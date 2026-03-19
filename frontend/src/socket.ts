@@ -1,0 +1,27 @@
+import { io } from 'socket.io-client';
+
+const BASE_URL = 'http://localhost:3000';
+
+export const customerSocket = io(`${BASE_URL}/customer`, {
+  autoConnect: false,
+  transports: ['websocket', 'polling']
+});
+
+export const vendorSocket = io(`${BASE_URL}/vendor`, {
+  autoConnect: false,
+  transports: ['websocket', 'polling']
+});
+
+export const adminSocket = io(`${BASE_URL}/admin`, {
+  autoConnect: false,
+  transports: ['websocket', 'polling']
+});
+
+// Helper to update auth token before connection
+export const connectSocket = (socket: any) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    socket.auth = { token };
+    socket.connect();
+  }
+};
