@@ -5,10 +5,7 @@ import {
   Camera, 
   CheckCircle2, 
   MapPin, 
-  Clock,
-  ShieldCheck,
-  AlertCircle,
-  Image as ImageIcon
+  Clock
 } from 'lucide-react';
 
 const ProofOfDelivery: React.FC = () => {

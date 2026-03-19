@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Receipt, Users, CreditCard, LayoutDashboard, Calculator } from 'lucide-react';
+import { FileText, Download, CreditCard } from 'lucide-react';
 import axios from 'axios';
 
 const InvoicingReports: React.FC = () => {

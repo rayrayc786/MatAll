@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Package, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
   AlertCircle,
-  Truck,
-  TrendingUp,
   Boxes,
-  History,
-  ArrowRight,
-  Loader2
 } from 'lucide-react';
 import { vendorSocket, connectSocket } from '../socket';
 import toast from 'react-hot-toast';

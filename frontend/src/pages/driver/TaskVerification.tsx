@@ -5,7 +5,6 @@ import {
   Scan, 
   CheckCircle2, 
   Package, 
-  AlertTriangle,
   ArrowRight,
   Info
 } from 'lucide-react';

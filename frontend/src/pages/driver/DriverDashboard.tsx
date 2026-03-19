@@ -4,10 +4,7 @@ import {
   Zap, 
   MapPin, 
   Package, 
-  TrendingUp, 
-  CheckCircle2, 
-  AlertCircle,
-  Truck
+  TrendingUp
 } from 'lucide-react';
 
 const DriverDashboard: React.FC = () => {

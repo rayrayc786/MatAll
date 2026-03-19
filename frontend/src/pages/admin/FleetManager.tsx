@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Truck, User, MapPin } from 'lucide-react';
+import { User, MapPin as MapPinIcon } from 'lucide-react';
 import axios from 'axios';
 import L from 'leaflet';
 

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
   Navigation, 
   MessageSquare, 
   Phone, 
-  MapPin, 
-  Clock,
   ChevronRight,
   ShieldCheck
 } from 'lucide-react';
