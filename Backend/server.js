@@ -17,12 +17,26 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/builditquic
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware
-app.use(cors());
+const allowedOrigins = ['https://build-it-quick-gules.vercel.app', 'http://localhost:5173'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Initialize Socket.io
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { 
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // Redis setup
