@@ -22,7 +22,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post('http://localhost:3000/api/auth/login', { phoneNumber });
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, { phoneNumber });
       setStep(2);
       setError('');
       toast.success('OTP sent to ' + phoneNumber);
@@ -38,7 +38,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:3000/api/auth/verify', { phoneNumber, otp });
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/verify`, { phoneNumber, otp });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       toast.success('Login successful!');

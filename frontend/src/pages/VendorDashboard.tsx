@@ -25,7 +25,7 @@ const VendorDashboard: React.FC = () => {
   const fetchOrders = async () => {
     const token = localStorage.getItem('token');
     try {
-      const { data } = await axios.get('http://localhost:3000/api/vendor/orders', {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/vendor/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(data);
@@ -56,7 +56,7 @@ const VendorDashboard: React.FC = () => {
   const handleStatusUpdate = async (orderId: string, status: string) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.patch(`http://localhost:3000/api/vendor/orders/${orderId}/status`, { status }, {
+      await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/vendor/orders/${orderId}/status`, { status }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchOrders();

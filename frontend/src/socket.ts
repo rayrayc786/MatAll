@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const customerSocket = io(`${BASE_URL}/customer`, {
   autoConnect: false,

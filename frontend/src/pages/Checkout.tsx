@@ -143,7 +143,7 @@ const Checkout: React.FC = () => {
         }
       };
       
-      const { data } = await axios.post('http://localhost:3000/api/orders/checkout', orderData, {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders/checkout`, orderData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

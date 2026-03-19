@@ -23,7 +23,7 @@ const SKUManager: React.FC = () => {
 
   const fetchSKUs = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/api/products');
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`);
       setSkus(data);
       setLoading(false);
     } catch (err) {
@@ -44,7 +44,7 @@ const SKUManager: React.FC = () => {
 
     try {
       setLoading(true);
-      await axios.post('http://localhost:3000/api/admin/products/bulk-upload', formData);
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/bulk-upload`, formData);
       alert('Products uploaded successfully');
       fetchSKUs();
     } catch (err) {
@@ -59,9 +59,9 @@ const SKUManager: React.FC = () => {
     e.preventDefault();
     try {
       if (editingSku) {
-        await axios.put(`http://localhost:3000/api/admin/products/${editingSku._id}`, formData);
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/${editingSku._id}`, formData);
       } else {
-        await axios.post('http://localhost:3000/api/admin/products', formData);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products`, formData);
       }
       setShowModal(false);
       setEditingSku(null);
@@ -74,7 +74,7 @@ const SKUManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`http://localhost:3000/api/admin/products/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/${id}`);
       fetchSKUs();
     } catch (err) {
       console.error(err);

@@ -8,7 +8,7 @@ const PickingQueue: React.FC = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/api/orders');
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders`);
       setOrders(data);
       setLoading(false);
     } catch (err) {
@@ -33,7 +33,7 @@ const PickingQueue: React.FC = () => {
     if (!nextStatus) return;
 
     try {
-      await axios.patch(`http://localhost:3000/api/admin/orders/${orderId}/status`, { status: nextStatus });
+      await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/orders/${orderId}/status`, { status: nextStatus });
       fetchOrders();
     } catch (err) {
       console.error(err);

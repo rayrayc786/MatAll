@@ -13,7 +13,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await axios.get('http://localhost:3000/api/admin/stats');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/stats`);
         setStats(data);
         setLoading(false);
       } catch (err) {

@@ -21,7 +21,7 @@ const VendorStore: React.FC = () => {
     // Fetch vendor's products
     const fetchVendorProducts = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:3000/api/products?vendorId=${id}`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?vendorId=${id}`);
         setProducts(data);
       } catch (err) {
         console.error(err);

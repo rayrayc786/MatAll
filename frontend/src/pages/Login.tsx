@@ -13,7 +13,7 @@ const Login: React.FC = () => {
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3000/api/auth/login', { phoneNumber });
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, { phoneNumber });
       setStep(2);
       setError('');
     } catch (err: any) {
@@ -24,7 +24,7 @@ const Login: React.FC = () => {
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('http://localhost:3000/api/auth/verify', { phoneNumber, otp });
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/verify`, { phoneNumber, otp });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       navigate('/');

@@ -38,7 +38,7 @@ const ProofOfDelivery: React.FC = () => {
     setUploading(true);
     try {
       // In real app, upload photo to S3 first
-      await axios.patch(`http://localhost:3000/api/orders/${id}/status`, { 
+      await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}/status`, { 
         status: 'delivered',
         proofImageUrl: 'https://images.unsplash.com/photo-1590060417650-cc04b0608a63?auto=format&fit=crop&q=80&w=400' 
       }, {

@@ -9,7 +9,7 @@ const InvoicingReports: React.FC = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const { data } = await axios.get('http://localhost:3000/api/orders');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders`);
         setOrders(data);
         setLoading(false);
       } catch (err) {

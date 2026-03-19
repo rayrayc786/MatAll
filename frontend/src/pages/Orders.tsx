@@ -18,7 +18,7 @@ const Orders: React.FC = () => {
       }
 
       try {
-        const { data } = await axios.get('http://localhost:3000/api/orders', {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const user = JSON.parse(localStorage.getItem('user') || '{}');

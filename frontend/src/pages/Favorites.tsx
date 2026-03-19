@@ -17,7 +17,7 @@ const Favorites: React.FC = () => {
     }
 
     try {
-      const { data } = await axios.get('http://localhost:3000/api/auth/favorites', {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/favorites`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFavorites(data);
@@ -35,7 +35,7 @@ const Favorites: React.FC = () => {
   const toggleFavorite = async (productId: string) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.post('http://localhost:3000/api/auth/favorites/toggle', { productId }, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/favorites/toggle`, { productId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Removed from favorites');

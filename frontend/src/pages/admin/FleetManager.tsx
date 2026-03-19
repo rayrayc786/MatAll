@@ -21,7 +21,7 @@ const FleetManager: React.FC = () => {
 
   const fetchDrivers = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/api/admin/fleet');
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/fleet`);
       setDrivers(data);
       setLoading(false);
     } catch (err) {

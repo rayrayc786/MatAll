@@ -21,8 +21,8 @@ const DriverDashboard: React.FC = () => {
     const config = { headers: { Authorization: `Bearer ${token}` } };
     
     try {
-      const statsRes = await axios.get('http://localhost:3000/api/auth/driver-stats', config);
-      const ordersRes = await axios.get('http://localhost:3000/api/orders/available', config);
+      const statsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/driver-stats`, config);
+      const ordersRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/available`, config);
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
       setStats(statsRes.data);
@@ -41,7 +41,7 @@ const DriverDashboard: React.FC = () => {
   const toggleDuty = async () => {
     const token = localStorage.getItem('token');
     try {
-      const { data } = await axios.post('http://localhost:3000/api/auth/toggle-duty', {}, {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/toggle-duty`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsOnline(data.isOnline);
@@ -56,7 +56,7 @@ const DriverDashboard: React.FC = () => {
   const acceptTask = async (id: string) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.post(`http://localhost:3000/api/orders/${id}/accept`, {}, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}/accept`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Task accepted! Proceed to dark store for pickup.');

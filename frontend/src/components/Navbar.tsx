@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
     }
     setIsSearching(true);
     try {
-      const { data } = await axios.get(`http://localhost:3000/api/products/autocomplete?q=${q}`);
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/autocomplete?q=${q}`);
       setSuggestions(data);
     } catch (err) {
       console.error(err);

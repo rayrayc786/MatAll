@@ -20,7 +20,7 @@ const TaskVerification: React.FC = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:3000/api/orders/${id}`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`);
         setOrder(data);
         setLoading(false);
       } catch (err) {
@@ -45,7 +45,7 @@ const TaskVerification: React.FC = () => {
     }
 
     try {
-      await axios.patch(`http://localhost:3000/api/orders/${id}/status`, { status: 'dispatched' }, {
+      await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}/status`, { status: 'dispatched' }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       navigate(`/driver/delivery/${id}`);

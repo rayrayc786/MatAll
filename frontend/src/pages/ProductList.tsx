@@ -43,7 +43,7 @@ const ProductCard = ({ product }: { product: any }) => {
     }
 
     try {
-      const { data } = await axios.post('http://localhost:3000/api/auth/favorites/toggle', { productId: product._id }, {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/favorites/toggle`, { productId: product._id }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsFavorite(!isFavorite);
@@ -151,7 +151,7 @@ const ProductList: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:3000/api/products${search}`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products${search}`);
         setProducts(data);
         setLoading(false);
       } catch (err) {

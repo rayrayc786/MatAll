@@ -37,7 +37,7 @@ const Tracking: React.FC = () => {
 
   const fetchOrder = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/api/orders/${id}`);
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`);
       setOrder(data);
       setLoading(false);
     } catch (err) {

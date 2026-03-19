@@ -25,7 +25,7 @@ const Profile: React.FC = () => {
       if (!token) return;
 
       try {
-        const { data } = await axios.get('http://localhost:3000/api/auth/profile', {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUser(data);
