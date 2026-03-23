@@ -4,6 +4,7 @@ import { Search, ShoppingCart, User, LayoutDashboard, Truck, LogOut, Package, Cl
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import AISearch from './AISearch';
+import './navbar.css';
 
 const Navbar: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,7 +72,7 @@ const Navbar: React.FC = () => {
 
   return (
     <header className="navbar">
-      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="nav-left">
         <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -79,20 +80,19 @@ const Navbar: React.FC = () => {
       </div>
       
       <div className="search-container-main">
-        <form className="search-bar" onSubmit={handleSearch} style={{ width: '100%', margin: 0 }}>
+        <form className="search-bar" onSubmit={handleSearch}>
           <Search size={20} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Search name, SKU, or CSI..." 
+            placeholder="Search Products" 
             value={searchTerm}
             onChange={onInputChange}
-            style={{ width: '100%' }}
           />
-          {isSearching ? <Loader2 size={18} className="animate-spin" style={{ marginRight: '10px' }} /> : <AISearch />}
+          {isSearching ? <Loader2 size={18} className="animate-spin suggestion-loader" /> : <AISearch />}
         </form>
 
         {suggestions.length > 0 && (
-          <div className="autocomplete-dropdown card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', padding: '0.5rem', maxHeight: '400px', overflowY: 'auto', zIndex: 2000 }}>
+          <div className="autocomplete-dropdown">
             {suggestions.map(item => (
               <div 
                 key={item._id} 
@@ -102,25 +102,24 @@ const Navbar: React.FC = () => {
                   setSearchTerm('');
                   navigate(`/products/${item._id}`);
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
               >
                 <img 
                   src={getFullImageUrl(item.imageUrl)} 
                   alt="" 
-                  style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} 
+                  className="suggestion-img"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
                   }}
                 />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{item.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <div className="suggestion-info">
+                  <div className="suggestion-name">{item.name}</div>
+                  <div className="suggestion-meta">
                     {item.brand && `Brand: ${item.brand} | `}
                     {item.sku && `SKU: ${item.sku}`}
                     {item.category && ` | ${item.category}`}
                   </div>
                 </div>
-                <div style={{ fontWeight: 800, color: 'var(--primary-dark)' }}>₹{item.price}</div>
+                <div className="suggestion-price">₹{item.price}</div>
               </div>
             ))}
           </div>
@@ -133,45 +132,45 @@ const Navbar: React.FC = () => {
         {isLoggedIn && (
           <>
             <Link to="/favorites" className="nav-link" title="Favorites">
-              <span className="nav-text-mobile">Favorites</span>
               <Heart size={22} className="nav-icon-desktop" />
+              <span className="nav-text-mobile">Favorites</span>
             </Link>
-            <Link to="/orders" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ClipboardList size={18} /> Orders
+            <Link to="/orders" className="nav-link">
+              <ClipboardList size={18} /> <span>Orders</span>
             </Link>
           </>
         )}
         
         {isLoggedIn && user.role === 'Admin' && (
-          <Link to="/admin" className="nav-link admin-link" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-dark)', fontWeight: 800 }}>
-            <LayoutDashboard size={18} /> Admin
+          <Link to="/admin" className="nav-link admin-link">
+            <LayoutDashboard size={18} /> <span>Admin</span>
           </Link>
         )}
         
         {isLoggedIn && user.role === 'Driver' && (
-          <Link to="/driver" className="nav-link driver-link" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 800 }}>
-            <Truck size={18} /> Driver Portal
+          <Link to="/driver" className="nav-link driver-link">
+            <Truck size={18} /> <span>Driver Portal</span>
           </Link>
         )}
 
         {isLoggedIn && user.role === 'Vendor' && (
-          <Link to="/vendor" className="nav-link vendor-link" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontWeight: 800 }}>
-            <Package size={18} /> Vendor Portal
+          <Link to="/vendor" className="nav-link vendor-link">
+            <Package size={18} /> <span>Vendor Portal</span>
           </Link>
         )}
 
         {isLoggedIn ? (
           <>
-            <Link to="/profile" className="nav-link user-profile-link" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link to="/profile" className="nav-link user-profile-link">
               <User size={24} /> <span className="nav-text-mobile">Profile</span>
             </Link>
-            <button onClick={handleLogout} className="nav-link logout-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', fontWeight: 700 }}>
-              <LogOut size={20} /> Logout
+            <button onClick={handleLogout} className="nav-link logout-btn">
+              <LogOut size={20} /> <span>Logout</span>
             </button>
           </>
         ) : (
-          <Link to="/login" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <User size={24} /> Login
+          <Link to="/login" className="nav-link">
+            <User size={24} /> <span>Login</span>
           </Link>
         )}
       </div>

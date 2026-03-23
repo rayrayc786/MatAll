@@ -256,23 +256,23 @@ const SKUManager: React.FC = () => {
 
   return (
     <main className="admin-content">
-      <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
+      <header className="admin-header space-between sku-header">
         <div className="title-group">
           <h1>SKU & Inventory Manager</h1>
           <p>Master database for industrial materials & Smart Units</p>
         </div>
-        <div className="action-group" style={{ display: 'flex', gap: '12px' }}>
+        <div className="action-group sku-action-group">
           <input 
             type="file" 
             ref={fileInputRef} 
-            style={{ display: 'none' }} 
+            className="hidden-file-input" 
             accept=".xlsx, .xls"
             onChange={handleFileUpload}
           />
           <button className="secondary-btn" onClick={() => fileInputRef.current?.click()}>
             <FileUp size={18} /> Bulk Upload (Excel)
           </button>
-          <button className="secondary-btn" onClick={handleClearAll} style={{ backgroundColor: '#fee2e2', color: '#ef4444' }}>
+          <button className="secondary-btn sku-clear-all-btn" onClick={handleClearAll}>
             <Trash2 size={18} /> Clear All
           </button>
           <button className="add-sku-btn" onClick={resetForm}>
@@ -281,26 +281,26 @@ const SKUManager: React.FC = () => {
         </div>
       </header>
 
-      <div className="card" style={{ padding: '1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="search-group" style={{ flex: '0 1 400px', display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div className="card sku-search-card">
+        <div className="sku-search-container">
+          <div className="search-group sku-search-group">
             <Search size={18} color="#64748b" />
             <input 
               type="text" 
               placeholder="Search by SKU, Name, Brand, or Category..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem' }} 
+              className="sku-search-input"
             />
           </div>
-          <div className="quick-stats" style={{ display: 'flex', gap: '2rem' }}>
+          <div className="quick-stats sku-quick-stats">
             <div className="q-stat">
-              <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, display: 'block' }}>TOTAL SKUS</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{skus.length}</span>
+              <span className="q-stat-label">TOTAL SKUS</span>
+              <span className="q-stat-value">{skus.length}</span>
             </div>
             <div className="q-stat">
-              <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, display: 'block' }}>FILTERED</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{filteredSkus.length}</span>
+              <span className="q-stat-label">FILTERED</span>
+              <span className="q-stat-value">{filteredSkus.length}</span>
             </div>
           </div>
         </div>
@@ -321,14 +321,14 @@ const SKUManager: React.FC = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem' }}>Loading Inventory...</td></tr>
+              <tr><td colSpan={7} className="loading-cell">Loading Inventory...</td></tr>
             ) : filteredSkus.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem' }}>No products found matching "{search}"</td></tr>
+              <tr><td colSpan={7} className="empty-cell">No products found matching "{search}"</td></tr>
             ) : (
               filteredSkus.map(sku => (
                 <tr key={sku._id}>
                   <td className="product-cell">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="sku-product-info">
                       <img 
                         src={getFullImageUrl(sku.imageUrl)} 
                         alt="" 
@@ -338,10 +338,10 @@ const SKUManager: React.FC = () => {
                         }}
                       />
                       <div>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{sku.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                        <div className="sku-product-name">{sku.name}</div>
+                        <div className="sku-variant-badges">
                           {sku.subVariants?.map((v: any, i: number) => (
-                            <span key={i} style={{ marginRight: '8px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                            <span key={i} className="sku-variant-badge">
                               {v.title}: {v.value}
                             </span>
                           ))}
@@ -350,20 +350,20 @@ const SKUManager: React.FC = () => {
                     </div>
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{sku.brand || 'N/A'}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{sku.category} / {sku.subCategory}</div>
+                    <div className="sku-brand-name">{sku.brand || 'N/A'}</div>
+                    <div className="sku-category-path">{sku.category} / {sku.subCategory}</div>
                   </td>
-                  <td className="sku-id" style={{ fontFamily: 'monospace', fontWeight: 600, color: '#64748b' }}>{sku.sku}</td>
+                  <td className="sku-id sku-id-text">{sku.sku}</td>
                   <td>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', textDecoration: 'line-through' }}>MRP: ₹{sku.mrp || 0}</div>
-                    <div style={{ fontWeight: 700, color: '#0f172a' }}>Sale: ₹{sku.salePrice || sku.price}</div>
+                    <div className="sku-mrp-text">MRP: ₹{sku.mrp || 0}</div>
+                    <div className="sku-sale-price">Sale: ₹{sku.salePrice || sku.price}</div>
                   </td>
-                  <td><span style={{ fontSize: '0.85rem' }}>{sku.deliveryTime || 'N/A'}</span></td>
+                  <td><span className="sku-delivery-text">{sku.deliveryTime || 'N/A'}</span></td>
                   <td>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{sku.stock || 240} {sku.unitLabel}s</span>
+                    <span className="sku-stock-text">{sku.stock || 240} {sku.unitLabel}s</span>
                   </td>
                   <td className="actions-cell">
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="sku-actions-container">
                       <button className="icon-btn" onClick={() => openEdit(sku)} title="Edit"><Edit3 size={16} /></button>
                       <button className="icon-btn delete" onClick={() => handleDelete(sku._id)} title="Delete"><Trash2 size={16} /></button>
                     </div>
@@ -377,14 +377,14 @@ const SKUManager: React.FC = () => {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content card" style={{ maxWidth: '900px' }}>
-            <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0 }}>{editingSku ? 'Edit Product' : 'Add New Product'}</h2>
+          <div className="modal-content card sku-modal-content">
+            <div className="modal-header space-between sku-modal-header">
+              <h2 className="sku-modal-title">{editingSku ? 'Edit Product' : 'Add New Product'}</h2>
               <button className="icon-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="admin-form">
-              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <div className="form-grid sku-form-grid">
+                <div className="form-group sku-form-span-2">
                   <label>Product Name</label>
                   <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
                 </div>
@@ -438,11 +438,11 @@ const SKUManager: React.FC = () => {
 
                 <div className="form-group">
                   <label>Primary Attribute (Size/Color/etc)</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="sku-attribute-group">
                     <select 
                       value={formData.size || ''} 
                       onChange={e => setFormData({...formData, size: e.target.value})}
-                      style={{ flex: 1 }}
+                      className="sku-attribute-select"
                     >
                       <option value="">Select Title...</option>
                       {masterVariantTitles.map(t => (
@@ -459,16 +459,16 @@ const SKUManager: React.FC = () => {
                         else newSubs[0].value = e.target.value;
                         setFormData({...formData, subVariants: newSubs});
                       }}
-                      style={{ flex: 1 }}
+                      className="sku-attribute-input"
                     />
                   </div>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: 'span 3' }}>
+                <div className="form-group sku-form-span-3">
                   <label>Additional Attributes</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px' }}>
+                  <div className="sku-additional-attributes">
                     {(formData.subVariants || []).slice(1).map((sv, idx) => (
-                      <div key={idx} style={{ display: 'flex', gap: '4px' }}>
+                      <div key={idx} className="sku-attribute-row">
                         <select 
                           value={sv.title} 
                           onChange={e => {
@@ -493,7 +493,7 @@ const SKUManager: React.FC = () => {
                         <button type="button" onClick={() => setFormData({...formData, subVariants: formData.subVariants.filter((_, i) => i !== idx + 1)})} className="icon-btn delete"><X size={14} /></button>
                       </div>
                     ))}
-                    <button type="button" className="secondary-btn" onClick={() => setFormData({...formData, subVariants: [...(formData.subVariants || []), { title: masterVariantTitles[0]?.name || '', value: '' }]})} style={{ fontSize: '0.75rem', padding: '4px 8px' }}>
+                    <button type="button" className="secondary-btn sku-add-attribute-btn" onClick={() => setFormData({...formData, subVariants: [...(formData.subVariants || []), { title: masterVariantTitles[0]?.name || '', value: '' }]})}>
                       <Plus size={14} /> Add Attribute
                     </button>
                   </div>
@@ -537,12 +537,12 @@ const SKUManager: React.FC = () => {
                   <input type="text" value={formData.csiMasterFormat || ''} onChange={e => setFormData({...formData, csiMasterFormat: e.target.value})} />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: 'span 3' }}>
+                <div className="form-group sku-form-span-3">
                   <label>Image URL</label>
                   <input type="text" placeholder="/images/..." value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} />
                 </div>
               </div>
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
+              <div className="modal-footer sku-modal-footer">
                 <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="primary-btn">Save Product</button>
               </div>
@@ -554,9 +554,9 @@ const SKUManager: React.FC = () => {
       {/* Upload Progress Indicator */}
       {uploadProgress.active && (
         <div className="upload-progress-container">
-          <div className="space-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Uploading Excel...</span>
-            <span style={{ fontWeight: 800, color: '#3b82f6' }}>{uploadProgress.percentage}%</span>
+          <div className="space-between sku-upload-progress-info">
+            <span className="sku-upload-status">Uploading Excel...</span>
+            <span className="sku-upload-percentage">{uploadProgress.percentage}%</span>
           </div>
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${uploadProgress.percentage}%` }}></div>
@@ -568,10 +568,10 @@ const SKUManager: React.FC = () => {
       {uploadResult && uploadResult.summary && (
         <div className="modal-overlay">
           <div className="modal-content card results-modal">
-            <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="modal-header space-between sku-modal-header">
+              <div className="sku-results-header-info">
                 <CheckCircle2 color="#22c55e" size={24} />
-                <h2 style={{ margin: 0 }}>Upload Summary</h2>
+                <h2 className="sku-results-title">Upload Summary</h2>
               </div>
               <button className="icon-btn" onClick={() => setUploadResult(null)}><X size={20} /></button>
             </div>
@@ -597,10 +597,10 @@ const SKUManager: React.FC = () => {
 
             {uploadResult.skippedDetails && uploadResult.skippedDetails.length > 0 && (
               <div className="skipped-section">
-                <h3 style={{ marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 className="skipped-section-title">
                   <AlertCircle size={18} color="#ef4444" /> Skipped Rows Reasons
                 </h3>
-                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="skipped-table-container">
                   <table className="skipped-table">
                     <thead>
                       <tr>
@@ -623,7 +623,7 @@ const SKUManager: React.FC = () => {
               </div>
             )}
 
-            <div className="modal-footer" style={{ marginTop: '2rem', textAlign: 'right' }}>
+            <div className="modal-footer sku-results-footer">
               <button className="primary-btn" onClick={() => setUploadResult(null)}>Close Results</button>
             </div>
           </div>

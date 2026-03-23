@@ -1054,6 +1054,11 @@ a {
   cursor: pointer;
 }
 
+.product-card-modern.dropdown-open {
+  overflow: visible;
+  z-index: 100;
+}
+
 .product-card-modern:hover {
   transform: translateY(-8px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);

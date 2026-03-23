@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Construction, Drill, Wrench, Layers, ArrowRight, ShieldCheck, Zap, CreditCard } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import './home.css';
 
 const CATEGORIES = [
   { id: '03', name: 'Concrete', icon: <Layers size={24} />, color: '#eff6ff', textColor: '#2563eb' },
@@ -63,17 +64,17 @@ const Home: React.FC = () => {
       <div className="content">
         <section className="features-grid">
           <div className="feature-card">
-            <div className="f-icon" style={{ background: '#dcfce7' }}><ShieldCheck color="#16a34a" /></div>
+            <div className="f-icon quality"><ShieldCheck color="#16a34a" /></div>
             <h3>100% Quality Insured</h3>
             <p>Every batch lab-tested and certified before dispatch.</p>
           </div>
           <div className="feature-card">
-            <div className="f-icon" style={{ background: '#eff6ff' }}><Zap color="#2563eb" /></div>
+            <div className="f-icon tracking"><Zap color="#2563eb" /></div>
             <h3>Real-time Tracking</h3>
             <p>Live GPS tracking for all your jobsite deliveries.</p>
           </div>
           <div className="feature-card">
-            <div className="f-icon" style={{ background: '#fef2f2' }}><CreditCard color="#dc2626" /></div>
+            <div className="f-icon pay"><CreditCard color="#dc2626" /></div>
             <h3>BuildItQuick Pay</h3>
             <p>Buy now, pay later with 45-day interest-free credit.</p>
           </div>
@@ -96,7 +97,7 @@ const Home: React.FC = () => {
           ))}
         </div>
 
-        <section className="section-header" style={{ marginTop: '4rem' }}>
+        <section className="section-header top-rated-section">
           <div>
             <h2>Top Rated Materials</h2>
             <p>Most ordered items this week at best prices</p>
@@ -104,9 +105,9 @@ const Home: React.FC = () => {
           <Link to="/products" className="text-link">View All Materials <ArrowRight size={16} /></Link>
         </section>
 
-        <div className="product-grid" style={{ marginTop: '2rem' }}>
+        <div className="product-grid product-grid-home">
           {topProducts.length === 0 ? (
-            <p style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '2rem', color: '#64748b' }}>Loading top materials...</p>
+            <p className="loading-home">Loading top materials...</p>
           ) : (
             topProducts.map(item => (
               <ProductCard key={item._id} product={item} />

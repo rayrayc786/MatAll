@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FileText, Download, ShoppingCart, ShieldCheck, Zap, ChevronDown, Minus, Plus, Heart, Share2 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import './product-detail.css';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -51,16 +52,16 @@ const ProductDetail: React.FC = () => {
   };
 
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
+    <div className="pdp-loading-container">
       <Zap className="animate-spin" size={48} color="var(--primary)" />
-      <p style={{ fontWeight: 700, color: '#64748b' }}>Loading technical specs...</p>
+      <p className="pdp-loading-text">Loading technical specs...</p>
     </div>
   );
   
   if (!product) return (
-    <div style={{ textAlign: 'center', padding: '4rem' }}>
+    <div className="pdp-not-found">
       <h2>Material not found.</h2>
-      <button className="primary-btn" onClick={() => navigate('/products')} style={{ marginTop: '1rem' }}>Back to Materials</button>
+      <button className="primary-btn pdp-back-btn" onClick={() => navigate('/products')}>Back to Materials</button>
     </div>
   );
 
@@ -72,13 +73,13 @@ const ProductDetail: React.FC = () => {
   const currentMrp = selectedVariant ? selectedVariant.mrp : (product.mrp || 0);
 
   return (
-    <main className="content pdp" style={{ padding: '2rem' }}>
-      <div className="product-showcase" style={{ background: 'white', borderRadius: '32px', padding: '2.5rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -2px rgba(0,0,0,0.05)' }}>
-        <div className="product-image-large" style={{ background: '#f8fafc', padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <main className="content pdp pdp-main">
+      <div className="product-showcase pdp-showcase">
+        <div className="product-image-large pdp-image-container">
           <img 
             src={getFullImageUrl(selectedVariant?.image || product.imageUrl)} 
             alt={product.name} 
-            style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '20px' }}
+            className="pdp-image"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=800';
             }}
@@ -86,45 +87,43 @@ const ProductDetail: React.FC = () => {
         </div>
         
         <div className="product-essentials">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div className="brand-badge" style={{ background: '#f1f5f9', padding: '6px 16px', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', color: '#1e293b', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
+          <div className="pdp-header-actions">
+            <div className="brand-badge pdp-brand-badge">
               {product.brand || 'Premium Material'}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="icon-btn" style={{ background: '#f8fafc' }}><Share2 size={20} /></button>
-              <button className="icon-btn" style={{ background: '#f8fafc' }}><Heart size={20} /></button>
+            <div className="pdp-icon-actions">
+              <button className="icon-btn pdp-icon-btn"><Share2 size={20} /></button>
+              <button className="icon-btn pdp-icon-btn"><Heart size={20} /></button>
             </div>
           </div>
 
-          <h1 style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.5rem', color: '#0f172a', lineHeight: 1.2 }}>{product.name}</h1>
-          <p className="sku" style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem', marginBottom: '2rem' }}>
-            SKU: <span style={{ color: '#0f172a' }}>{selectedVariant?.sku || product.sku}</span> | CSI: <span style={{ color: '#0f172a' }}>{product.csiMasterFormat || 'N/A'}</span>
+          <h1 className="pdp-title">{product.name}</h1>
+          <p className="sku pdp-sku-line">
+            SKU: <span className="pdp-sku-value">{selectedVariant?.sku || product.sku}</span> | CSI: <span className="pdp-sku-value">{product.csiMasterFormat || 'N/A'}</span>
           </p>
           
-          <div className="variant-section" style={{ marginBottom: '2.5rem' }}>
-            <label style={{ display: 'block', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.75rem', color: '#64748b' }}>SELECT SPECIFICATION</label>
-            <div className="variant-selector-container" ref={dropdownRef} style={{ maxWidth: '400px' }}>
+          <div className="variant-section pdp-price-container">
+            <label className="pdp-variant-label">SELECT SPECIFICATION</label>
+            <div className="variant-selector-container pdp-variant-selector" ref={dropdownRef}>
               {product.variants?.length > 1 ? (
                 <>
                   <button 
-                    className="variant-dropdown-btn" 
+                    className="variant-dropdown-btn pdp-variant-dropdown" 
                     onClick={() => setShowVariants(!showVariants)}
-                    style={{ padding: '0.8rem 1.25rem', fontSize: '1rem' }}
                   >
                     <span>{selectedVariant?.name} — ₹{selectedVariant?.price}</span> 
                     <ChevronDown size={20} />
                   </button>
                   {showVariants && (
-                    <div className="variant-menu" style={{ top: 'calc(100% + 8px)' }}>
+                    <div className="variant-menu pdp-variant-menu">
                       {product.variants.map((v: any) => (
                         <div 
                           key={v.sku} 
-                          className={`variant-option ${selectedVariant?.sku === v.sku ? 'active' : ''}`}
+                          className={`variant-option pdp-variant-option ${selectedVariant?.sku === v.sku ? 'active' : ''}`}
                           onClick={() => {
                             setSelectedVariant(v);
                             setShowVariants(false);
                           }}
-                          style={{ padding: '1rem 1.25rem' }}
                         >
                           <span>{v.name}</span>
                           <span className="v-price">₹{v.price}</span>
@@ -134,111 +133,110 @@ const ProductDetail: React.FC = () => {
                   )}
                 </>
               ) : (
-                <div style={{ background: '#f8fafc', padding: '1rem 1.5rem', borderRadius: '14px', border: '1.5px solid #e2e8f0', fontWeight: 700 }}>
+                <div className="pdp-single-variant">
                   {selectedVariant?.name || product.unitLabel || 'Standard Unit'}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="price-display" style={{ marginBottom: '2.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-              <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a' }}>₹{currentPrice}</span>
-              <span style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: 600 }}>/ {product.unitLabel || 'unit'}</span>
+          <div className="price-display pdp-price-container">
+            <div className="pdp-price-row">
+              <span className="pdp-current-price">₹{currentPrice}</span>
+              <span className="pdp-unit-label">/ {product.unitLabel || 'unit'}</span>
             </div>
             {currentMrp > currentPrice && (
-              <div style={{ fontSize: '1.1rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: 600, marginTop: '4px' }}>
+              <div className="pdp-mrp">
                 MRP: ₹{currentMrp}
               </div>
             )}
-            <div style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.9rem', marginTop: '8px' }}>
+            <div className="pdp-tax-info">
               Inclusive of all taxes
             </div>
           </div>
           
-          <div className="action-row" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          <div className="action-row pdp-action-row">
             {cartItem ? (
-              <div className="quantity-control active" style={{ height: '54px', minWidth: '160px', padding: '0 1.5rem' }}>
-                <button onClick={() => addToCart(product, -1, selectedVariant?.name)} style={{ transform: 'scale(1.3)' }}><Minus size={18} /></button>
-                <span style={{ fontSize: '1.25rem', fontWeight: 900 }}>{cartItem.quantity}</span>
-                <button onClick={() => addToCart(product, 1, selectedVariant?.name)} style={{ transform: 'scale(1.3)' }}><Plus size={18} /></button>
+              <div className="quantity-control active pdp-qty-control">
+                <button onClick={() => addToCart(product, -1, selectedVariant?.name)} className="pdp-qty-btn"><Minus size={18} /></button>
+                <span className="pdp-qty-value">{cartItem.quantity}</span>
+                <button onClick={() => addToCart(product, 1, selectedVariant?.name)} className="pdp-qty-btn"><Plus size={18} /></button>
               </div>
             ) : (
               <button 
                 onClick={() => addToCart(product, 1, selectedVariant?.name)} 
-                className="quick-add-btn"
-                style={{ height: '54px', padding: '0 3rem', fontSize: '1.1rem', flex: 1, maxWidth: '300px' }}
+                className="quick-add-btn pdp-add-cart-btn"
               >
                 <ShoppingCart size={22} /> Add to Cart
               </button>
             )}
             
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', background: '#f0fdf4', padding: '12px 20px', borderRadius: '16px', border: '1px solid #bcf0da' }}>
+            <div className="pdp-delivery-badge">
               <Zap size={24} color="#16a34a" fill="#16a34a" />
               <div>
-                <div style={{ fontWeight: 900, color: '#16a34a', fontSize: '0.95rem' }}>FREE DELIVERY</div>
-                <div style={{ color: '#16a34a', fontSize: '0.8rem', fontWeight: 700 }}>In {product.deliveryTime || '60 mins'}</div>
+                <div className="pdp-delivery-title">FREE DELIVERY</div>
+                <div className="pdp-delivery-time">In {product.deliveryTime || '60 mins'}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="technical-section" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
-        <div className="specs-card" style={{ background: 'white', padding: '2.5rem', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.25rem', fontWeight: 900, marginBottom: '2rem' }}>
+      <div className="technical-section pdp-tech-section">
+        <div className="specs-card pdp-specs-card">
+          <h3 className="pdp-section-title">
             <FileText size={24} color="var(--primary-dark)" /> Technical Specifications
           </h3>
-          <table className="specs-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="specs-table pdp-specs-table">
             <tbody>
               {product.category && (
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem 0', color: '#64748b', fontWeight: 600 }}>Category</td>
-                  <td style={{ padding: '1rem 0', fontWeight: 700, textAlign: 'right' }}>{product.category}</td>
+                <tr className="pdp-spec-row">
+                  <td className="pdp-spec-label">Category</td>
+                  <td className="pdp-spec-value">{product.category}</td>
                 </tr>
               )}
               {product.subCategory && (
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem 0', color: '#64748b', fontWeight: 600 }}>Sub Category</td>
-                  <td style={{ padding: '1rem 0', fontWeight: 700, textAlign: 'right' }}>{product.subCategory}</td>
+                <tr className="pdp-spec-row">
+                  <td className="pdp-spec-label">Sub Category</td>
+                  <td className="pdp-spec-value">{product.subCategory}</td>
                 </tr>
               )}
               {product.size && (
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem 0', color: '#64748b', fontWeight: 600 }}>Standard Unit</td>
-                  <td style={{ padding: '1rem 0', fontWeight: 700, textAlign: 'right' }}>{product.size}</td>
+                <tr className="pdp-spec-row">
+                  <td className="pdp-spec-label">Standard Unit</td>
+                  <td className="pdp-spec-value">{product.size}</td>
                 </tr>
               )}
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '1rem 0', color: '#64748b', fontWeight: 600 }}>Logistics Weight</td>
-                <td style={{ padding: '1rem 0', fontWeight: 700, textAlign: 'right' }}>{product.weightPerUnit} kg</td>
+              <tr className="pdp-spec-row">
+                <td className="pdp-spec-label">Logistics Weight</td>
+                <td className="pdp-spec-value">{product.weightPerUnit} kg</td>
               </tr>
               <tr>
-                <td style={{ padding: '1rem 0', color: '#64748b', fontWeight: 600 }}>Packaging Volume</td>
-                <td style={{ padding: '1rem 0', fontWeight: 700, textAlign: 'right' }}>{product.volumePerUnit} m³</td>
+                <td className="pdp-spec-label">Packaging Volume</td>
+                <td className="pdp-spec-value">{product.volumePerUnit} m³</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div className="compliance-card" style={{ background: '#0f172a', color: 'white', padding: '2.5rem', borderRadius: '24px' }}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.25rem', fontWeight: 900, marginBottom: '2rem' }}>
+        <div className="compliance-card pdp-compliance-card">
+          <h3 className="pdp-section-title">
             <ShieldCheck size={24} color="var(--primary)" /> Quality & Compliance
           </h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+          <p className="pdp-compliance-text">
             Every batch of this material is lab-tested and certified to meet industrial safety standards.
           </p>
-          <ul className="docs-list" style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <li style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem 1.25rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-              <span style={{ fontWeight: 600 }}>Safety Data Sheet (MSDS)</span>
+          <ul className="docs-list pdp-docs-list">
+            <li className="pdp-doc-item">
+              <span className="pdp-doc-label">Safety Data Sheet (MSDS)</span>
               <Download size={18} color="var(--primary)" />
             </li>
-            <li style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem 1.25rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-              <span style={{ fontWeight: 600 }}>Industrial IS Certification</span>
+            <li className="pdp-doc-item">
+              <span className="pdp-doc-label">Industrial IS Certification</span>
               <Download size={18} color="var(--primary)" />
             </li>
-            <li style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem 1.25rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-              <span style={{ fontWeight: 600 }}>Batch Test Report</span>
+            <li className="pdp-doc-item">
+              <span className="pdp-doc-label">Batch Test Report</span>
               <Download size={18} color="var(--primary)" />
             </li>
           </ul>

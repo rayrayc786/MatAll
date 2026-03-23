@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Search, Edit3, Trash2, X, Store, CheckCircle2, MapPin } from 'lucide-react';
+import './vendor.css';
 
 const VendorManager: React.FC = () => {
   const [vendors, setVendors] = useState<any[]>([]);
@@ -117,7 +118,7 @@ const VendorManager: React.FC = () => {
 
   return (
     <main className="admin-content">
-      <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
+      <header className="admin-header space-between vendor-header">
         <div className="title-group">
           <h1>Vendor Management</h1>
           <p>Manage verified partners and their product categories</p>
@@ -127,22 +128,22 @@ const VendorManager: React.FC = () => {
         </button>
       </header>
 
-      <div className="card" style={{ padding: '1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="search-group" style={{ flex: '0 1 400px', display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div className="card vendor-search-card">
+        <div className="vendor-search-container">
+          <div className="search-group vendor-search-group">
             <Search size={18} color="#64748b" />
             <input 
               type="text" 
               placeholder="Search by Vendor Name or Category..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem' }} 
+              className="vendor-search-input"
             />
           </div>
-          <div className="quick-stats" style={{ display: 'flex', gap: '2rem' }}>
+          <div className="quick-stats vendor-stats">
             <div className="q-stat">
-              <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, display: 'block' }}>TOTAL VENDORS</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{vendors.length}</span>
+              <span className="q-stat-label">TOTAL VENDORS</span>
+              <span className="q-stat-value">{vendors.length}</span>
             </div>
           </div>
         </div>
@@ -161,32 +162,32 @@ const VendorManager: React.FC = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Loading Vendors...</td></tr>
+              <tr><td colSpan={5} className="loading-cell">Loading Vendors...</td></tr>
             ) : filteredVendors.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>No vendors found</td></tr>
+              <tr><td colSpan={5} className="empty-cell">No vendors found</td></tr>
             ) : (
               filteredVendors.map(vendor => (
                 <tr key={vendor._id}>
                   <td className="product-cell">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', background: '#FFEA00', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="vendor-info-cell">
+                      <div className="vendor-icon-container">
                         <Store size={20} color="#000" />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{vendor.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{vendor.contactPhone}</div>
+                        <div className="vendor-name">{vendor.name}</div>
+                        <div className="vendor-phone">{vendor.contactPhone}</div>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}>
+                    <div className="vendor-location-container">
                       <MapPin size={14} color="#64748b" /> {vendor.location}
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    <div className="vendor-categories-container">
                       {vendor.categories?.map((cat: string, i: number) => (
-                        <span key={i} style={{ fontSize: '0.7rem', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                        <span key={i} className="vendor-category-badge">
                           {cat}
                         </span>
                       ))}
@@ -194,15 +195,15 @@ const VendorManager: React.FC = () => {
                   </td>
                   <td>
                     {vendor.isVerified ? (
-                      <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.85rem' }}>
+                      <span className="vendor-verified">
                         <CheckCircle2 size={16} /> Verified
                       </span>
                     ) : (
-                      <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Pending</span>
+                      <span className="vendor-pending">Pending</span>
                     )}
                   </td>
                   <td className="actions-cell">
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="action-buttons">
                       <button className="icon-btn" onClick={() => openEdit(vendor)} title="Edit"><Edit3 size={16} /></button>
                       <button className="icon-btn delete" onClick={() => handleDelete(vendor._id)} title="Delete"><Trash2 size={16} /></button>
                     </div>
@@ -216,13 +217,13 @@ const VendorManager: React.FC = () => {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content card" style={{ maxWidth: '600px' }}>
-            <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0 }}>{editingVendor ? 'Edit Vendor' : 'Register New Vendor'}</h2>
+          <div className="modal-content card vendor-modal">
+            <div className="modal-header space-between vendor-modal-header">
+              <h2 className="modal-title">{editingVendor ? 'Edit Vendor' : 'Register New Vendor'}</h2>
               <button className="icon-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="admin-form">
-              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+              <div className="form-grid vendor-form-grid">
                 <div className="form-group">
                   <label>Business Name</label>
                   <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
@@ -238,11 +239,11 @@ const VendorManager: React.FC = () => {
                 
                 <div className="form-group">
                   <label>Categories of Expertise</label>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <div className="category-input-group">
                     <select 
                       value={categoryInput} 
                       onChange={e => setCategoryInput(e.target.value)}
-                      style={{ flex: 1 }}
+                      className="category-select"
                     >
                       <option value="">Select a category...</option>
                       {masterCategories
@@ -255,35 +256,34 @@ const VendorManager: React.FC = () => {
                     <button 
                       type="button" 
                       onClick={addCategory} 
-                      className="primary-btn" 
-                      style={{ padding: '0 1.5rem' }}
+                      className="primary-btn category-add-btn" 
                       disabled={!categoryInput}
                     >
                       Add
                     </button>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', padding: '10px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
-                    {formData.categories.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No categories added yet</span>}
+                  <div className="categories-display-area">
+                    {formData.categories.length === 0 && <span className="no-categories-text">No categories added yet</span>}
                     {formData.categories.map((cat, i) => (
-                      <span key={i} className="unit-badge" style={{ background: '#FFEA00', color: '#000', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}>
-                        {cat} <X size={14} style={{ cursor: 'pointer' }} onClick={() => removeCategory(cat)} />
+                      <span key={i} className="unit-badge vendor-category-tag">
+                        {cat} <X size={14} className="tag-close-icon" onClick={() => removeCategory(cat)} />
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                <div className="form-group verified-checkbox-group">
                   <input 
                     type="checkbox" 
                     id="verified"
                     checked={formData.isVerified} 
                     onChange={e => setFormData({...formData, isVerified: e.target.checked})} 
-                    style={{ width: '20px', height: '20px' }}
+                    className="verified-checkbox"
                   />
-                  <label htmlFor="verified" style={{ marginBottom: 0 }}>Verified Partner</label>
+                  <label htmlFor="verified" className="verified-label">Verified Partner</label>
                 </div>
               </div>
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
+              <div className="modal-footer vendor-modal-footer">
                 <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="primary-btn">Save Vendor</button>
               </div>
