@@ -6,6 +6,15 @@ import { useCart } from '../contexts/CartContext';
 const Cart: React.FC = () => {
   const { cart, removeFromCart, totalAmount, totalWeight, vehicleClass, addToCart } = useCart();
 
+  const getFullImageUrl = (url?: string) => {
+    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
+    if (url.startsWith('http')) return url;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanBase}${cleanUrl}`;
+  };
+
   if (cart.length === 0) {
     return (
       <main className="content empty-cart-container">
@@ -37,7 +46,13 @@ const Cart: React.FC = () => {
           {cart.map((item) => (
             <div key={item.product._id + (item.selectedVariant || '')} className="cart-item-card-modern">
               <div className="item-img">
-                <img src={item.product.imageUrl || 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=200'} alt={item.product.name} />
+                <img 
+                  src={getFullImageUrl(item.product.imageUrl)} 
+                  alt={item.product.name} 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=200';
+                  }}
+                />
               </div>
               <div className="item-details">
                 <div className="item-main">

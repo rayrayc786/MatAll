@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Vendor = require('../models/Vendor');
 
 exports.getVendorOrders = async (req, res) => {
   try {
@@ -42,15 +43,46 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.getAvailableOrders = async (req, res) => {
   try {
-    // Orders that are pending and haven't been assigned to a vendor yet, 
-    // OR orders specifically assigned to this vendor that are pending.
+    const vendor = await Vendor.findById(req.user.vendorId);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+
+    // Find orders where status is pending and NO vendor assigned yet
+    // AND at least one item category matches vendor's categories
     const orders = await Order.find({ 
-      $or: [
-        { vendorId: req.user.vendorId, status: 'pending' },
-        { vendorId: { $exists: false }, status: 'pending' }
-      ]
+      status: 'pending',
+      vendorId: { $exists: false },
+      'items.category': { $in: vendor.categories }
     }).sort({ createdAt: -1 });
+
     res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.acceptOrder = async (req, res) => {
+  try {
+    // Vendor accepts a pending order
+    const order = await Order.findOneAndUpdate(
+      { _id: req.params.id, status: 'pending', vendorId: { $exists: false } },
+      { 
+        status: 'vendor-confirmed', 
+        vendorId: req.user.vendorId 
+      },
+      { new: true }
+    );
+
+    if (!order) return res.status(400).json({ message: 'Order already accepted or unavailable' });
+
+    const io = req.app.get('socketio');
+    if (order.userId) {
+      io.of('/customer').to(order.userId.toString()).emit('order-status-update', { 
+        orderId: order._id, 
+        status: 'vendor-confirmed' 
+      });
+    }
+
+    res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

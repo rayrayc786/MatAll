@@ -1,20 +1,168 @@
 const Product = require('../models/Product');
+const fs = require('fs');
+const path = require('path');
+
+// Helper to resolve image names to actual file paths from Image Master
+const resolveProductImages = (product) => {
+  const imageMasterPath = path.resolve(__dirname, '..', '..', 'Image Master');
+  
+  let files = [];
+  try {
+    if (fs.existsSync(imageMasterPath)) {
+      files = fs.readdirSync(imageMasterPath);
+    }
+  } catch (err) {
+    console.error('Error reading Image Master directory:', err);
+  }
+
+  const normalize = (str) => (str || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const findFile = (name) => {
+    if (!name) return null;
+    const target = normalize(name);
+    return files.find(f => {
+      const baseName = f.split('.')[0];
+      return normalize(baseName) === target || normalize(f) === target;
+    });
+  };
+
+  let resolved = [];
+  if (product.imageNames && product.imageNames.length > 0) {
+    resolved = product.imageNames.map(name => {
+      const found = findFile(name);
+      return found ? `/images/${found}` : null;
+    }).filter(Boolean);
+  }
+  
+  if (resolved.length === 0 && product.sku) {
+    const foundBySku = findFile(product.sku);
+    if (foundBySku) resolved.push(`/images/${foundBySku}`);
+  }
+
+  if (resolved.length > 0) {
+    product.images = resolved;
+    product.imageUrl = resolved[0];
+  } else {
+    product.images = product.images || [];
+    if (!product.imageUrl || product.imageUrl.includes('unsplash')) {
+       product.imageUrl = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+    }
+  }
+
+  return product;
+};
+
+// Helper to group products by Name + Brand to create variants dynamically
+const groupProductsByVariants = (products) => {
+  const groupedMap = new Map();
+  
+  products.forEach(p => {
+    // Grouping Key: Brand + Base Name (strip everything after '|')
+    const baseName = (p.name || '').toString().split('|')[0].trim().toLowerCase();
+    const cleanBrand = (p.brand || '').toString().toLowerCase().trim();
+    const key = `${cleanBrand}-${baseName}`;
+    
+    if (!groupedMap.has(key)) {
+  const groupHeader = { ...p };
+  groupHeader.variants = [];
+
+  groupedMap.set(key, groupHeader);
+}
+    
+    const group = groupedMap.get(key);
+    
+    // Variant Label: Use the specific part after '|', or the Size field, or the first SubVariant
+    let variantName = '';
+
+const nameParts = (p.name || '').toString().split('|');
+
+if (nameParts.length > 1) {
+  variantName = nameParts[1].trim();
+} else if (p.subVariants?.length > 0) {
+  variantName = p.subVariants.map(sv => sv.value).join(' / ');
+} else if (p.size && p.size !== 'Material' && p.size !== 'Standard') {
+  variantName = p.size;
+} else {
+  variantName = p.sku;
+}
+    
+    if (!variantName) variantName = p.sku || 'Standard';
+
+    // Ensure this specific SKU is added as a variant
+    const exists = group.variants.some(v => v.sku === p.sku);
+    if (!exists) {
+      group.variants.push({
+        name: variantName,
+        price: p.salePrice || p.price,
+        mrp: p.mrp || 0,
+        sku: p.sku,
+        _id: p._id,
+        image: p.imageUrl,
+        unitLabel: p.unitLabel
+      });
+    }
+
+    // Image Preference: If group leader has a placeholder but this product has a real image, promote it
+    const groupHasPlaceholder = !group.imageUrl || group.imageUrl.includes('unsplash');
+    const pHasRealImg = p.imageUrl && !p.imageUrl.includes('unsplash');
+    
+    if (groupHasPlaceholder && pHasRealImg) {
+      group.imageUrl = p.imageUrl;
+      group.images = p.images;
+    }
+  });
+
+  return Array.from(groupedMap.values());
+};
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, brand, subCategory, search } = req.query;
     let query = { isActive: true };
 
     if (category) {
-      query.csiMasterFormat = { $regex: `^${category}` };
+      const categories = Array.isArray(category) ? category : [category];
+      query.category = { $in: categories };
+    }
+    
+    if (brand) {
+      const brands = Array.isArray(brand) ? brand : [brand];
+      query.brand = { $in: brands };
+    }
+
+    if (subCategory) {
+      const subCategories = Array.isArray(subCategory) ? subCategory : [subCategory];
+      query.subCategory = { $in: subCategories };
     }
 
     if (search) {
-      query.name = { $regex: search, $options: 'i' };
+      const regex = new RegExp(search, 'i');
+      query.$or = [
+        { name: regex }, { sku: regex }, { productCode: regex },
+        { category: regex }, { subCategory: regex }, { brand: regex },
+        { size: regex }, { deliveryTime: regex }, { unitLabel: regex }
+      ];
     }
 
-    const products = await Product.find(query);
-    res.json(products);
+    let products = await Product.find(query).lean();
+    
+    // 1. Resolve images first
+    products = products.map(resolveProductImages);
+    
+    // 2. Group into variants
+    let groupedProducts = groupProductsByVariants(products);
+
+
+    // 3. Sort: Products with images first
+    groupedProducts.sort((a, b) => {
+      const aHasImg = a.imageUrl && !a.imageUrl.includes('unsplash');
+      const bHasImg = b.imageUrl && !b.imageUrl.includes('unsplash');
+      if (aHasImg && !bHasImg) return -1;
+      if (!aHasImg && bHasImg) return 1;
+      return 0;
+    });
+
+    res.json(groupedProducts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -22,9 +170,20 @@ exports.getAllProducts = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ message: 'Product not found' });
-    res.json(product);
+    
+    const baseName = (product.name || '').toString().split('|')[0].trim();
+    const relatedProducts = await Product.find({
+      brand: product.brand,
+      name: { $regex: new RegExp('^' + baseName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i') },
+      isActive: true
+    }).lean();
+
+    const resolved = relatedProducts.map(resolveProductImages);
+    const grouped = groupProductsByVariants(resolved);
+    
+    res.json(grouped[0] || resolveProductImages(product));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -36,17 +195,34 @@ exports.autocomplete = async (req, res) => {
     if (!q) return res.json([]);
 
     const regex = new RegExp(q, 'i');
-    const products = await Product.find({
+    let products = await Product.find({
       $or: [
-        { name: regex },
-        { sku: regex },
-        { csiMasterFormat: regex },
-        { description: regex }
+        { name: regex }, { sku: regex }, { brand: regex }, { category: regex }
       ],
       isActive: true
-    }).limit(10).select('name sku csiMasterFormat imageUrl price unitLabel');
+    }).limit(40).lean();
 
-    res.json(products);
+    products = products.map(resolveProductImages);
+    const grouped = groupProductsByVariants(products);
+    
+    res.json(grouped.slice(0, 10));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getFilters = async (req, res) => {
+  console.log('GET /filters hit');
+  try {
+    const brands = await Product.distinct('brand', { isActive: true });
+    const categories = await Product.distinct('category', { isActive: true });
+    const subCategories = await Product.distinct('subCategory', { isActive: true });
+    
+    res.json({
+      brands: brands.filter(Boolean).sort(),
+      categories: categories.filter(Boolean).sort(),
+      subCategories: subCategories.filter(Boolean).sort()
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

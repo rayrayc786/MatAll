@@ -1,199 +1,177 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Filter, ChevronRight, Plus, Minus, ChevronDown, Star, Heart } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
-import toast from 'react-hot-toast';
-
-const ProductCard = ({ product }: { product: any }) => {
-  const { cart, addToCart } = useCart();
-  const navigate = useNavigate();
-  
-  // Get latest user from local storage to check favorites
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [isFavorite, setIsFavorite] = useState(user.favorites?.includes(product._id));
-  
-  const [selectedVariant, setSelectedVariant] = useState(
-    product.variants?.length > 0 ? product.variants[0].name : null
-  );
-  const [showVariants, setShowVariants] = useState(false);
-
-  const cartItem = cart.find(
-    (item) => item.product._id === product._id && item.selectedVariant === selectedVariant
-  );
-
-  const currentPrice = selectedVariant 
-    ? product.variants.find((v: any) => v.name === selectedVariant).price 
-    : product.price;
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('.quick-add-btn') || target.closest('.quantity-control') || target.closest('.variant-selector-container') || target.closest('.fav-btn-overlay')) {
-      return;
-    }
-    navigate(`/products/${product._id}`);
-  };
-
-  const toggleFavorite = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to favorite products');
-      return;
-    }
-
-    try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/favorites/toggle`, { productId: product._id }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setIsFavorite(!isFavorite);
-      user.favorites = data.favorites;
-      localStorage.setItem('user', JSON.stringify(user));
-      toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites');
-    } catch (err) {
-      toast.error('Action failed');
-    }
-  };
-
-  return (
-    <div className="product-card-modern" onClick={handleCardClick}>
-      <div className="material-img-wrap">
-        <img 
-          src={product.imageUrl || 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400'} 
-          alt={product.name} 
-        />
-        <div className="delivery-badge-mini">60 MINS</div>
-        <button 
-          className={`fav-btn-overlay ${isFavorite ? 'active' : ''}`} 
-          onClick={toggleFavorite}
-          style={{ 
-            position: 'absolute', top: '12px', right: '12px', 
-            background: isFavorite ? 'white' : 'rgba(255,255,255,0.2)', 
-            backdropFilter: 'blur(8px)',
-            border: 'none', padding: '8px', 
-            borderRadius: '50%', cursor: 'pointer', display: 'flex', 
-            boxShadow: isFavorite ? '0 4px 6px rgba(0,0,0,0.1)' : 'none', 
-            color: isFavorite ? '#ef4444' : 'white',
-            zIndex: 10,
-            transition: 'all 0.2s'
-          }}
-        >
-          <Heart size={18} fill={isFavorite ? '#ef4444' : 'none'} strokeWidth={2.5} />
-        </button>
-      </div>
-      
-      <div className="product-info-modern">
-        <div className="meta-row">
-          <span className="csi-tag">CSI: {product.csiMasterFormat}</span>
-          <span className="rating-mini"><Star size={10} fill="#f59e0b" color="#f59e0b" /> 4.8</span>
-        </div>
-        <h3>{product.name}</h3>
-        
-        {product.variants?.length > 0 ? (
-          <div className="variant-selector-container">
-            <button className="variant-dropdown-btn" onClick={(e) => { e.stopPropagation(); setShowVariants(!showVariants); }}>
-              {selectedVariant} <ChevronDown size={14} />
-            </button>
-            {showVariants && (
-              <div className="variant-menu">
-                {product.variants.map((v: any) => (
-                  <div 
-                    key={v.name} 
-                    className={`variant-option ${selectedVariant === v.name ? 'active' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedVariant(v.name);
-                      setShowVariants(false);
-                    }}
-                  >
-                    <span>{v.name}</span>
-                    <span>₹{v.price}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="unit-label-modern">{product.unitLabel || 'Standard Unit'}</div>
-        )}
-
-        <div className="card-footer-modern">
-          <div className="price-stack">
-            <span className="price">₹{currentPrice.toFixed(2)}</span>
-            <span className="tax-info">Incl. GST</span>
-          </div>
-          
-          {cartItem ? (
-            <div className="quantity-control active" onClick={e => e.stopPropagation()}>
-              <button onClick={() => addToCart(product, -1, selectedVariant)}><Minus size={14} /></button>
-              <span>{cartItem.quantity}</span>
-              <button onClick={() => addToCart(product, 1, selectedVariant)}><Plus size={14} /></button>
-            </div>
-          ) : (
-            <button onClick={(e) => { e.stopPropagation(); addToCart(product, 1, selectedVariant); }} className="quick-add-btn">
-              ADD
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="detail-hover-indicator">
-        <ChevronRight size={18} />
-      </div>
-    </div>
-  );
-};
+import { Filter, X, } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
+  const [filters, setFilters] = useState<{ brands: string[], categories: string[], subCategories: string[] }>({
+    brands: [],
+    categories: [],
+    subCategories: []
+  });
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const { search } = useLocation();
+  
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  // Load initial filters
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/filters`);
+        setFilters(data);
+      } catch (err) {
+        console.error('Error fetching filters:', err);
+      }
+    };
+    fetchFilters();
+  }, []);
+
+  // Parse URL params on load
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cat = params.get('category');
+    if (cat && !selectedCategories.includes(cat)) {
+      setSelectedCategories([cat]);
+    }
+  }, [location.search]);
+
+  // Fetch products when filters change
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products${search}`);
+        const params = new URLSearchParams(location.search);
+        
+        // Add selected filters to request
+        selectedBrands.forEach(b => params.append('brand', b));
+        selectedCategories.forEach(c => params.append('category', c));
+        selectedSubCategories.forEach(s => params.append('subCategory', s));
+
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?${params.toString()}`);
         setProducts(data);
-        setLoading(false);
       } catch (err) {
-        console.error(err);
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchProducts();
-  }, [search]);
+  }, [selectedBrands, selectedCategories, selectedSubCategories, location.search]);
+
+  const toggleFilter = (item: string, selected: string[], setSelected: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (selected.includes(item)) {
+      setSelected(selected.filter(i => i !== item));
+    } else {
+      setSelected([...selected, item]);
+    }
+  };
+
+  const clearAllFilters = () => {
+    setSelectedBrands([]);
+    setSelectedCategories([]);
+    setSelectedSubCategories([]);
+    navigate('/products');
+  };
 
   return (
-    <div className="product-list-page">
-      <aside className="sidebar-filters">
-        <h3><Filter size={20} /> Advanced Filters</h3>
-        <div className="filter-section">
-          <label>Brand</label>
-          <select>
-            <option>All Brands</option>
-            <option>Birla</option>
-            <option>UltraTech</option>
-            <option>Tata Steel</option>
-          </select>
+    <div className="product-list-page" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', padding: '2rem' }}>
+      <aside className="sidebar-filters" style={{ background: 'white', padding: '2rem', borderRadius: '24px', border: '1px solid #e2e8f0', height: 'fit-content', position: 'sticky', top: '100px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Filter size={20} /> Filters
+          </h3>
+          {(selectedBrands.length > 0 || selectedCategories.length > 0 || selectedSubCategories.length > 0) && (
+            <button onClick={clearAllFilters} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+              Clear All
+            </button>
+          )}
         </div>
-        <div className="filter-section">
-          <label>Grade / Size</label>
-          <div className="checkbox-group">
-            <label><input type="checkbox" /> 53 Grade</label>
-            <label><input type="checkbox" /> 12mm TMT</label>
-            <label><input type="checkbox" /> 20mm Aggregate</label>
+
+        {/* Categories Section */}
+        <div className="filter-group" style={{ marginBottom: '2.5rem' }}>
+          <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontWeight: 800 }}>Categories</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {filters.categories.map(cat => (
+              <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: selectedCategories.includes(cat) ? 800 : 500 }}>
+                <input 
+                  type="checkbox" 
+                  checked={selectedCategories.includes(cat)} 
+                  onChange={() => toggleFilter(cat, selectedCategories, setSelectedCategories)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary-dark)' }}
+                />
+                {cat}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Sub-Categories Section */}
+        {filters.subCategories.length > 0 && (
+          <div className="filter-group" style={{ marginBottom: '2.5rem' }}>
+            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontWeight: 800 }}>Sub-Categories</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '10px' }}>
+              {filters.subCategories.map(sub => (
+                <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: selectedSubCategories.includes(sub) ? 800 : 500 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedSubCategories.includes(sub)} 
+                    onChange={() => toggleFilter(sub, selectedSubCategories, setSelectedSubCategories)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary-dark)' }}
+                  />
+                  {sub}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Brands Section */}
+        <div className="filter-group">
+          <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontWeight: 800 }}>Brands</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '10px' }}>
+            {filters.brands.map(brand => (
+              <label key={brand} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: selectedBrands.includes(brand) ? 800 : 500 }}>
+                <input 
+                  type="checkbox" 
+                  checked={selectedBrands.includes(brand)} 
+                  onChange={() => toggleFilter(brand, selectedBrands, setSelectedBrands)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary-dark)' }}
+                />
+                {brand}
+              </label>
+            ))}
           </div>
         </div>
       </aside>
 
       <main className="product-results">
         <header className="results-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Industrial Materials</h2>
-          <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{products.length} Items Found</span>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, margin: 0 }}>Materials Catalog</h2>
+          <div style={{ color: '#64748b', fontWeight: 700, fontSize: '0.95rem', background: 'white', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            {products.length} Products Available
+          </div>
         </header>
 
         {loading ? (
-          <div className="loading-state" style={{ textAlign: 'center', padding: '4rem' }}>Loading materials...</div>
+          <div style={{ textAlign: 'center', padding: '10rem 0' }}>
+            <div className="animate-spin" style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid var(--primary)', borderRadius: '50%', margin: '0 auto 1rem' }}></div>
+            <p style={{ fontWeight: 700, color: '#64748b' }}>Refreshing catalog...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '8rem 2rem', background: 'white', borderRadius: '32px', border: '1px solid #e2e8f0' }}>
+            <X size={48} color="#94a3b8" style={{ marginBottom: '1.5rem' }} />
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>No matches found</h3>
+            <p style={{ color: '#64748b', marginBottom: '2rem' }}>Try adjusting your filters or search criteria.</p>
+            <button onClick={clearAllFilters} className="primary-btn" style={{ margin: '0 auto' }}>Reset All Filters</button>
+          </div>
         ) : (
-          <div className="product-grid">
+          <div className="product-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
             {products.map(product => (
               <ProductCard key={product._id} product={product} />
             ))}

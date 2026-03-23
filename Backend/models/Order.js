@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const OrderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  category: { type: String }, // Store category for routing
   quantity: { type: Number, required: true },
   unitPrice: { type: Number, required: true },
   totalWeight: { type: Number, required: true }, // Pre-calculated weight

@@ -29,7 +29,7 @@ exports.verifyOTP = async (req, res) => {
     }
 
     // Upsert User
-    let user = await User.findOne({ phoneNumber });
+    let user = await User.findOne({ phoneNumber }).populate('vendorId');
     if (!user) {
       user = new User({
         phoneNumber,

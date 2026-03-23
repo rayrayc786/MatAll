@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { Construction, Drill, Wrench, Layers, ArrowRight, ShieldCheck, Zap, CreditCard } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
 
 const CATEGORIES = [
   { id: '03', name: 'Concrete', icon: <Layers size={24} />, color: '#eff6ff', textColor: '#2563eb' },
@@ -11,38 +13,22 @@ const CATEGORIES = [
   { id: '26', name: 'Electrical', icon: <Zap size={24} />, color: '#fef2f2', textColor: '#dc2626' },
 ];
 
-const TOP_MATERIALS = [
-  { 
-    id: '1', 
-    name: 'TMT 500D Steel', 
-    desc: 'Grade 500D | 12mm', 
-    img: 'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?auto=format&fit=crop&q=80&w=400',
-    price: '₹850.00 / Ton'
-  },
-  { 
-    id: '2', 
-    name: 'OPC 53 Cement', 
-    desc: '50kg Bag | Birla', 
-    img: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=400',
-    price: '₹6.50 / Bag'
-  },
-  { 
-    id: '3', 
-    name: 'Washed M-Sand', 
-    desc: 'Washed | 1 Ton', 
-    img: 'https://images.unsplash.com/photo-1533062609701-2274b74bb881?auto=format&fit=crop&q=80&w=400',
-    price: '₹18.00 / Ton'
-  },
-  { 
-    id: '4', 
-    name: 'Solid Blocks', 
-    desc: '8" Load Bearing', 
-    img: 'https://images.unsplash.com/photo-1590060417650-cc04b0608a63?auto=format&fit=crop&q=80&w=400',
-    price: '₹0.85 / Block'
-  }
-];
-
 const Home: React.FC = () => {
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTopProducts = async () => {
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`);
+        // Just take the first 4 for "Top Rated"
+        setTopProducts(data.slice(0, 4));
+      } catch (err) {
+        console.error('Error fetching top products:', err);
+      }
+    };
+    fetchTopProducts();
+  }, []);
+
   return (
     <main className="home-page">
       <section className="hero-modern">
@@ -118,23 +104,14 @@ const Home: React.FC = () => {
           <Link to="/products" className="text-link">View All Materials <ArrowRight size={16} /></Link>
         </section>
 
-        <div className="materials-grid">
-          {TOP_MATERIALS.map(item => (
-            <Link to="/products" key={item.id} className="material-card-modern">
-              <div className="material-img">
-                <img src={item.img} alt={item.name} />
-                <div className="price-tag">{item.price}</div>
-              </div>
-              <div className="material-info">
-                <h3>{item.name}</h3>
-                <p>{item.desc}</p>
-                <div className="card-footer-modern">
-                  <span className="rating">⭐ 4.8</span>
-                  <span className="delivery-tag">Fast Delivery</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+        <div className="product-grid" style={{ marginTop: '2rem' }}>
+          {topProducts.length === 0 ? (
+            <p style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '2rem', color: '#64748b' }}>Loading top materials...</p>
+          ) : (
+            topProducts.map(item => (
+              <ProductCard key={item._id} product={item} />
+            ))
+          )}
         </div>
       </div>
     </main>

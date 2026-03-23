@@ -15,6 +15,13 @@ import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import SKUManager from './pages/admin/SKUManager';
+import VendorManager from './pages/admin/VendorManager';
+import CategoryManager from './pages/admin/CategoryManager';
+import SubCategoryManager from './pages/admin/SubCategoryManager';
+import UnitManager from './pages/admin/UnitManager';
+import BrandManager from './pages/admin/BrandManager';
+import SubVariantTitleManager from './pages/admin/SubVariantTitleManager';
+import DeliveryTimeManager from './pages/admin/DeliveryTimeManager';
 import PickingQueue from './pages/admin/PickingQueue';
 import FleetManager from './pages/admin/FleetManager';
 import InvoicingReports from './pages/admin/InvoicingReports';
@@ -29,10 +36,22 @@ import { customerSocket, vendorSocket, connectSocket } from './socket';
 import toast from 'react-hot-toast';
 import './App.css';
 
+import { useState } from 'react';
+import { Menu } from 'lucide-react';
+
 const AdminLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
-    <div className="admin-layout">
-      <AdminSidebar />
+    <div className={`admin-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+      <button 
+        className="admin-sidebar-toggle" 
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        <Menu size={20} />
+      </button>
+      <AdminSidebar onClose={() => setIsSidebarOpen(false)} />
+      {isSidebarOpen && <div className="admin-sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
       <div className="admin-content-area">
         <Outlet />
       </div>
@@ -105,6 +124,13 @@ const App: React.FC = () => {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="inventory" element={<SKUManager />} />
+              <Route path="vendors" element={<VendorManager />} />
+              <Route path="categories" element={<CategoryManager />} />
+              <Route path="sub-categories" element={<SubCategoryManager />} />
+              <Route path="units" element={<UnitManager />} />
+              <Route path="brands" element={<BrandManager />} />
+              <Route path="variant-titles" element={<SubVariantTitleManager />} />
+              <Route path="delivery-times" element={<DeliveryTimeManager />} />
               <Route path="queue" element={<PickingQueue />} />
               <Route path="fleet" element={<FleetManager />} />
               <Route path="invoices" element={<InvoicingReports />} />

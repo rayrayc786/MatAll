@@ -2,9 +2,10 @@ import React, { createContext, useContext, useState, useMemo } from 'react';
 
 interface Product {
   _id: string;
-  vendorId?: string;
   name: string;
   sku: string;
+  category?: string;
+  subCategory?: string;
   unitType: 'individual' | 'weight-based' | 'pack' | 'bundle';
   unitLabel: string;
   csiMasterFormat: string;

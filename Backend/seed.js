@@ -25,7 +25,6 @@ const seedUsers = [
     fullName: 'Vendor Manager',
     phoneNumber: '6666655555',
     role: 'Vendor',
-    vendorId: seedVendor._id,
     isVerified: true
   },
   {
@@ -54,7 +53,6 @@ const seedProducts = [
     weightPerUnit: 50,
     volumePerUnit: 0.035,
     price: 6.50,
-    vendorId: seedVendor._id,
     variants: [{ name: '50kg Bag', price: 6.50, weight: 50, volume: 0.035, sku: 'CEM-53-50KG' }],
     imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=400'
   },
@@ -67,7 +65,6 @@ const seedProducts = [
     weightPerUnit: 1000,
     volumePerUnit: 0.12,
     price: 850.00,
-    vendorId: seedVendor._id,
     imageUrl: 'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?auto=format&fit=crop&q=80&w=400'
   },
   {
@@ -79,7 +76,6 @@ const seedProducts = [
     weightPerUnit: 1000,
     volumePerUnit: 0.65,
     price: 18.00,
-    vendorId: seedVendor._id,
     imageUrl: 'https://images.unsplash.com/photo-1533062609701-2274b74bb881?auto=format&fit=crop&q=80&w=400'
   }
 ];

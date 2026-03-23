@@ -45,6 +45,15 @@ const Favorites: React.FC = () => {
     }
   };
 
+  const getFullImageUrl = (url?: string) => {
+    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+    if (url.startsWith('http')) return url;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanBase}${cleanUrl}`;
+  };
+
   if (loading) return <div className="content">Loading your favorites...</div>;
 
   return (
@@ -66,7 +75,14 @@ const Favorites: React.FC = () => {
           {favorites.map(product => (
             <div key={product._id} className="fav-card card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
               <div style={{ height: '200px', background: '#f1f5f9' }}>
-                <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img 
+                  src={getFullImageUrl(product.imageUrl)} 
+                  alt={product.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                  }}
+                />
               </div>
               <div style={{ padding: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

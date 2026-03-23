@@ -115,13 +115,13 @@ const Checkout: React.FC = () => {
     }
 
     try {
-      const vendorId = cart[0]?.product.vendorId || '65f1a2b3c4d5e6f7a8b9c0d1';
       const user = JSON.parse(localStorage.getItem('user') || '{}');
 
       const orderData = {
         userId: user._id,
         items: cart.map(item => ({
           productId: item.product._id,
+          category: item.product.category, // Pass category for routing
           quantity: item.quantity,
           unitPrice: item.product.price,
           totalWeight: (item.product.weightPerUnit || 0) * item.quantity,
@@ -132,7 +132,6 @@ const Checkout: React.FC = () => {
         totalVolume,
         vehicleClass,
         paymentMethod,
-        vendorId,
         darkStoreId: '65f1a2b3c4d5e6f7a8b9c0d2',
         deliveryAddress: {
           name: jobsiteAddress,

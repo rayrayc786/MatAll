@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
@@ -34,7 +35,14 @@ mongoose.connection.on('disconnected', () => {
 });
 
 // Middleware
-const allowedOrigins = ['https://build-it-quick-gules.vercel.app', 'http://localhost:5173'];
+const allowedOrigins = [
+  'https://build-it-quick-gules.vercel.app', 
+  'http://localhost:5173', 
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -45,7 +53,15 @@ app.use(cors({
   },
   credentials: true
 }));
+
 app.use(express.json());
+
+// Serve images from the "Image Master" directory at the project root
+const imagePath = path.resolve(__dirname, '..', 'Image Master');
+console.log('Static images directory:', imagePath);
+app.use('/images', express.static(imagePath));
+// Fallback for /api/images if VITE_API_BASE_URL includes /api
+app.use('/api/images', express.static(imagePath));
 
 // Initialize Socket.io
 const io = new Server(server, {

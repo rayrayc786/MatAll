@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const ProductSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
   description: { type: String },
   sku: { type: String, required: true, unique: true },
   
@@ -10,7 +9,7 @@ const ProductSchema = new mongoose.Schema({
   unitType: { 
     type: String, 
     enum: ['individual', 'weight-based', 'pack', 'bundle'], 
-    required: true 
+    default: 'individual'
   },
   unitLabel: { type: String, default: 'unit' }, // e.g., 'lbs', 'kg', 'pack of 10'
   
@@ -19,18 +18,34 @@ const ProductSchema = new mongoose.Schema({
   specifications: { type: Map, of: String }, // Key-Value pair for extra details
   
   // Logistics & Vehicle Matching
-  weightPerUnit: { type: Number, required: true }, // Weight in kg/lbs for calculations
-  volumePerUnit: { type: Number, required: true }, // Volume in cubic units for vehicle fitting
+  weightPerUnit: { type: Number, default: 0 }, // Weight in kg/lbs for calculations
+  volumePerUnit: { type: Number, default: 0 }, // Volume in cubic units for vehicle fitting
   
   price: { type: Number, required: true },
   imageUrl: { type: String, default: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400' },
+  images: [{ type: String }],
+  imageNames: [{ type: String }], // Raw names from Excel column
+
+  // Data.xlsx specific fields
+  category: { type: String },
+  subCategory: { type: String },
+  brand: { type: String },
+  size: { type: String },
+  productCode: { type: String },
+  mrp: { type: Number },
+  salePrice: { type: Number },
+  deliveryTime: { type: String },
+  subVariants: [{
+    title: String,
+    value: String
+  }],
 
   // Variants: e.g., different bag sizes, steel diameters
   variants: [{
-    name: { type: String, required: true }, // e.g., "50kg Bag", "10kg Bag"
-    price: { type: Number, required: true },
-    weight: { type: Number, required: true },
-    volume: { type: Number, required: true },
+    name: { type: String }, // e.g., "50kg Bag", "10kg Bag"
+    price: { type: Number },
+    weight: { type: Number },
+    volume: { type: Number },
     sku: { type: String }
   }],
 
@@ -49,6 +64,6 @@ const ProductSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true }
   }, { timestamps: true });
 
-  ProductSchema.index({ name: 'text', sku: 'text', csiMasterFormat: 'text', description: 'text' });
+  ProductSchema.index({ name: 'text', sku: 'text', csiMasterFormat: 'text', description: 'text', category: 'text', brand: 'text' });
 
   module.exports = mongoose.model('Product', ProductSchema);
