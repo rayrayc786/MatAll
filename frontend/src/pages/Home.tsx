@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Construction, Drill, Wrench, Layers, ArrowRight, ShieldCheck, Zap, CreditCard } from 'lucide-react';
+import { Construction, Drill, Wrench, Layers, ArrowRight, ShieldCheck, Zap, CreditCard, ChevronRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import './home.css';
 
 const CATEGORIES = [
-  { id: '03', name: 'Concrete', icon: <Layers size={24} />, color: '#eff6ff', textColor: '#2563eb' },
-  { id: '04', name: 'Masonry', icon: <Construction size={24} />, color: '#fff7ed', textColor: '#d97706' },
-  { id: '05', name: 'Metals', icon: <Drill size={24} />, color: '#f0fdf4', textColor: '#16a34a' },
-  { id: '06', name: 'Wood', icon: <Layers size={24} />, color: '#fafaf9', textColor: '#44403c' },
-  { id: '22', name: 'Plumbing', icon: <Wrench size={24} />, color: '#f5f3ff', textColor: '#7c3aed' },
-  { id: '26', name: 'Electrical', icon: <Zap size={24} />, color: '#fef2f2', textColor: '#dc2626' },
+  { id: '03', name: 'Concrete', icon: <Layers size={24} />, color: '#eff6ff', textColor: '#2563eb', img: 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=200' },
+  { id: '04', name: 'Masonry', icon: <Construction size={24} />, color: '#fff7ed', textColor: '#d97706', img: 'https://images.unsplash.com/photo-1590059132218-22af239d53ea?auto=format&fit=crop&q=80&w=200' },
+  { id: '05', name: 'Metals', icon: <Drill size={24} />, color: '#f0fdf4', textColor: '#16a34a', img: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=200' },
+  { id: '06', name: 'Wood', icon: <Layers size={24} />, color: '#fafaf9', textColor: '#44403c', img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=200' },
+  { id: '22', name: 'Plumbing', icon: <Wrench size={24} />, color: '#f5f3ff', textColor: '#7c3aed', img: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&q=80&w=200' },
+  { id: '26', name: 'Electrical', icon: <Zap size={24} />, color: '#fef2f2', textColor: '#dc2626', img: 'https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=200' },
 ];
 
 const Home: React.FC = () => {
@@ -21,8 +21,7 @@ const Home: React.FC = () => {
     const fetchTopProducts = async () => {
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`);
-        // Just take the first 4 for "Top Rated"
-        setTopProducts(data.slice(0, 4));
+        setTopProducts(data.slice(0, 8));
       } catch (err) {
         console.error('Error fetching top products:', err);
       }
@@ -31,90 +30,65 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <main className="home-page">
-      <section className="hero-modern">
-        <div className="hero-content">
-          <div className="badge-promo">🚀 Fastest Jobsite Delivery in India</div>
-          <h1>B2B Industrial Materials, <span>Delivered in 60 Mins.</span></h1>
-          <p>Direct from 500+ verified manufacturers. Procurement simplified for contractors and developers.</p>
-          <div className="hero-actions">
-            <Link to="/products" className="btn-primary-lg">Browse Materials <ArrowRight size={20} /></Link>
-          </div>
-          <div className="hero-trust">
-            <span>Trusted by:</span>
-            <div className="trust-logos">
-              <span className="trust-logo">L&T Construction</span>
-              <span className="trust-logo">Tata Projects</span>
-              <span className="trust-logo">Lodha Group</span>
-            </div>
-          </div>
-        </div>
-        <div className="hero-visual">
-          <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=800" alt="Construction Site" />
-          <div className="floating-stat">
-            <Zap size={20} color="#f59e0b" fill="#f59e0b" />
-            <div>
-              <strong>Instant Delivery</strong>
-              <p>Under 60 mins</p>
-            </div>
-          </div>
-        </div>
+    <main className="home-container">
+      {/* Hero Banner - Blinkit style */}
+      <section className="home-hero-banner">
+         <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1200" alt="B2B Materials" className="hero-bg" />
+         <div className="hero-overlay">
+            <div className="hero-tag">UP TO 40% OFF</div>
+            <h2>Industrial Materials Delivered in 60 Mins</h2>
+            <Link to="/products" className="hero-btn">Shop Now</Link>
+         </div>
       </section>
 
-      <div className="content">
-        <section className="features-grid">
-          <div className="feature-card">
-            <div className="f-icon quality"><ShieldCheck color="#16a34a" /></div>
-            <h3>100% Quality Insured</h3>
-            <p>Every batch lab-tested and certified before dispatch.</p>
-          </div>
-          <div className="feature-card">
-            <div className="f-icon tracking"><Zap color="#2563eb" /></div>
-            <h3>Real-time Tracking</h3>
-            <p>Live GPS tracking for all your jobsite deliveries.</p>
-          </div>
-          <div className="feature-card">
-            <div className="f-icon pay"><CreditCard color="#dc2626" /></div>
-            <h3>BuildItQuick Pay</h3>
-            <p>Buy now, pay later with 45-day interest-free credit.</p>
-          </div>
-        </section>
-
-        <section className="section-header">
-          <div>
-            <h2>CSI MasterFormat Categories</h2>
-            <p>Browse materials by industrial classification</p>
-          </div>
-          <Link to="/products" className="text-link">View All Categories <ArrowRight size={16} /></Link>
-        </section>
-
-        <div className="category-grid">
+      {/* Shop by Store / Categories */}
+      <section className="home-section">
+        <div className="home-section-header">
+          <h3>Shop by store</h3>
+        </div>
+        <div className="blinkit-category-grid">
           {CATEGORIES.map(cat => (
-            <Link to={`/products?category=${cat.id}`} key={cat.id} className="category-card-modern">
-              <div className="cat-icon-wrap" style={{ background: cat.color, color: cat.textColor }}>{cat.icon}</div>
-              <span className="cat-name">{cat.name}</span>
+            <Link to={`/products?category=${cat.id}`} key={cat.id} className="blinkit-category-item">
+              <div className="cat-img-box">
+                <img src={cat.img} alt={cat.name} />
+              </div>
+              <span>{cat.name} Store</span>
             </Link>
           ))}
         </div>
+      </section>
 
-        <section className="section-header top-rated-section">
-          <div>
-            <h2>Top Rated Materials</h2>
-            <p>Most ordered items this week at best prices</p>
-          </div>
-          <Link to="/products" className="text-link">View All Materials <ArrowRight size={16} /></Link>
-        </section>
-
-        <div className="product-grid product-grid-home">
+      {/* Hot Deals - Horizontal Scroll */}
+      <section className="home-section">
+        <div className="home-section-header">
+          <h3>Hot deals</h3>
+          <Link to="/products" className="see-all">see all</Link>
+        </div>
+        <div className="blinkit-product-scroll">
           {topProducts.length === 0 ? (
-            <p className="loading-home">Loading top materials...</p>
+            <p>Loading deals...</p>
           ) : (
             topProducts.map(item => (
-              <ProductCard key={item._id} product={item} />
+              <div key={item._id} className="scroll-item-wrap">
+                <ProductCard product={item} />
+              </div>
             ))
           )}
         </div>
-      </div>
+      </section>
+
+      {/* Daily Fresh Needs / Recent Materials */}
+      <section className="home-section">
+        <div className="home-section-header">
+          <h3>Recent Materials</h3>
+          <Link to="/products" className="see-all">see all</Link>
+        </div>
+        <div className="blinkit-product-grid">
+          {topProducts.map(item => (
+            <ProductCard key={item._id} product={item} />
+          ))}
+        </div>
+      </section>
     </main>
   );
 };

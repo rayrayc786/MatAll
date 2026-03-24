@@ -4,6 +4,7 @@ import { Search, ShoppingCart, User, LayoutDashboard, Truck, LogOut, Package, Cl
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import AISearch from './AISearch';
+import LocationSelector from './LocationSelector';
 import './navbar.css';
 
 const Navbar: React.FC = () => {
@@ -18,6 +19,8 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
+  const isHomePage = location.pathname === '/';
+  const isProductListPage = location.pathname === '/products';
 
   useEffect(() => {
     setSuggestions([]); // Clear on route change
@@ -71,7 +74,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="navbar">
+    <header className={`navbar ${isHomePage ? 'home-navbar' : ''}`}>
       <div className="nav-left">
         <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -79,52 +82,55 @@ const Navbar: React.FC = () => {
         <Link to="/" className="logo">BuildItQuick</Link>
       </div>
       
-      <div className="search-container-main">
-        <form className="search-bar" onSubmit={handleSearch}>
-          <Search size={20} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search Products" 
-            value={searchTerm}
-            onChange={onInputChange}
-          />
-          {isSearching ? <Loader2 size={18} className="animate-spin suggestion-loader" /> : <AISearch />}
-        </form>
+      {!isProductListPage && (
+        <div className="search-container-main">
+          {isHomePage && <div className="mobile-location-header"><LocationSelector /></div>}
+          <form className="search-bar" onSubmit={handleSearch}>
+            <Search size={20} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder='Search "cement"' 
+              value={searchTerm}
+              onChange={onInputChange}
+            />
+            {isSearching ? <Loader2 size={18} className="animate-spin suggestion-loader" /> : <AISearch />}
+          </form>
 
-        {suggestions.length > 0 && (
-          <div className="autocomplete-dropdown">
-            {suggestions.map(item => (
-              <div 
-                key={item._id} 
-                className="suggestion-item" 
-                onClick={() => {
-                  setSuggestions([]);
-                  setSearchTerm('');
-                  navigate(`/products/${item._id}`);
-                }}
-              >
-                <img 
-                  src={getFullImageUrl(item.imageUrl)} 
-                  alt="" 
-                  className="suggestion-img"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
+          {suggestions.length > 0 && (
+            <div className="autocomplete-dropdown">
+              {suggestions.map(item => (
+                <div 
+                  key={item._id} 
+                  className="suggestion-item" 
+                  onClick={() => {
+                    setSuggestions([]);
+                    setSearchTerm('');
+                    navigate(`/products/${item._id}`);
                   }}
-                />
-                <div className="suggestion-info">
-                  <div className="suggestion-name">{item.name}</div>
-                  <div className="suggestion-meta">
-                    {item.brand && `Brand: ${item.brand} | `}
-                    {item.sku && `SKU: ${item.sku}`}
-                    {item.category && ` | ${item.category}`}
+                >
+                  <img 
+                    src={getFullImageUrl(item.imageUrl)} 
+                    alt="" 
+                    className="suggestion-img"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
+                    }}
+                  />
+                  <div className="suggestion-info">
+                    <div className="suggestion-name">{item.name}</div>
+                    <div className="suggestion-meta">
+                      {item.brand && `Brand: ${item.brand} | `}
+                      {item.sku && `SKU: ${item.sku}`}
+                      {item.category && ` | ${item.category}`}
+                    </div>
                   </div>
+                  <div className="suggestion-price">₹{item.price}</div>
                 </div>
-                <div className="suggestion-price">₹{item.price}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className={`nav-actions ${isMenuOpen ? 'open' : ''}`}>
         <Link to="/products" className="nav-link">Materials</Link>

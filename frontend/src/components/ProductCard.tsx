@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Minus, ChevronDown, Heart, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, ChevronDown, Heart, ShoppingCart, Timer, Star } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import toast from 'react-hot-toast';
 
@@ -22,6 +22,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   );
   const [showVariants, setShowVariants] = useState(false);
 
+  // Random ratings for UI consistency with reference
+  const ratingData = useMemo(() => {
+    const rating = (Math.random() * (5 - 3.8) + 3.8).toFixed(1);
+    const count = Math.floor(Math.random() * 50000) + 100;
+    return { rating, count: count.toLocaleString() };
+  }, [product._id]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -38,10 +45,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const currentPrice = selectedVariant ? selectedVariant.price : (product.salePrice || product.price);
   const currentMrp = selectedVariant ? selectedVariant.mrp : (product.mrp || 0);
+  
+  const discount = currentMrp > currentPrice 
+    ? Math.round(((currentMrp - currentPrice) / currentMrp) * 100) 
+    : 0;
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.quick-add-btn') || target.closest('.quantity-control') || target.closest('.variant-selector-container') || target.closest('.fav-btn-overlay')) {
+    if (target.closest('.blinkit-add-action') || target.closest('.blinkit-variant-selector') || target.closest('.fav-icon-btn')) {
       return;
     }
     navigate(`/products/${product._id}`);
@@ -78,93 +89,76 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   return (
-    <div className={`product-card-modern ${showVariants ? 'dropdown-open' : ''}`} onClick={handleCardClick}>
-      <div className="material-img-wrap">
+    <div className="blinkit-list-card" onClick={handleCardClick}>
+      <div className="list-card-image-section">
+        <button 
+          className={`list-fav-btn ${isFavorite ? 'active' : ''}`} 
+          onClick={toggleFavorite}
+        >
+          <Heart size={18} fill={isFavorite ? '#ef4444' : 'none'} strokeWidth={2} />
+        </button>
+        
         <img 
           src={getFullImageUrl(selectedVariant?.image || product.imageUrl)} 
           alt={product.name} 
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
-          }}
+          className="list-product-img"
         />
-        <div className="delivery-badge-mini">{product.deliveryTime || '60 MINS'}</div>
-        <button 
-          className={`fav-btn-overlay ${isFavorite ? 'active' : ''}`} 
-          onClick={toggleFavorite}
-        >
-          <Heart size={18} fill={isFavorite ? '#ef4444' : 'none'} strokeWidth={2.5} />
-        </button>
-      </div>
-      
-      <div className="product-info-modern">
-        <div className="brand-label">{product.brand}</div>
-        <h3 className="product-name-title">
-          {product.name}
-        </h3>
         
-        <div className="variant-selector-container" ref={dropdownRef}>
-          {product.variants?.length > 1 ? (
-            <>
-              <button 
-                className="variant-dropdown-btn" 
-                onClick={(e) => { e.stopPropagation(); setShowVariants(!showVariants); }}
-              >
-                <span>{selectedVariant?.name} — ₹{selectedVariant?.price}</span> 
-                <ChevronDown size={16} />
-              </button>
-              {showVariants && (
-                <div className="variant-menu">
-                  {product.variants.map((v: any) => (
-                    <div 
-                      key={v.sku} 
-                      className={`variant-option ${selectedVariant?.sku === v.sku ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedVariant(v);
-                        setShowVariants(false);
-                      }}
-                    >
-                      <span>{v.name}</span>
-                      <span className="v-price">₹{v.price}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="single-variant-label">
-              {selectedVariant?.name || product.unitLabel || 'Standard'}
-            </div>
-          )}
+        {/* In-stock indicator (green square dot) */}
+        <div className="stock-dot-indicator">
+          <div className="dot"></div>
         </div>
+      </div>
 
-        <div className="card-footer-modern">
-          <div className="price-stack">
-            {currentMrp > currentPrice && (
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: 600 }}>
-                ₹{currentMrp}
-              </span>
-            )}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-              <span className="price">₹{currentPrice}</span>
-              <span className="unit-text">/{product.unitLabel || 'pc'}</span>
-            </div>
+      <div className="list-card-details">
+        <div className="list-variant-row">
+          <div className="list-unit-info">
+            {selectedVariant?.name || product.unitLabel || 'Standard'}
           </div>
           
-          {cartItem ? (
-            <div className="quantity-control active" onClick={e => e.stopPropagation()}>
-              <button onClick={() => addToCart(product, -1, selectedVariant?.name)}><Minus size={14} /></button>
-              <span className="qty-val">{cartItem.quantity}</span>
-              <button onClick={() => addToCart(product, 1, selectedVariant?.name)}><Plus size={14} /></button>
-            </div>
-          ) : (
-            <button 
-              onClick={(e) => { e.stopPropagation(); addToCart(product, 1, selectedVariant?.name); }} 
-              className="quick-add-btn"
-            >
-              <ShoppingCart size={16} /> ADD
-            </button>
-          )}
+          <div className="list-add-container">
+            {cartItem ? (
+              <div className="list-qty-control" onClick={e => e.stopPropagation()}>
+                <button onClick={() => addToCart(product, -1, selectedVariant?.name)}><Minus size={14} /></button>
+                <span className="list-qty-val">{cartItem.quantity}</span>
+                <button onClick={() => addToCart(product, 1, selectedVariant?.name)}><Plus size={14} /></button>
+              </div>
+            ) : (
+              <div className="list-add-wrapper">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); addToCart(product, 1, selectedVariant?.name); }} 
+                  className="list-add-btn"
+                >
+                  ADD
+                </button>
+                {product.variants?.length > 1 && (
+                   <span className="options-tag">{product.variants.length} options</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="list-pricing-section">
+           {currentMrp > currentPrice && <div className="list-mrp">₹{currentMrp}</div>}
+           <div className="list-price-row">
+              <span className="list-price">₹{currentPrice}</span>
+              {discount > 0 && <span className="list-discount">{discount}% OFF on MRP</span>}
+           </div>
+        </div>
+
+        <h3 className="list-product-name">{product.name}</h3>
+        
+        <div className="list-meta-row">
+          <div className="list-rating">
+            {[1,2,3,4,5].map(i => (
+               <Star key={i} size={12} fill={i <= 4 ? "#facc15" : "#e2e8f0"} color={i <= 4 ? "#facc15" : "#e2e8f0"} />
+            ))}
+            <span className="rating-count">({ratingData.count})</span>
+          </div>
+          <div className="list-delivery-time">
+            <Timer size={12} /> {product.deliveryTime || '10 mins'}
+          </div>
         </div>
       </div>
     </div>

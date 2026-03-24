@@ -11,6 +11,45 @@
   gap: 1.5rem;
 }
 
+.mobile-location-header {
+  display: none;
+}
+
+/* Home Navbar specific styles */
+@media (max-width: 850px) {
+  .home-navbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0.5rem 1rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .home-navbar .nav-left {
+    display: none !important;
+  }
+
+  /* Hide the default cart badge on home page because it's now inside LocationSelector */
+  .home-navbar .cart-badge {
+    display: none !important;
+  }
+
+  .home-navbar .mobile-location-header {
+    display: block;
+    width: 100%;
+  }
+
+  .home-navbar .search-container-main {
+    order: 2;
+    max-width: none;
+    width: 100%;
+  }
+
+  .home-navbar .search-bar {
+    background: #f3f4f6;
+    border-radius: 12px;
+  }
+}
+
 .nav-left {
   display: flex;
   align-items: center;

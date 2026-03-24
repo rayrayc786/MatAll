@@ -67,6 +67,23 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+exports.updateProfile = async (req, res) => {
+  try {
+    const { fullName, email, jobsites } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (fullName) user.fullName = fullName;
+    if (email) user.email = email;
+    if (jobsites) user.jobsites = jobsites;
+
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.toggleFavorite = async (req, res) => {
   try {
     const { productId } = req.body;

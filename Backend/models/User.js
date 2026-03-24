@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const JobsiteSchema = new mongoose.Schema({
   name: { type: String, required: true }, // e.g., "Bridge Construction Site A"
+  addressType: { 
+    type: String, 
+    enum: ['Home', 'Office', 'Site', 'Other'], 
+    default: 'Other' 
+  },
   addressText: { type: String, required: true },
   location: {
     type: {
