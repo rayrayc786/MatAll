@@ -1,0 +1,325 @@
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dynamic Banner */
+.login-banner {
+  height: 120px;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.banner-track {
+  display: flex;
+  gap: 2rem;
+  animation: scroll 20s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.banner-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  min-width: 80px;
+}
+
+.banner-img-item {
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.banner-img-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Logo and Tagline */
+.login-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+}
+
+.matall-logo {
+  background-color: #000000;
+  color: #FFEA00;
+  padding: 1rem 2rem;
+  font-size: 2.5rem;
+  font-weight: 900;
+  border-radius: 12px;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.tagline {
+  font-size: 1.1rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.auto-redirect-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 1rem;
+}
+
+.otp-subtitle {
+  text-align: center; 
+  margin-bottom: 2rem; 
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.otp-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.call-link {
+  color: #FFEA00;
+  font-weight: 800;
+  cursor: pointer;
+  background: #000;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+
+/* Legal Modal */
+.legal-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: flex-end;
+  z-index: 2000;
+}
+
+.legal-modal-content {
+  width: 100%;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 2rem;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.legal-modal-content h3 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+}
+
+.legal-modal-body {
+  margin-bottom: 2rem;
+}
+
+.legal-modal-body ul {
+  padding-left: 1.25rem;
+  margin: 1rem 0;
+}
+
+.legal-modal-body li {
+  margin-bottom: 0.5rem;
+  color: #475569;
+}
+
+.btn-close-modal {
+  width: 100%;
+  padding: 1rem;
+  background: #FFEA00;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Login Form */
+.login-form-container {
+  padding: 0 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 450px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 2rem;
+}
+
+.mobile-input-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+.mobile-input-wrapper:focus-within {
+  border-color: #FFEA00;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(255, 234, 0, 0.1);
+}
+
+.prefix {
+  font-weight: 700;
+  color: #1e293b;
+  margin-right: 0.75rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid #cbd5e1;
+}
+
+.mobile-input-wrapper input {
+  border: none;
+  background: transparent;
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 600;
+  outline: none;
+  color: #1e293b;
+}
+
+/* Buttons */
+.login-btn {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+}
+
+.btn-continue {
+  background-color: #FFEA00;
+  color: #000000;
+  box-shadow: 0 4px 6px -1px rgba(255, 234, 0, 0.2);
+}
+
+.btn-continue:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-guest {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.btn-guest:hover {
+  background-color: #1e293b;
+}
+
+/* Legal Links */
+.login-footer {
+  padding: 2rem;
+  text-align: center;
+}
+
+.legal-text {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.legal-link {
+  color: #1e293b;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* OTP Step Specifics */
+.otp-container {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.otp-box {
+  width: 50px;
+  height: 60px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.otp-box:focus {
+  border-color: #FFEA00;
+}
+
+.resend-text {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.resend-link {
+  color: #FFEA00;
+  font-weight: 700;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .matall-logo {
+    font-size: 2rem;
+  }
+}
