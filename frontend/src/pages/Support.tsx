@@ -10,7 +10,6 @@ import {
   FileText,
   ChevronRight,
   ChevronDown,
-  ChevronUp,
   Send,
   Mic
 } from 'lucide-react';

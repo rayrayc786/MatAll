@@ -6,10 +6,9 @@ import {
   Mic, 
   Plus, 
   Camera, 
-  PlayCircle,
-  Search,
-  X
+  PlayCircle
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import './search-filter.css';
 
 const SearchFilter: React.FC = () => {

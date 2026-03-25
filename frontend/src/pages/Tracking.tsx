@@ -1,140 +1,225 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { Phone, User, MapPin, Truck, CheckCircle2, Package, Loader2 } from 'lucide-react';
-import { customerSocket, connectSocket } from '../socket';
-import L from 'leaflet';
-import toast from 'react-hot-toast';
-
-const truckIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
-
-const StatusStep = ({ icon, label, isActive, isCompleted }: { icon: any, label: string, isActive: boolean, isCompleted: boolean }) => (
-  <div className={`status-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
-    <div className="step-icon" style={{ 
-      width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: isCompleted ? '#16a34a' : isActive ? '#2563eb' : '#f1f5f9',
-      color: isCompleted || isActive ? 'white' : '#94a3b8'
-    }}>
-      {isCompleted ? <CheckCircle2 size={20} /> : icon}
-    </div>
-    <div className="step-label">
-      <span style={{ fontWeight: 700, color: isActive || isCompleted ? '#0f172a' : '#94a3b8' }}>{label}</span>
-    </div>
-  </div>
-);
+import { 
+  ArrowLeft, 
+  Home, 
+  Heart, 
+  ChevronRight, 
+  ChevronDown, 
+  MessageCircle, 
+  Star, 
+  HelpCircle,
+  Package
+} from 'lucide-react';
+import { customerSocket } from '../socket';
+import './tracking.css';
 
 const Tracking: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
-  const [vehiclePos] = useState<any>([12.9716, 77.5946]);
   const [loading, setLoading] = useState(true);
+  const [activeAction, setActiveTab] = useState<'none' | 'track' | 'feedback' | 'faqs'>('track');
+  const [rating, setRating] = useState(5);
 
-  const fetchOrder = async () => {
-    try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`);
-      setOrder(data);
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const FAQS = [
+    { q: 'When will I get my order?', a: 'Your order is currently being processed and will be delivered within the estimated timeline shown above.' },
+    { q: 'Can I change my delivery address?', a: 'Address changes are not permitted once the order is confirmed for security reasons.' },
+    { q: 'How do I cancel my order?', a: 'Cancellations are only possible within the first 5 minutes of placing the order.' }
+  ];
 
   useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setOrder(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchOrder();
-    connectSocket(customerSocket);
-    
+
     customerSocket.on('order-status-update', (data: any) => {
       if (data.orderId === id) {
         setOrder((prev: any) => ({ ...prev, status: data.status }));
-        
-        if (data.status === 'vendor-confirmed') {
-          toast.success('Vendor has accepted your order!', { icon: '🏗️', duration: 5000 });
-        } else if (data.status === 'rejected-by-vendor') {
-          toast.error('Vendor has rejected your order. Refund initiated.', { duration: 6000 });
-        } else if (data.status === 'dispatched') {
-          toast.success('Your materials are on the way!');
-        }
       }
     });
 
     return () => {
       customerSocket.off('order-status-update');
-      customerSocket.disconnect();
     };
   }, [id]);
 
-  if (loading) return <div className="content">Locating your shipment...</div>;
+  if (loading) return <div className="loading-box">Checking order status...</div>;
+  if (!order) return <div className="loading-box">Order not found</div>;
 
-  const steps = [
-    { key: 'pending', label: 'Order Placed', icon: <Package size={20} /> },
-    { key: 'vendor-confirmed', label: 'Vendor Accepted', icon: <CheckCircle2 size={20} /> },
-    { key: 'picking', label: 'Picking & Packing', icon: <Loader2 size={20} className="animate-spin" /> },
-    { key: 'dispatched', label: 'In Transit', icon: <Truck size={20} /> },
-    { key: 'delivered', label: 'Delivered', icon: <MapPin size={20} /> },
-  ];
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'Confirmed': return 'Your order is confirmed';
+      case 'Out-for-Delivery': return 'Order is out for delivery';
+      case 'Delivered': return 'Order delivered successfully';
+      default: return 'Processing your order';
+    }
+  };
 
-  const currentStepIdx = steps.findIndex(s => s.key === order.status);
+  const renderTimeline = () => (
+    <div className="tracking-timeline-expanded animate-fade-in">
+      <div className="timeline-item active">
+          <div className="dot"></div>
+          <div className="text">Order Received at {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+      </div>
+      <div className={`timeline-item ${['Confirmed', 'Out-for-Delivery', 'Delivered'].includes(order.status) ? 'active' : ''}`}>
+          <div className="dot"></div>
+          <div className="text">Order Confirmed</div>
+      </div>
+      <div className={`timeline-item ${['Out-for-Delivery', 'Delivered'].includes(order.status) ? 'active' : ''}`}>
+          <div className="dot"></div>
+          <div className="text">Order Dispatched</div>
+      </div>
+      <div className={`timeline-item ${order.status === 'Delivered' ? 'active' : ''}`}>
+          <div className="dot"></div>
+          <div className="text">Order Delivered</div>
+      </div>
+    </div>
+  );
+
+  const renderFeedback = () => (
+    <div className="feedback-section-prd animate-fade-in">
+      <h3 className="feedback-title">Rate this order experience</h3>
+      <div className="star-rating-row">
+        {[1,2,3,4,5].map(s => (
+          <Star 
+            key={s} 
+            size={32} 
+            fill={s <= rating ? "#facc15" : "transparent"} 
+            color={s <= rating ? "#facc15" : "#cbd5e1"}
+            onClick={() => setRating(s)}
+            className="star-icon"
+          />
+        ))}
+      </div>
+      <div className="feedback-form">
+        <textarea placeholder="Feedback to improve (Do not include personal details)"></textarea>
+        <button className="submit-feedback-btn">Submit Review</button>
+      </div>
+      
+      <div className="social-links-prd">
+        <p>Follow us on social</p>
+        <div className="social-icons">
+           <div className="social-circle">IG</div>
+           <div className="social-circle">FB</div>
+           <div className="social-circle">X</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFAQs = () => (
+    <div className="faqs-list-prd animate-fade-in">
+      {FAQS.map((faq, idx) => (
+        <div key={idx} className="faq-item-prd">
+          <div className="faq-q"><strong>{faq.q}</strong></div>
+          <p className="faq-a">{faq.a}</p>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <main className="content tracking-page-modern" style={{ padding: '3rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '2.5rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900 }}>Track Procurement #BID-{id?.slice(-6).toUpperCase()}</h1>
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-          <span style={{ color: '#16a34a', fontWeight: 800 }}>● {order.status.toUpperCase().replace(/-/g, ' ')}</span>
-          <span style={{ color: '#64748b' }}>|</span>
-          <span style={{ color: '#64748b', fontWeight: 600 }}>ETA: 45 Mins</span>
-        </div>
+    <div className="blinkit-tracking-page">
+      <header className="tracking-header-sticky">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={24} />
+        </button>
+        <div className="header-title">Order Status</div>
+        <Link to="/" className="home-btn-link">
+          <Home size={24} />
+        </Link>
       </header>
 
-      <div className="tracking-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '3rem' }}>
-        <section className="map-view card" style={{ padding: 0, overflow: 'hidden', height: '600px' }}>
-          <MapContainer center={[12.9716, 77.5946]} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={vehiclePos} icon={truckIcon}>
-              <Popup>Delivery Vehicle</Popup>
-            </Marker>
-          </MapContainer>
-        </section>
+      <main className="tracking-content">
+        {/* Dynamic Status Display */}
+        <div className="order-confirmation-hero">
+           <div className="conf-icon-box">
+              <Heart size={32} fill="#ef4444" color="#ef4444" />
+           </div>
+           <h2>{getStatusText(order.status)}</h2>
+        </div>
 
-        <aside className="tracking-status-sidebar">
-          <div className="status-card card" style={{ padding: '2rem' }}>
-            <h3>Fulfillment Progress</h3>
-            <div className="status-stepper" style={{ marginTop: '1.5rem', position: 'relative' }}>
-              <div className="stepper-line" style={{ position: 'absolute', left: '19px', top: '20px', bottom: '40px', width: '2px', background: '#e2e8f0', zIndex: 0 }}></div>
-              {steps.map((step, idx) => (
-                <StatusStep 
-                  key={step.key}
-                  icon={step.icon}
-                  label={step.label}
-                  isActive={order.status === step.key}
-                  isCompleted={currentStepIdx > idx || order.status === 'delivered'}
-                />
-              ))}
-            </div>
-          </div>
+        {/* Order Summary Section - PRD Page 48 */}
+        <div className="order-summary-tiles-container">
+           {order.items.map((item: any, idx: number) => (
+              <div key={idx} className="order-item-tile-prd">
+                 <div className="item-img-prd">
+                    <img src={item?.product?.imageUrl} alt="" />
+                 </div>
+                 <div className="item-details-prd">
+                    <h4>{item?.product?.brand} {item?.product?.name}</h4>
+                    <span className="item-qty-prd">Qty: {item?.quantity}</span>
+                    <div className="price-row-prd">
+                       <span className="sale-price-prd">₹{item?.price * item?.quantity}</span>
+                       <span className="mrp-prd">₹{item?.product?.mrp * item?.quantity}</span>
+                    </div>
+                 </div>
+              </div>
+           ))}
+        </div>
 
-          <div className="driver-card card" style={{ marginTop: '1.5rem', padding: '1.5rem' }}>
-            <h4 style={{ margin: '0 0 1rem 0' }}>Logistics Partner</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={24} />
+        {/* Action Buttons - PRD Page 48 */}
+        <div className="tracking-actions-list">
+           <div 
+             className={`action-btn-row-prd ${activeAction === 'track' ? 'active' : ''}`} 
+             onClick={() => setActiveTab(activeAction === 'track' ? 'none' : 'track')}
+           >
+              <div className="action-label-box">
+                 <Package size={20} />
+                 <span>Track order</span>
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 800, margin: 0 }}>{order.driverId ? 'Assigned Driver' : 'Awaiting Driver...'}</p>
-                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Verified Professional</p>
+              <ChevronDown size={20} className={activeAction === 'track' ? 'rotate-180' : ''} />
+           </div>
+           {activeAction === 'track' && renderTimeline()}
+
+           <div className="action-btn-row-prd" onClick={() => navigate('/support')}>
+              <div className="action-label-box">
+                 <MessageCircle size={20} />
+                 <span>Need support</span>
               </div>
-              <button className="icon-btn"><Phone size={18} /></button>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </main>
+              <ChevronRight size={20} />
+           </div>
+
+           <div 
+             className={`action-btn-row-prd ${activeAction === 'feedback' ? 'active' : ''}`}
+             onClick={() => setActiveTab(activeAction === 'feedback' ? 'none' : 'feedback')}
+           >
+              <div className="action-label-box">
+                 <Star size={20} />
+                 <span>Please help us improve</span>
+              </div>
+              <ChevronDown size={20} className={activeAction === 'feedback' ? 'rotate-180' : ''} />
+           </div>
+           {activeAction === 'feedback' && renderFeedback()}
+
+           <div 
+             className={`action-btn-row-prd ${activeAction === 'faqs' ? 'active' : ''}`}
+             onClick={() => setActiveTab(activeAction === 'faqs' ? 'none' : 'faqs')}
+           >
+              <div className="action-label-box">
+                 <HelpCircle size={20} />
+                 <span>FAQs</span>
+              </div>
+              <ChevronDown size={20} className={activeAction === 'faqs' ? 'rotate-180' : ''} />
+           </div>
+           {activeAction === 'faqs' && renderFAQs()}
+        </div>
+      </main>
+    </div>
   );
 };
 

@@ -1,298 +1,346 @@
-import React, { useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { MapPin,  Truck, Banknote, CheckCircle2, ClipboardList, Search, Loader2, Navigation } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Home, 
+  ChevronRight, 
+  Receipt, 
+  FileText, 
+  ChevronDown,
+  Plus,
+  Clock,
+  MapPin,
+  ArrowRight,
+  Mic
+} from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import LoginModal from '../components/LoginModal';
+import './checkout.css';
 
-// Component to handle map clicks
-const LocationPicker = ({ onLocationSelect }: { onLocationSelect: (latlng: any) => void }) => {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng);
-    },
-  });
-  return null;
-};
-
-// Component to fly map to new position
-const ChangeMapView = ({ coords }: { coords: any }) => {
-  const map = useMap();
-  map.flyTo([coords.lat, coords.lng], 15);
-  return null;
-};
+interface Address {
+  _id?: string;
+  name: string;
+  addressText: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  type: 'Home' | 'Work' | 'Site' | 'Other';
+}
 
 const Checkout: React.FC = () => {
-  const { cart, totalAmount, totalWeight, totalVolume, vehicleClass, clearCart } = useCart();
-  const [jobsitePos, setJobsitePos] = useState<any>({ lat: 12.9716, lng: 77.5946 });
-  const [jobsiteAddress, setJobsiteAddress] = useState('Bangalore Construction Site, Block B');
-  const [paymentMethod, setPaymentMethod] = useState('COD');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState<any>(null);
-  
-  // Search states
-  const [,setSearchTerm] = useState('');
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
-  const searchTimeout = useRef<any>(null);
-
+  const { cart, clearCart, totalAmount } = useCart();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'checkout' | 'address-list' | 'location-ask' | 'map-confirm' | 'address-form'>('checkout');
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [isSelf, setIsSelf] = useState(true);
+  const [showPolicy, setShowPolicy] = useState(false);
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const handleLocateMe = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
-      return;
+  const itemsTotal = totalAmount;
+  const mrpTotal = cart.reduce((acc, item) => acc + (item.product.mrp || item.product.price) * item.quantity, 0);
+  const savings = mrpTotal - itemsTotal;
+  const deliveryCharge = itemsTotal > 5000 ? 0 : 150;
+  const handlingCharge = 25;
+  const grandTotal = itemsTotal + deliveryCharge + handlingCharge;
+
+  useEffect(() => {
+    if (user.jobsites) {
+      setAddresses(user.jobsites);
+      if (user.jobsites.length > 0) setSelectedAddress(user.jobsites[0]);
     }
-
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      const newPos = { lat: latitude, lng: longitude };
-      setJobsitePos(newPos);
-      
-      // Reverse geocode to get address name
-      try {
-        const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-        const addr = data.display_name || `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        setJobsiteAddress(addr);
-        setSearchTerm(addr);
-      } catch (err) {
-        console.error('Reverse geocoding failed:', err);
-      } finally {
-        setIsLocating(false);
-      }
-    }, (err) => {
-      console.error(err);
-      toast.error('Failed to get your location. Please check browser permissions.');
-      setIsLocating(false);
-    }, { enableHighAccuracy: true });
-  };
-
-  const searchLocation = async (query: string) => {
-    if (query.length < 3) {
-      setSuggestions([]);
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const { data } = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=in&limit=5`);
-      setSuggestions(data);
-    } catch (err) {
-      console.error('Search failed:', err);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setJobsiteAddress(value);
-    setSearchTerm(value);
-
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => searchLocation(value), 500);
-  };
-
-  const selectSuggestion = (s: any) => {
-    const lat = parseFloat(s.lat);
-    const lon = parseFloat(s.lon);
-    setJobsitePos({ lat, lng: lon });
-    setJobsiteAddress(s.display_name);
-    setSearchTerm(s.display_name);
-    setSuggestions([]);
-  };
+  }, []);
 
   const handlePlaceOrder = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to place your order');
-      setIsLoginModalOpen(true);
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address');
+      setStep('address-list');
       return;
     }
-
+    setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-
+      const token = localStorage.getItem('token');
       const orderData = {
-        userId: user._id,
         items: cart.map(item => ({
-          productId: item.product._id,
-          category: item.product.category, // Pass category for routing
+          product: item.product._id,
           quantity: item.quantity,
-          unitPrice: item.product.price,
-          totalWeight: (item.product.weightPerUnit || 0) * item.quantity,
-          totalVolume: (item.product.volumePerUnit || 0) * item.quantity
+          price: item.product.salePrice || item.product.price,
+          selectedVariant: item.selectedVariant
         })),
-        totalAmount,
-        totalWeight,
-        totalVolume,
-        vehicleClass,
-        paymentMethod,
-        darkStoreId: '65f1a2b3c4d5e6f7a8b9c0d2',
-        deliveryAddress: {
-          name: jobsiteAddress,
-          location: {
-            type: "Point",
-            coordinates: [jobsitePos.lng, jobsitePos.lat]
-          }
-        }
+        totalAmount: grandTotal,
+        shippingAddress: selectedAddress.addressText,
+        paymentMethod: 'COD'
       };
-      
-      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders/checkout`, orderData, {
+
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, orderData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      clearCart();
-      setOrderSuccess(data);
+
       toast.success('Order placed successfully!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to place order. Please try again.');
+      clearCart();
+      navigate(`/tracking/${data._id}`);
+    } catch (err: any) {
+      toast.error('Failed to place order');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (orderSuccess) {
-    return (
-      <main className="content order-success-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
-        <div className="card" style={{ maxWidth: '500px', width: '100%', textAlign: 'center', padding: '3rem' }}>
-          <div style={{ background: '#dcfce7', color: '#16a34a', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
-            <CheckCircle2 size={48} />
-          </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem' }}>Order Confirmed!</h1>
-          <p style={{ color: '#64748b', marginBottom: '2.5rem' }}>Your order #BID-{orderSuccess._id.slice(-6).toUpperCase()} has been placed.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button onClick={() => navigate(`/tracking/${orderSuccess._id}`)} className="btn-primary-lg" style={{ width: '100%', justifyContent: 'center' }}>
-              Track Live Delivery <Truck size={20} />
-            </button>
-            <Link to="/orders" className="secondary-btn" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }}>
-              <ClipboardList size={20} /> Manage My Orders
-            </Link>
+  const renderAddressSelection = () => (
+    <div className="address-modal-overlay" onClick={() => setStep('checkout')}>
+      <div className="address-modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Select delivery location</h3>
+          <button className="close-btn" onClick={() => setStep('checkout')}>×</button>
+        </div>
+        
+        <div className="address-list-container">
+          <button className="add-new-addr-btn" onClick={() => setStep('location-ask')}>
+            <Plus size={18} /> Add New Address
+          </button>
+          
+          {addresses.map((addr, idx) => (
+            <div 
+              key={idx} 
+              className={`address-item-card ${selectedAddress === addr ? 'selected' : ''}`}
+              onClick={() => { setSelectedAddress(addr); setStep('checkout'); }}
+            >
+              <div className="addr-main">
+                <div className="addr-title-row">
+                  <strong>{addr.name}</strong>
+                  <span className="addr-tag">{addr.type}</span>
+                </div>
+                <p className="addr-text-full">{addr.addressText}</p>
+              </div>
+              <div className="addr-radio">
+                <div className={`radio-outer ${selectedAddress === addr ? 'checked' : ''}`}>
+                  <div className="radio-inner"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderLocationAsk = () => (
+    <div className="address-modal-overlay">
+      <div className="address-modal-content prompt-modal">
+        <h3 className="prompt-title">Where shall we deliver?</h3>
+        <p className="prompt-sub">This helps us deliver your order quick.</p>
+        
+        <button className="prompt-btn btn-yellow" onClick={() => setStep('map-confirm')}>
+          I am not at the delivery location
+        </button>
+        <button className="prompt-btn btn-black" onClick={() => setStep('map-confirm')}>
+          I am at the delivery location
+        </button>
+        
+        <button className="modal-back-link" onClick={() => setStep('address-list')}>Back</button>
+      </div>
+    </div>
+  );
+
+  const renderMapConfirm = () => (
+    <div className="map-confirm-screen">
+      <header className="map-header">
+        <button onClick={() => setStep('location-ask')}><ArrowLeft /></button>
+        <span>Confirm location on map</span>
+        <Home onClick={() => navigate('/')} />
+      </header>
+      <div className="map-placeholder">
+        {/* Mock Map View */}
+        <div className="mock-map">
+           <MapPin size={48} color="#ef4444" fill="#ef4444" />
+           <div className="map-pulse"></div>
+        </div>
+      </div>
+      <div className="map-bottom-sheet">
+        <div className="detected-addr-box">
+          <MapPin size={20} className="yellow-pin" />
+          <div className="detected-text">
+            <strong>D Block</strong>
+            <p>Sector 44, Gurgaon</p>
           </div>
         </div>
-      </main>
-    );
-  }
+        <button className="btn-input-complete" onClick={() => setStep('address-form')}>
+          Add complete address
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderAddressForm = () => (
+    <div className="address-form-screen">
+      <header className="map-header">
+        <button onClick={() => setStep('map-confirm')}><ArrowLeft /></button>
+        <span>Add more address details</span>
+        <Home onClick={() => navigate('/')} />
+      </header>
+      
+      <div className="form-scroll-content">
+        <div className="who-ordering-section">
+          <p>Who are you ordering for?</p>
+          <div className="toggle-row">
+            <button className={`toggle-btn ${isSelf ? 'active' : ''}`} onClick={() => setIsSelf(true)}>Yourself</button>
+            <button className={`toggle-btn ${!isSelf ? 'active' : ''}`} onClick={() => setIsSelf(false)}>Someone else</button>
+          </div>
+        </div>
+
+        <div className="input-group">
+          <input type="text" placeholder="Address Nickname (e.g. Home, Site 1)" />
+          <input type="text" placeholder="House/ Unit Number" />
+          <input type="text" placeholder="Floor" />
+          <input type="text" placeholder="Tower/ Block (optional)" />
+          <input type="text" placeholder="Nearby Landmark" />
+          <div className="textarea-wrapper">
+            <textarea placeholder="Any directions. Help rider reach your location"></textarea>
+            <Mic size={18} className="mic-icon-small" />
+          </div>
+          {!isSelf && (
+            <>
+              <input type="text" placeholder="Enter Recipient's name" />
+              <input type="tel" placeholder="Recipient's mobile number" />
+            </>
+          )}
+        </div>
+
+        <button className="btn-input-complete" onClick={() => setStep('checkout')}>
+          Save & Continue
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <main className="content checkout-page">
-      <h1>Jobsite Delivery & Payment</h1>
-      
-      <div className="checkout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
-        <section className="map-section card">
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0 }}><MapPin size={20} /> Pin Exact Delivery Location</h3>
-          </header>
-          
-          <div className="address-input-box" style={{ marginBottom: '1.5rem', position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Delivery Address / Site Name</label>
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input 
-                type="text" 
-                value={jobsiteAddress} 
-                onChange={handleSearchChange}
-                placeholder="Search for jobsite or enter manually..."
-                style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '12px', border: '2px solid #f1f5f9', fontSize: '1rem', fontWeight: 600 }}
-              />
-              {(isSearching || isLocating) && <Loader2 size={18} className="animate-spin" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />}
-            </div>
+    <div className="blinkit-checkout-page">
+      <header className="checkout-header-sticky">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={24} />
+        </button>
+        <div className="header-title">Checkout</div>
+        <Link to="/" className="home-btn-link">
+          <Home size={24} />
+        </Link>
+      </header>
 
-            {suggestions.length > 0 && (
-              <div className="search-suggestions card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 2000, marginTop: '5px', padding: '0.5rem' }}>
-                {suggestions.map((s, idx) => (
-                  <div key={idx} onClick={() => selectSuggestion(s)} style={{ padding: '10px', cursor: 'pointer', borderBottom: idx < suggestions.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '0.9rem' }}>
-                    <MapPin size={14} style={{ display: 'inline', marginRight: '8px' }} /> {s.display_name}
-                  </div>
-                ))}
-              </div>
-            )}
+      <main className="checkout-content">
+        {/* Top Bar - PRD Page 34 */}
+        <div className="checkout-owner-card">
+          <div className="owner-info">
+            <span>Order for <strong>{user.fullName || 'Guest'}</strong></span>
+            <span className="owner-phone">{user.phoneNumber}</span>
           </div>
+          <button className="change-btn" onClick={() => setStep('address-list')}>Change</button>
+        </div>
 
-          <div className="map-wrapper" style={{ position: 'relative' }}>
-            <MapContainer center={[jobsitePos.lat, jobsitePos.lng]} zoom={13} style={{ height: '350px', width: '100%', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={jobsitePos} />
-              <LocationPicker onLocationSelect={(latlng) => setJobsitePos(latlng)} />
-              <ChangeMapView coords={jobsitePos} />
-            </MapContainer>
-            
-            <button 
-              onClick={handleLocateMe}
-              title="Locate Me"
-              style={{ 
-                position: 'absolute', bottom: '20px', right: '20px', zIndex: 1000,
-                background: 'white', border: 'none', padding: '10px', borderRadius: '50%',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)'
-              }}
-            >
-              {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
-            </button>
+        {/* Delivery Time & Shipment - PRD Page 34 */}
+        <div className="delivery-slot-card">
+           <div className="slot-header">
+              <Clock size={18} />
+              <span>Delivery in 60 Mins</span>
+           </div>
+           <p className="slot-sub">Shipment of {cart.length} Item{cart.length > 1 ? 's' : ''}</p>
+        </div>
+
+        {/* Bill Details - PRD Page 34 */}
+        <section className="checkout-section">
+          <div className="section-title-row">
+            <Receipt size={18} />
+            <h3>Bill Details</h3>
+          </div>
+          <div className="bill-card">
+            <div className="bill-row">
+              <div className="bill-label">
+                <FileText size={14} /> Items Total
+              </div>
+              <span className="bill-val">₹{itemsTotal}</span>
+            </div>
+            <div className="bill-row">
+              <span className="bill-label">Delivery Charge</span>
+              <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge}` : <span className="free">FREE</span>}</span>
+            </div>
+            <div className="bill-row">
+              <span className="bill-label">Handling Charge</span>
+              <span className="bill-val">₹{handlingCharge}</span>
+            </div>
+            <div className="bill-row grand-total-row">
+              <span className="total-label">Grand Total</span>
+              <span className="total-val">₹{grandTotal}</span>
+            </div>
           </div>
         </section>
 
-        <section className="payment-logistics-section">
-          <div className="payment-options card">
-            <h3>Select Payment Method</h3>
-            <div className="payment-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '1.5rem' }}>
-              <div className={`payment-method-card ${paymentMethod === 'COD' ? 'active' : ''}`} 
-                   onClick={() => setPaymentMethod('COD')}
-                   style={{ border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #e2e8f0', padding: '1.25rem 1rem', borderRadius: '16px', textAlign: 'center', cursor: 'pointer', background: paymentMethod === 'COD' ? '#fffbeb' : 'white' }}>
-                <Banknote size={24} style={{ marginBottom: '8px', color: paymentMethod === 'COD' ? 'var(--primary-dark)' : '#94a3b8' }} />
-                <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>COD</div>
-              </div>
-              <div className={`payment-method-card ${paymentMethod === 'upi' ? 'active' : ''}`} 
-                   onClick={() => setPaymentMethod('upi')}
-                   style={{ border: paymentMethod === 'upi' ? '2px solid var(--primary)' : '1px solid #e2e8f0', padding: '1.25rem 1rem', borderRadius: '16px', textAlign: 'center', cursor: 'pointer', background: paymentMethod === 'upi' ? '#fffbeb' : 'white' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>⚡</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>UPI</div>
-              </div>
-            </div>
+        {/* Total Savings Tile - PRD Page 34 */}
+        {savings > 0 && (
+          <div className="savings-tile">
+            <span className="savings-text">Your total savings</span>
+            <span className="savings-amount">₹{savings}</span>
           </div>
+        )}
 
-          <div className="logistics-card card" style={{ marginTop: '1.5rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem' }}>Logistics Summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '10px', color: '#2563eb' }}><MapPin size={20} /></div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Delivery To</span>
-                  <p style={{ fontWeight: 800, margin: '2px 0 0 0', fontSize: '0.9rem', lineHeight: 1.4 }}>{jobsiteAddress}</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>
-                    {jobsitePos.lat.toFixed(4)}, {jobsitePos.lng.toFixed(4)}
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ background: '#fffbeb', padding: '10px', borderRadius: '10px', color: '#d97706' }}><Truck size={20} /></div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Vehicle Fleet</span>
-                  <p style={{ fontWeight: 800, margin: '2px 0 0 0', fontSize: '0.9rem' }}>{vehicleClass}</p>
-                </div>
-              </div>
-            </div>
+        {/* GSTIN Entry - PRD Page 34 */}
+        <div className="gstin-entry-row">
+           <div className="gst-icon-box">%</div>
+           <div className="gst-text">
+              <span>Add GSTIN</span>
+              <p>Claim input tax credit</p>
+           </div>
+           <ChevronRight size={20} />
+        </div>
+
+        {/* Cancellation Policy - PRD Page 34 */}
+        <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
+          <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>
+             <span>Cancellation policy</span>
+             <ChevronDown size={18} className={showPolicy ? 'rotate-180' : ''} />
           </div>
+          {showPolicy && (
+            <div className="policy-content-details">
+              <p>Orders cannot be cancelled once dispatched. For manufacturing defects, items must be inspected at the time of delivery.</p>
+            </div>
+          )}
+        </div>
 
-          <button 
-            className="btn-primary-lg" 
-            onClick={handlePlaceOrder}
-            style={{ width: '100%', marginTop: '2rem', padding: '1.25rem', justifyContent: 'center' }}
-          >
-            Confirm Order - ₹{totalAmount.toFixed(2)}
-          </button>
-        </section>
-      </div>
+        {/* Order Delivery Address Tab - PRD Page 34 */}
+        <div className="checkout-address-card" onClick={() => setStep('address-list')}>
+           <div className="addr-icon"><MapPin size={20} /></div>
+           <div className="addr-details">
+              <span className="addr-label">Delivering to <strong>{selectedAddress?.name || 'Select Address'}</strong></span>
+              <p className="addr-text">{selectedAddress?.addressText || 'Click to select or add new address'}</p>
+           </div>
+           <button className="change-btn">Change</button>
+        </div>
+      </main>
 
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
-        onSuccess={() => handlePlaceOrder()} 
-      />
-    </main>
+      <footer className="checkout-footer-fixed">
+        <div className="payment-preview" onClick={() => navigate('/payment')}>
+           <div className="pay-method-pill">
+              <span className="dot"></span>
+              <span>PAY USING <strong>UPI</strong></span>
+           </div>
+           <ChevronDown size={16} />
+        </div>
+        <button className="final-place-btn" onClick={handlePlaceOrder} disabled={loading}>
+           <div className="btn-price">
+              <span className="val">₹{grandTotal}</span>
+              <span className="lbl">TOTAL</span>
+           </div>
+           <div className="btn-text">
+              {loading ? 'Processing...' : 'Place Order'} <ArrowRight size={20} />
+           </div>
+        </button>
+      </footer>
+
+      {/* Address Overlay Flow */}
+      {step === 'address-list' && renderAddressSelection()}
+      {step === 'location-ask' && renderLocationAsk()}
+      {step === 'map-confirm' && renderMapConfirm()}
+      {step === 'address-form' && renderAddressForm()}
+    </div>
   );
 };
 

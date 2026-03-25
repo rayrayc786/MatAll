@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ChevronDown, User, Loader2, ShoppingCart } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
+import { MapPin, ChevronDown, User, Loader2, Mic } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LocationModal from './LocationModal';
 import './locationSelector.css';
@@ -11,12 +10,11 @@ const LocationSelector: React.FC = () => {
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   
-  const { cart } = useCart();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // If logged in and has jobsites, use the first one
     if (isLoggedIn && user.jobsites && user.jobsites.length > 0) {
       setAddress(user.jobsites[0].addressText);
     } else {
@@ -43,7 +41,6 @@ const LocationSelector: React.FC = () => {
           const fullAddress = conciseAddr ? `${conciseAddr}, ${addressData.city || addressData.state || ''}` : data.display_name;
           setAddress(fullAddress);
 
-          // If logged in, update backend (only if they don't have any jobsites yet)
           if (isLoggedIn && (!user.jobsites || user.jobsites.length === 0)) {
             updateBackendAddress(fullAddress, [longitude, latitude]);
           }
@@ -96,29 +93,28 @@ const LocationSelector: React.FC = () => {
 
   return (
     <>
-      <div className="location-selector">
-        <div className="location-info" onClick={() => setIsModalOpen(true)}>
-          <div className="delivery-time">Delivery in 60 minutes</div>
-          <div className="address-container">
-            <span className="address-text" title={address}>
-              {address}
-            </span>
-            {isLocating ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <ChevronDown size={14} className="chevron" />
-            )}
+      <div className="landing-header">
+        <div className="header-top-row">
+          <div className="location-section-landing" onClick={() => setIsModalOpen(true)}>
+            <MapPin size={20} className="pin-icon-landing" />
+            <div className="location-text-landing">
+              <span className="addr-landing">{address}</span>
+              {isLocating ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+            </div>
           </div>
+          
+          <Link to={isLoggedIn ? "/profile" : "/login"} className="profile-btn-circle">
+            <User size={22} />
+          </Link>
         </div>
 
-        <div className="header-actions-mobile">
-          <Link to="/cart" className="action-icon-mobile">
-            <ShoppingCart size={24} />
-            {cart.length > 0 && <span className="mobile-cart-badge">{cart.length}</span>}
-          </Link>
-          <Link to={isLoggedIn ? "/profile" : "/login"} className="action-icon-mobile profile-bg">
-            <User size={24} />
-          </Link>
+        <div className="search-bar-landing" onClick={() => navigate('/search')}>
+          <input type="text" placeholder="Search your product" readOnly />
+          <Mic size={20} className="mic-icon-landing" />
         </div>
       </div>
 

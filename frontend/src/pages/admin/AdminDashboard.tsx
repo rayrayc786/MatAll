@@ -1,133 +1,189 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertTriangle, Package, Truck, Clock } from 'lucide-react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, BarChart, Bar, Cell 
-} from 'recharts';
+  Package, 
+  Users, 
+  Layers, 
+  Clock
+} from 'lucide-react';
+import './admin-dashboard.css';
 
 const AdminDashboard: React.FC = () => {
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>('dashboard');
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/stats`);
-        setStats(data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch admin stats:', err);
-      }
-    };
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
-  }, []);
+  const TILES = [
+    { label: 'Active Orders', val: '20', icon: <Package size={24} />, color: '#FFEA00' },
+    { label: 'Active Suppliers', val: '10', icon: <Users size={24} />, color: '#f8fafc' },
+    { label: 'Active Categories', val: '3', icon: <Layers size={24} />, color: '#f8fafc' },
+    { label: 'Avg Delivery Time', val: '25 mins', icon: <Clock size={24} />, color: '#f8fafc' },
+  ];
 
-  if (loading) return <div className="content">Loading dashboard metrics...</div>;
+  const REPORT_GROUPS = [
+    {
+      title: 'Financial Reports',
+      items: [
+        { name: 'Payout Reconciliation', sub: 'Reports to reconcile all receivables and payouts.' },
+        { name: 'Revenue Recognition', sub: 'Access revenue reports, track trends with charts.' }
+      ]
+    },
+    {
+      title: 'Analytics',
+      items: [
+        { name: 'Billing Analytics', sub: 'Monitor key categories and invoice metrics like MRR.' },
+        { name: 'Revenue Analytics', sub: 'Reports about revenue generated per category.' }
+      ]
+    },
+    {
+      title: 'Support',
+      items: [
+        { name: 'Ticket Analytics', sub: 'Report on the support tickets or queries raised.' },
+        { name: 'Feedback and Rating', sub: 'Report on what kind of queries, buying trends.' }
+      ]
+    }
+  ];
+
+  const ACTION_ITEMS = [
+    { name: 'User Management', sub: 'Enter basic details of a user, send SMS/WhatsApp.', color: '#FFEA00' },
+    { name: 'Order Management', sub: 'Access revenue reports, track trends with charts.', color: '#f1f5f9' },
+    { name: 'Category Management', sub: 'Monitor key categories and invoice metrics.', color: '#f1f5f9' },
+    { name: 'Review Support Tickets', sub: 'Reports about revenue generated per category.', color: '#f1f5f9' }
+  ];
+
+  const renderDashboard = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      {/* Metric Tiles */}
+      <div className="admin-tiles-grid">
+         {TILES.map((tile, idx) => (
+           <div key={idx} className="admin-metric-tile" style={{ backgroundColor: tile.color }}>
+              <div className="tile-top">
+                 <span className="tile-val">{tile.val}</span>
+                 {tile.icon}
+              </div>
+              <span className="tile-label">{tile.label}</span>
+           </div>
+         ))}
+      </div>
+
+      {/* Revenue Section */}
+      <section className="admin-section-box">
+         <div className="section-header">
+            <h3>Revenue</h3>
+            <div className="filter-pills-row">
+               <button className="pill">Monthly</button>
+               <button className="pill active">Weekly</button>
+               <button className="pill">Today</button>
+            </div>
+         </div>
+         <div className="revenue-graph-placeholder">
+            <div className="mock-graph">
+               <div className="graph-line"></div>
+               <div className="graph-points">
+                  <div className="point p1"></div>
+                  <div className="point p2 active"></div>
+               </div>
+            </div>
+            <div className="graph-legend">
+               <span>S</span> <span>M</span> <span>T</span> <span>W</span> <span>T</span> <span>F</span> <span>S</span>
+            </div>
+         </div>
+      </section>
+
+      {/* B2B Orders Section */}
+      <section className="admin-section-box">
+         <div className="section-header">
+            <h3>B2B Orders</h3>
+            <div className="filter-pills-row">
+               <button className="pill">Monthly</button>
+               <button className="pill active">Weekly</button>
+               <button className="pill">Today</button>
+            </div>
+         </div>
+         
+         <div className="b2b-orders-list">
+            {[
+              { name: 'Sierra Interior', date: 'Mar 22, 2025', amount: '+ 10,000', code: 'SI' },
+              { name: 'Benchmarks', date: 'Mar 26, 2025', amount: '+ 1,00,000', code: 'BM' },
+              { name: 'Sierra Interior', date: 'Mar 22, 2025', amount: '+ 2,00,000', code: 'SI' },
+            ].map((order, idx) => (
+              <div key={idx} className="b2b-order-row">
+                 <div className="b2b-avatar">{order.code}</div>
+                 <div className="b2b-info">
+                    <h4>{order.name}</h4>
+                    <span>{order.date}</span>
+                 </div>
+                 <div className="b2b-amount">{order.amount}</div>
+                 <button className="new-order-btn">New Order</button>
+              </div>
+            ))}
+         </div>
+      </section>
+    </div>
+  );
+
+  const renderReports = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="reports-screen-container">
+        {REPORT_GROUPS.map((group, idx) => (
+          <div key={idx} className="report-group-box">
+            <h3 className="group-title-label">{group.title}</h3>
+            <div className="report-items-list">
+              {group.items.map((item, iIdx) => (
+                <div key={iIdx} className={`report-card-item ${iIdx === 0 && idx === 0 ? 'yellow' : ''}`}>
+                  <h4>{item.name}</h4>
+                  <p>{item.sub}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderActions = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="actions-screen-container">
+        {ACTION_ITEMS.map((item, idx) => (
+          <div key={idx} className="action-category-card" style={{ backgroundColor: item.color }}>
+            <h4>{item.name}</h4>
+            <p>{item.sub}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
-    <main className="admin-content">
-      <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
-        <div className="title-group">
-          <h1>Operational Dashboard</h1>
-          <p>Real-time logistics & GMV analytics</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.85rem', background: 'white', padding: '0.5rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-          <Clock size={16} /> Last updated: {new Date().toLocaleTimeString()}
-        </div>
+    <div className="matall-admin-dashboard">
+      <header className="admin-dash-header">
+        <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+        <div className="admin-profile-dot"></div>
       </header>
 
-      <div className="stats-grid">
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.5rem' }}>
-          <div className="stat-icon" style={{ background: '#dcfce7', color: '#16a34a', padding: '1rem', borderRadius: '12px' }}><TrendingUp size={24} /></div>
-          <div className="stat-info">
-            <span className="label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Gross Merch Value</span>
-            <div className="value" style={{ fontSize: '1.5rem', fontWeight: 800 }}>₹{stats.gmv.toLocaleString()}</div>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.5rem' }}>
-          <div className="stat-icon" style={{ background: '#dbeafe', color: '#2563eb', padding: '1rem', borderRadius: '12px' }}><Truck size={24} /></div>
-          <div className="stat-info">
-            <span className="label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Deliveries</span>
-            <div className="value" style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.activeDeliveries}</div>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.5rem', borderLeft: '4px solid #ef4444' }}>
-          <div className="stat-icon" style={{ background: '#fef2f2', color: '#ef4444', padding: '1rem', borderRadius: '12px' }}><AlertTriangle size={24} /></div>
-          <div className="stat-info">
-            <span className="label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>SLA Breach Alerts</span>
-            <div className="value" style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.lateOrders} Late</div>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.5rem' }}>
-          <div className="stat-icon" style={{ background: '#f1f5f9', color: '#475569', padding: '1rem', borderRadius: '12px' }}><Package size={24} /></div>
-          <div className="stat-info">
-            <span className="label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Orders Today</span>
-            <div className="value" style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.totalOrders}</div>
-          </div>
-        </div>
-      </div>
+      {activeTab === 'dashboard' && renderDashboard()}
+      {activeTab === 'reports' && renderReports()}
+      {activeTab === 'actions' && renderActions()}
 
-      <div className="charts-container" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}><TrendingUp size={20} color="#2563eb" /> GMV Velocity (Hourly)</h3>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.hourlyGMV}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Line type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={4} dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}><BarChart3 size={20} color="#8b5cf6" /> Order Status Dist.</h3>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: 'Pending', value: 12 },
-                { name: 'Picking', value: 5 },
-                { name: 'Dispatched', value: 8 },
-                { name: 'Delivered', value: 45 }
-              ]}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis hide />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  { [0,1,2,3].map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? '#f59e0b' : index === 1 ? '#3b82f6' : index === 2 ? '#8b5cf6' : '#10b981'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: '1.5rem', border: 'none', background: '#f1f5f9' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={20} color="#ef4444" /> Live Logistics Alerts</h3>
-        <div className="incident-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {stats.lateOrders > 0 && (
-            <div style={{ background: 'white', padding: '1rem 1.25rem', borderRadius: '12px', borderLeft: '4px solid #ef4444', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ background: '#fef2f2', color: '#ef4444', padding: '0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>CRITICAL</div>
-              <p style={{ margin: 0, fontSize: '0.9rem' }}><strong>SLA RISK</strong>: {stats.lateOrders} orders are exceeding 1-hour delivery threshold.</p>
-              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b' }}>JUST NOW</span>
-            </div>
-          )}
-          <div style={{ background: 'white', padding: '1rem 1.25rem', borderRadius: '12px', borderLeft: '4px solid #3b82f6', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ background: '#eff6ff', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>INFO</div>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>Fleet capacity at 85%. Recommend activating surge drivers.</p>
-            <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b' }}>5 MIN AGO</span>
-          </div>
-        </div>
-      </div>
-    </main>
+      <footer className="admin-footer-nav">
+         <button 
+           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+           onClick={() => setActiveTab('dashboard')}
+         >
+           Dashboard
+         </button>
+         <button 
+           className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
+           onClick={() => setActiveTab('reports')}
+         >
+           Reports
+         </button>
+         <button 
+           className={`nav-item ${activeTab === 'actions' ? 'active' : ''}`}
+           onClick={() => setActiveTab('actions')}
+         >
+           Actions
+         </button>
+      </footer>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Navigation, Plus, Share2, MoreVertical, X, Home, Briefcase, Map as MapIcon, Loader2, ChevronRight, Phone } from 'lucide-react';
+import { Search, MapPin, Navigation, X, Home, Map as MapIcon, Loader2, ChevronRight, Mic, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import './locationModal.css';
@@ -8,22 +8,28 @@ interface LocationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectAddress: (address: string, coords: [number, number]) => void;
-  currentAddress: string;
+  currentAddress?: string;
 }
 
-const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelectAddress, currentAddress }) => {
+const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelectAddress }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1); // 1: Decision, 2: Search/Selection
   const [showAddForm, setShowAddForm] = useState(false);
   
-  // New address form states
+  // New address form states (Slide 40)
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrType, setNewAddrType] = useState<'Home' | 'Office' | 'Site' | 'Other'>('Home');
   const [newAddrText, setNewAddrText] = useState('');
   const [newAddrPhone, setNewAddrPhone] = useState('');
   const [newAddrCoords, setNewAddrCoords] = useState<[number, number] | null>(null);
+  const [houseNumber, setHouseNumber] = useState('');
+  const [floor, setFloor] = useState('');
+  const [tower, setTower] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [directions, setDirections] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
@@ -32,6 +38,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      setStep(1);
+      setShowAddForm(false);
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -83,6 +91,18 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     });
   };
 
+  const selectSuggestion = (item: any) => {
+    if (showAddForm) {
+        setNewAddrText(item.display_name);
+        setNewAddrCoords([parseFloat(item.lon), parseFloat(item.lat)]);
+        setSuggestions([]);
+        setSearchTerm(item.display_name);
+    } else {
+        onSelectAddress(item.display_name, [parseFloat(item.lon), parseFloat(item.lat)]);
+        onClose();
+    }
+  };
+
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddrCoords || !newAddrText) {
@@ -92,10 +112,12 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
 
     try {
         const token = localStorage.getItem('token');
+        const formattedAddress = `${houseNumber ? houseNumber + ', ' : ''}${floor ? 'Floor ' + floor + ', ' : ''}${tower ? tower + ', ' : ''}${newAddrText}${landmark ? ' (Near ' + landmark + ')' : ''}`;
+        
         const newJobsite = {
             name: newAddrName || newAddrType,
             addressType: newAddrType,
-            addressText: newAddrText,
+            addressText: formattedAddress,
             contactPhone: newAddrPhone,
             location: {
                 type: 'Point',
@@ -113,23 +135,10 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
 
         localStorage.setItem('user', JSON.stringify(data));
         toast.success('Address added successfully');
-        setShowAddForm(false);
-        onSelectAddress(newAddrText, newAddrCoords);
+        onSelectAddress(formattedAddress, newAddrCoords);
         onClose();
     } catch (err) {
         toast.error('Failed to add address');
-    }
-  };
-
-  const selectSuggestion = (item: any) => {
-    if (showAddForm) {
-        setNewAddrText(item.display_name);
-        setNewAddrCoords([parseFloat(item.lon), parseFloat(item.lat)]);
-        setSuggestions([]);
-        setSearchTerm(item.display_name);
-    } else {
-        onSelectAddress(item.display_name, [parseFloat(item.lon), parseFloat(item.lat)]);
-        onClose();
     }
   };
 
@@ -144,90 +153,120 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
         </div>
 
         <div className="location-modal-body">
-          <div className="search-wrapper">
-            <Search size={20} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search for area, street name..." 
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-            {isSearching && <Loader2 size={18} className="animate-spin" />}
-          </div>
-
-          {suggestions.length > 0 && (
-            <div className="search-suggestions">
-              {suggestions.map((item, idx) => (
-                <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
-                  <MapPin size={18} className="pin-icon" />
-                  <div className="suggestion-details">
-                    <p className="main-text">{item.display_name.split(',')[0]}</p>
-                    <p className="sub-text">{item.display_name}</p>
-                  </div>
-                  <ChevronRight size={18} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!searchTerm && !showAddForm && (
-            <>
-              <div className="action-item" onClick={handleUseCurrentLocation}>
-                <div className="icon-circle current-loc"><Navigation size={20} /></div>
-                <div className="action-details">
-                  <h3>Use current location</h3>
-                  <p>{isLocating ? 'Locating...' : currentAddress}</p>
-                </div>
-                <ChevronRight size={18} />
+          {!showAddForm ? (
+            step === 1 ? (
+              <div className="location-decision-step">
+                 <div className="decision-illustration">
+                    <h2>Where shall we deliver?</h2>
+                    <p>This helps us deliver your order quick.</p>
+                 </div>
+                 <div className="decision-actions">
+                    <button className="decision-btn yellow" onClick={() => setStep(2)}>
+                       I am not at the delivery location
+                    </button>
+                    <button className="decision-btn black" onClick={handleUseCurrentLocation} disabled={isLocating}>
+                       {isLocating ? 'Locating...' : 'I am at the delivery location'}
+                    </button>
+                 </div>
+                 <div className="existing-addresses-preview">
+                    <div className="section-header-mini">
+                       <h4>Your saved addresses</h4>
+                       <button className="add-new-mini" onClick={() => setShowAddForm(true)}>+ Add New</button>
+                    </div>
+                    {isLoggedIn && user.jobsites?.length > 0 ? (
+                      user.jobsites.map((site: any, idx: number) => (
+                        <div key={idx} className="saved-addr-mini" onClick={() => onSelectAddress(site.addressText, site.location.coordinates)}>
+                          <div className="addr-icon-small">
+                             {site.addressType === 'Home' ? <Home size={16}/> : <MapIcon size={16}/>}
+                          </div>
+                          <div className="addr-text-mini">
+                             <strong>{site.name}</strong>
+                             <p>{site.addressText}</p>
+                          </div>
+                          <ChevronRight size={16} />
+                        </div>
+                      ))
+                    ) : <p className="no-addr-text">No saved addresses</p>}
+                 </div>
               </div>
-
-              <div className="action-item" onClick={() => setShowAddForm(true)}>
-                <div className="icon-circle add-new"><Plus size={20} /></div>
-                <div className="action-details">
-                  <h3>Add new address</h3>
+            ) : (
+              <div className="location-search-step">
+                <div className="search-wrapper">
+                  <Search size={20} className="search-icon" />
+                  <input 
+                    type="text" 
+                    placeholder="Search for area, street name..." 
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    autoFocus
+                  />
+                  {isSearching && <Loader2 size={18} className="animate-spin" />}
                 </div>
-                <ChevronRight size={18} />
-              </div>
-
-              <div className="saved-addresses-section">
-                <h4>Your saved addresses</h4>
-                {isLoggedIn && user.jobsites && user.jobsites.length > 0 ? (
-                  user.jobsites.map((site: any, idx: number) => (
-                    <div key={idx} className="saved-address-card" onClick={() => onSelectAddress(site.addressText, site.location.coordinates)}>
-                      <div className="addr-icon">
-                        {site.addressType === 'Home' && <Home size={20} />}
-                        {site.addressType === 'Office' && <Briefcase size={20} />}
-                        {site.addressType === 'Site' && <MapIcon size={20} />}
-                        {site.addressType === 'Other' && <MapPin size={20} />}
+                {suggestions.length > 0 ? (
+                  <div className="search-suggestions">
+                    {suggestions.map((item, idx) => (
+                      <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
+                        <MapPin size={18} className="pin-icon" />
+                        <div className="suggestion-details">
+                          <p className="main-text">{item.display_name.split(',')[0]}</p>
+                          <p className="sub-text">{item.display_name}</p>
+                        </div>
+                        <ChevronRight size={18} />
                       </div>
-                      <div className="addr-info">
-                        <div className="addr-header">
-                          <span className="addr-name">{site.name}</span>
-                        </div>
-                        <p className="addr-text">{site.addressText}</p>
-                        {site.contactPhone && (
-                          <p className="addr-phone"><Phone size={12} /> {site.contactPhone}</p>
-                        )}
-                        <div className="addr-actions">
-                          <button onClick={(e) => { e.stopPropagation(); }}><MoreVertical size={16} /></button>
-                          <button onClick={(e) => { e.stopPropagation(); }}><Share2 size={16} /></button>
-                        </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-search-state" onClick={handleUseCurrentLocation}>
+                     <Navigation size={20} />
+                     <span>Use current location</span>
+                  </div>
+                )}
+                <button className="back-link-btn" onClick={() => setStep(1)}>Back</button>
+              </div>
+            )
+          ) : (
+            <div className="add-address-form">
+              <div className="form-header-row">
+                 <button className="back-btn" onClick={() => setShowAddForm(false)}>
+                    <ArrowLeft size={20} />
+                 </button>
+                 <h3>Add more address details</h3>
+              </div>
+              
+              <div className="search-wrapper">
+                <Search size={20} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search city, area or street..." 
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                />
+              </div>
+
+              {suggestions.length > 0 && (
+                <div className="search-suggestions mini">
+                  {suggestions.map((item, idx) => (
+                    <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
+                      <div className="suggestion-details">
+                        <p className="main-text">{item.display_name.split(',')[0]}</p>
+                        <p className="sub-text">{item.display_name}</p>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="no-addresses">No saved addresses found.</p>
-                )}
-              </div>
-            </>
-          )}
+                  ))}
+                </div>
+              )}
 
-          {showAddForm && (
-            <div className="add-address-form">
-              <button className="back-btn" onClick={() => setShowAddForm(false)}>Back to selection</button>
               <form onSubmit={handleAddAddress}>
                 <div className="form-group">
-                  <label>Address Label (e.g. Home, Office)</label>
+                  <label>Who are you ordering for?</label>
+                  <div className="ordering-for-toggle">
+                     <button type="button" className="toggle-btn active">Yourself</button>
+                     <button type="button" className="toggle-btn">Someone else</button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Address Nickname</label>
                   <div className="type-chips">
                     {['Home', 'Office', 'Site', 'Other'].map(type => (
                       <button 
@@ -241,21 +280,47 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                     ))}
                   </div>
                 </div>
-                <div className="form-group">
-                    <label>Receiver's Name (Optional)</label>
-                    <input type="text" value={newAddrName} onChange={e => setNewAddrName(e.target.value)} placeholder="e.g. Rahul Arora" />
+
+                <div className="form-grid-2col">
+                   <div className="form-group">
+                       <label>House/ Unit Number</label>
+                       <input type="text" value={houseNumber} onChange={e => setHouseNumber(e.target.value)} placeholder="e.g. 402" />
+                   </div>
+                   <div className="form-group">
+                       <label>Floor</label>
+                       <input type="text" value={floor} onChange={e => setFloor(e.target.value)} placeholder="e.g. 4th" />
+                   </div>
                 </div>
+
                 <div className="form-group">
-                    <label>Phone Number</label>
-                    <input type="text" value={newAddrPhone} onChange={e => setNewAddrPhone(e.target.value)} placeholder="For delivery updates" />
+                    <label>Tower/ Block (optional)</label>
+                    <input type="text" value={tower} onChange={e => setTower(e.target.value)} placeholder="e.g. Block B" />
                 </div>
+
                 <div className="form-group">
-                    <label>Address</label>
-                    <div className="address-display">
-                        {newAddrText || "Select address using search above"}
+                    <label>Nearby Landmark</label>
+                    <input type="text" value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="e.g. Near Petrol Pump" />
+                </div>
+
+                <div className="form-group directions-group">
+                    <label>Directions for rider</label>
+                    <div className="input-with-mic">
+                       <input type="text" value={directions} onChange={e => setDirections(e.target.value)} placeholder="e.g. Yellow gate" />
+                       <Mic size={18} />
                     </div>
                 </div>
-                <button type="submit" className="save-btn" disabled={!newAddrCoords}>Save and Select</button>
+
+                <div className="form-group">
+                    <label>Recipient's name</label>
+                    <input type="text" value={newAddrName} onChange={e => setNewAddrName(e.target.value)} placeholder="e.g. Rahul Arora" />
+                </div>
+
+                <div className="form-group">
+                    <label>Recipient's mobile number</label>
+                    <input type="text" value={newAddrPhone} onChange={e => setNewAddrPhone(e.target.value)} placeholder="9876543210" />
+                </div>
+
+                <button type="submit" className="save-btn" disabled={!newAddrCoords}>Add complete address</button>
               </form>
             </div>
           )}

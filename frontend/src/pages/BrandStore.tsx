@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   Home, 
   Share2, 
-  ChevronRight,
   ShoppingCart
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -16,7 +15,7 @@ const BrandStore: React.FC = () => {
   const { brandName } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { cart } = useCart();
+  const { cart, totalAmount } = useCart();
   const [products, setProducts] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +23,7 @@ const BrandStore: React.FC = () => {
   const params = new URLSearchParams(location.search);
   const activeSub = params.get('subCategory');
 
-  const cartTotal = cart.reduce((acc, item) => acc + (item.product.salePrice || item.product.price) * item.quantity, 0);
+  const cartTotal = totalAmount;
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {

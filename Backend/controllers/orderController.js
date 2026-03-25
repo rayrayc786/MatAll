@@ -12,7 +12,12 @@ exports.getAllOrders = async (req, res) => {
 
 exports.checkout = async (req, res) => {
   try {
-    const orderData = req.body;
+    const orderData = {
+      ...req.body,
+      userId: req.user.id
+    };
+
+    console.log('Processing Order Data:', orderData);
     const order = await OrderService.createOrder(orderData);
 
     const io = req.app.get('socketio');

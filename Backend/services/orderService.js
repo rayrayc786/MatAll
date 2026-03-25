@@ -1,22 +1,39 @@
 const Order = require('../models/Order');
+const DarkStore = require('../models/DarkStore');
 
 const calculateOrderTotals = (items) => {
   let totalWeight = 0;
   let totalVolume = 0;
   let totalAmount = 0;
   
-  items.forEach(item => {
-    totalWeight += (item.totalWeight || 0);
-    totalVolume += (item.totalVolume || 0);
-    totalAmount += (item.unitPrice * item.quantity);
+  const mappedItems = items.map(item => {
+    const unitPrice = item.unitPrice || item.price || 0;
+    const productId = item.productId || item.product;
+    const quantity = item.quantity || 1;
+    const weight = item.totalWeight || 0;
+    const volume = item.totalVolume || 0;
+
+    totalWeight += weight;
+    totalVolume += volume;
+    totalAmount += (unitPrice * quantity);
+
+    return {
+      productId,
+      quantity,
+      unitPrice,
+      totalWeight: weight,
+      totalVolume: volume,
+      category: item.category || 'General'
+    };
   });
 
-  const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Example discount logic
+  const totalQty = mappedItems.reduce((sum, item) => sum + item.quantity, 0);
   if (totalQty > 10) {
     totalAmount *= 0.9;
   }
 
-  return { totalAmount, totalWeight, totalVolume };
+  return { totalAmount, totalWeight, totalVolume, mappedItems };
 };
 
 const determineVehicleClass = (weight) => {
@@ -27,14 +44,37 @@ const determineVehicleClass = (weight) => {
 };
 
 const createOrder = async (orderData) => {
-  const totals = calculateOrderTotals(orderData.items);
-  const vehicleClass = determineVehicleClass(totals.totalWeight);
+  const { totalAmount, totalWeight, totalVolume, mappedItems } = calculateOrderTotals(orderData.items);
+  const vehicleClass = determineVehicleClass(totalWeight);
+
+  // Auto-fetch darkStoreId if missing
+  let darkStoreId = orderData.darkStoreId;
+  if (!darkStoreId) {
+    const defaultStore = await DarkStore.findOne();
+    if (defaultStore) {
+      darkStoreId = defaultStore._id;
+    } else {
+      throw new Error('No DarkStore available to fulfill the order');
+    }
+  }
 
   const newOrder = new Order({
     ...orderData,
-    ...totals,
+    userId: orderData.userId,
+    items: mappedItems,
+    totalAmount,
+    totalWeight,
+    totalVolume,
     vehicleClass,
-    status: 'pending'
+    darkStoreId,
+    status: 'pending',
+    deliveryAddress: {
+      name: orderData.shippingAddress || 'Home',
+      location: {
+        type: 'Point',
+        coordinates: [76.7179, 30.7046] // Default Punjab for mock
+      }
+    }
   });
 
   return await newOrder.save();
