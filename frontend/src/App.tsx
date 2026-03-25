@@ -1,7 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
 import { Toaster } from 'react-hot-toast';
+import { Menu } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// User Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import ProductList from './pages/ProductList';
@@ -10,9 +14,16 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Tracking from './pages/Tracking';
 import VendorStore from './pages/VendorStore';
+import BrandStore from './pages/BrandStore';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
+import SearchFilter from './pages/SearchFilter';
+import SubCategoryPage from './pages/SubCategoryPage';
+import Support from './pages/Support';
+import PaymentMethod from './pages/PaymentMethod';
+
+// Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import SKUManager from './pages/admin/SKUManager';
 import VendorManager from './pages/admin/VendorManager';
@@ -25,19 +36,19 @@ import DeliveryTimeManager from './pages/admin/DeliveryTimeManager';
 import PickingQueue from './pages/admin/PickingQueue';
 import FleetManager from './pages/admin/FleetManager';
 import InvoicingReports from './pages/admin/InvoicingReports';
+
+// Driver Pages
 import DriverDashboard from './pages/driver/DriverDashboard';
 import TaskVerification from './pages/driver/TaskVerification';
 import DeliveryNavigation from './pages/driver/DeliveryNavigation';
 import ProofOfDelivery from './pages/driver/ProofOfDelivery';
+
+// Other
 import VendorDashboard from './pages/VendorDashboard';
 import Navbar from './components/Navbar';
 import AdminSidebar from './components/admin/AdminSidebar';
 import { customerSocket, vendorSocket, connectSocket } from './socket';
-import toast from 'react-hot-toast';
 import './App.css';
-
-import { useState } from 'react';
-import { Menu } from 'lucide-react';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -108,17 +119,24 @@ const App: React.FC = () => {
           <SocketManager />
           <Navbar />
           <Routes>
+            {/* Prioritize specific routes */}
+            <Route path="/search" element={<SearchFilter />} />
+            
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/products" element={<ProductList />} />
+            <Route path="/category/:id" element={<SubCategoryPage />} />
+            <Route path="/brand/:brandName" element={<BrandStore />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/payment" element={<PaymentMethod />} />
             <Route path="/tracking/:id" element={<Tracking />} />
             <Route path="/vendor/:id" element={<VendorStore />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/favorites" element={<Favorites />} />
+            <Route path="/support" element={<Support />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>

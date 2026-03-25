@@ -1,13 +1,30 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Trash2, Plus, Minus, Truck, ArrowRight, Package, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Home, 
+  Plus, 
+  Minus, 
+  ShoppingCart, 
+  MapPin, 
+  ChevronRight, 
+  ChevronUp,
+  ArrowRight,
+  Clock
+} from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import './cart.css';
 
 const Cart: React.FC = () => {
-  const { cart, removeFromCart, totalAmount, totalWeight, vehicleClass, addToCart } = useCart();
+  const { cart, addToCart, totalAmount } = useCart();
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const cartTotal = totalAmount;
+  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const getFullImageUrl = (url?: string) => {
-    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
+    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
     if (url.startsWith('http')) return url;
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
     const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -15,130 +32,120 @@ const Cart: React.FC = () => {
     return `${cleanBase}${cleanUrl}`;
   };
 
-  if (cart.length === 0) {
-    return (
-      <main className="content empty-cart-container">
-        <div className="empty-cart-card">
-          <div className="empty-icon-wrap">
-            <Package size={64} color="#94a3b8" />
-          </div>
-          <h2>Your jobsite cart is empty</h2>
-          <p>You haven't added any industrial materials to your procurement list yet.</p>
-          <Link to="/products" className="btn-primary-lg">Browse Materials <ArrowRight size={20} /></Link>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="content cart-page-modern">
-      <header className="cart-header">
-        <h1>Procurement Cart</h1>
-        <div className="cart-meta">
-          <span className="items-count">{cart.length} Industrial Items</span>
-          <span className="divider">|</span>
-          <span className="project-tag">Project: standard_delivery_01</span>
-        </div>
+    <div className="blinkit-cart-page">
+      <header className="cart-header-sticky">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={24} />
+        </button>
+        <div className="header-title">Cart</div>
+        <Link to="/" className="home-btn-link">
+          <Home size={24} />
+        </Link>
       </header>
-      
-      <div className="cart-grid-modern">
-        <div className="cart-items-section">
-          {cart.map((item) => (
-            <div key={item.product._id + (item.selectedVariant || '')} className="cart-item-card-modern">
-              <div className="item-img">
-                <img 
-                  src={getFullImageUrl(item.product.imageUrl)} 
-                  alt={item.product.name} 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=200';
-                  }}
-                />
-              </div>
-              <div className="item-details">
-                <div className="item-main">
-                  <h3>{item.product.name}</h3>
-                  <div className="item-tags">
-                    <span className="tag-sku">SKU: {item.product.sku}</span>
-                    {item.selectedVariant && <span className="tag-variant">{item.selectedVariant}</span>}
-                  </div>
-                </div>
-                <div className="item-procurement">
-                  <div className="quantity-modern">
-                    <button onClick={() => addToCart(item.product, -1, item.selectedVariant)} disabled={item.quantity <= 1}><Minus size={14} /></button>
-                    <input type="number" value={item.quantity} readOnly />
-                    <button onClick={() => addToCart(item.product, 1, item.selectedVariant)}><Plus size={14} /></button>
-                  </div>
-                  <button className="btn-remove-text" onClick={() => removeFromCart(item.product._id)}>
-                    <Trash2 size={14} /> Remove
-                  </button>
-                </div>
-              </div>
-              <div className="item-financials">
-                <div className="unit-price">₹{item.product.price.toFixed(2)} / unit</div>
-                <div className="total-price">₹{(item.product.price * item.quantity).toFixed(2)}</div>
-                <div className="total-weight">{(item.product.weightPerUnit * item.quantity).toLocaleString()} kg</div>
-              </div>
-            </div>
-          ))}
-          
-          <div className="cart-bundles-modern card">
-            <div className="bundle-header">
-              <ShieldCheck size={20} color="#16a34a" />
-              <h3>Optimization Suggestions</h3>
-            </div>
-            <div className="suggestion-item">
-              <p>Add <strong>10 tons of M-Sand</strong> to your order to unlock <strong>12% bulk discount</strong> on Cement.</p>
-              <button className="btn-secondary-sm">Add Now</button>
-            </div>
+
+      <main className="cart-content">
+        {/* Order Owner Details */}
+        <div className="cart-owner-card">
+          <div className="owner-info">
+            <span>Order for <strong>{user.fullName || 'Guest'}</strong></span>
+            <span className="owner-phone">{user.phoneNumber || '+91 XXXXXXXXXX'}</span>
           </div>
+          <button className="change-btn" onClick={() => navigate('/profile')}>Change</button>
         </div>
 
-        <aside className="cart-sidebar-sticky">
-          <div className="summary-card-modern card">
-            <h3>Order Summary</h3>
-            <div className="summary-rows">
-              <div className="s-row">
-                <span>Items Subtotal</span>
-                <span>₹{totalAmount.toFixed(2)}</span>
-              </div>
-              <div className="s-row">
-                <span>Logistics Weight</span>
-                <span>{totalWeight.toLocaleString()} kg</span>
-              </div>
-              <div className="s-row">
-                <span>Tax (GST 18%)</span>
-                <span>₹{(totalAmount * 0.18).toFixed(2)}</span>
-              </div>
-              
-              <div className="vehicle-assignment">
-                <div className="v-icon-wrap"><Truck size={20} /></div>
-                <div className="v-info">
-                  <span className="v-label">Assigned Vehicle</span>
-                  <span className="v-value">{vehicleClass}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="summary-total-box">
-              <div className="total-main">
-                <span>Grand Total</span>
-                <span className="total-amount">₹{(totalAmount * 1.18).toFixed(2)}</span>
-              </div>
-              <p className="savings-msg">You are saving ₹142.00 on this order</p>
-            </div>
-
-            <Link to="/checkout" className="btn-checkout-primary">
-              Proceed to Secure Checkout <ArrowRight size={20} />
-            </Link>
-            
-            <div className="trust-badges">
-              <div className="t-badge"><ShieldCheck size={14} /> Quality Assured</div>
-              <div className="t-badge"><Truck size={14} /> On-time Delivery</div>
-            </div>
+        {cart.length === 0 ? (
+          <div className="empty-cart-state">
+            <ShoppingCart size={64} color="#e2e8f0" />
+            <p>Your cart is empty</p>
+            <Link to="/products" className="browse-btn">Browse Materials</Link>
           </div>
-        </aside>
-      </div>
-    </main>
+        ) : (
+          <>
+            {/* Shipment details */}
+            <div className="shipment-info-card">
+              <div className="shipment-header">
+                <Clock size={18} />
+                <span>Delivery in 60 Mins</span>
+              </div>
+              <p className="shipment-sub">Shipment of {cartCount} Item{cartCount > 1 ? 's' : ''}</p>
+              
+              <div className="cart-items-horizontal-scroll">
+                {cart.map((item, idx) => (
+                  <div key={idx} className="cart-item-tile">
+                    <div className="item-img-box-prd">
+                      <img src={getFullImageUrl(item.product.imageUrl)} alt={item.product.name} />
+                    </div>
+                    <div className="item-details-prd">
+                      <h4>{item.product.brand} {item.product.name}</h4>
+                      <span className="item-unit-prd">{item.selectedVariant || item.product.unitLabel || 'Standard'}</span>
+                      <div className="item-price-info-prd">
+                        <span className="item-price-prd">₹{(item.product.salePrice || item.product.price) * item.quantity}</span>
+                        {item.product.mrp > (item.product.salePrice || item.product.price) && (
+                          <span className="item-mrp-prd">₹{item.product.mrp * item.quantity}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="item-qty-selector-prd">
+                      <button onClick={() => addToCart(item.product, -1, item.selectedVariant)}><Minus size={14} /></button>
+                      <span>{item.quantity}</span>
+                      <button onClick={() => addToCart(item.product, 1, item.selectedVariant)}><Plus size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* You might also need - PRD Page 32 */}
+            <section className="upsell-section-prd">
+              <h3>You might also need</h3>
+              <div className="upsell-scroll-prd">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className="upsell-card-prd">
+                    <div className="upsell-img-prd">
+                       <img src="https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=150" alt="" />
+                    </div>
+                    <div className="upsell-info-prd">
+                       <p className="upsell-name-prd">Glue Stick 1kg</p>
+                       <span className="upsell-price-prd">₹120</span>
+                       <button className="add-small-btn-prd">Add</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Delivery Address Tab */}
+            <div className="address-tab-row" onClick={() => navigate('/checkout')}>
+              <div className="addr-icon-box"><MapPin size={20} /></div>
+              <div className="addr-text-box">
+                <span className="addr-label">Delivering to <strong>Home</strong></span>
+                <p className="addr-preview">Plot XY, Random Road, Sector XX...</p>
+              </div>
+              <ChevronRight size={20} />
+            </div>
+          </>
+        )}
+      </main>
+
+      {cart.length > 0 && (
+        <footer className="cart-footer-fixed">
+          <div className="payment-method-toggle">
+            <span>PAY USING <strong>UPI</strong></span>
+            <ChevronUp size={16} />
+          </div>
+          <button className="place-order-btn" onClick={() => navigate('/checkout')}>
+            <div className="btn-price-col">
+              <span className="btn-total">₹{cartTotal}</span>
+              <span className="btn-label">Order Total</span>
+            </div>
+            <div className="btn-action-col">
+              Place Order <ArrowRight size={20} />
+            </div>
+          </button>
+        </footer>
+      )}
+    </div>
   );
 };
 

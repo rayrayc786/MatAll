@@ -6,6 +6,12 @@ interface Product {
   sku: string;
   category?: string;
   subCategory?: string;
+  brand?: string;
+  size?: string;
+  productCode?: string;
+  mrp: number;
+  salePrice?: number;
+  deliveryTime?: string;
   unitType: 'individual' | 'weight-based' | 'pack' | 'bundle';
   unitLabel: string;
   csiMasterFormat: string;
@@ -13,6 +19,10 @@ interface Product {
   volumePerUnit: number;
   imageUrl?: string;
   price: number;
+  subVariants?: {
+    title: string;
+    value: string;
+  }[];
   variants?: {
     name: string;
     price: number;

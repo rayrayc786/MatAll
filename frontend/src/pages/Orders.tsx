@@ -1,129 +1,99 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Package, CheckCircle2, Clock, ChevronRight, MapPin, XCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Home, 
+  ChevronRight, 
+  Star, 
+  RotateCcw
+} from 'lucide-react';
+import './orders.css';
 
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'in-progress' | 'completed' | 'cancelled'>('in-progress');
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/orders/my-orders`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        setOrders(data.filter((o: any) => o.userId === user._id));
-        setLoading(false);
+        setOrders(data);
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchOrders();
-  }, [navigate]);
-
-  const filterOrders = () => {
-    if (activeTab === 'completed') {
-      return orders.filter(o => o.status === 'delivered');
-    } else if (activeTab === 'cancelled') {
-      return orders.filter(o => o.status === 'cancelled' || o.status === 'rejected-by-vendor');
-    } else {
-      return orders.filter(o => !['delivered', 'cancelled', 'rejected-by-vendor'].includes(o.status));
-    }
-  };
-
-  if (loading) return <div className="content">Loading your orders...</div>;
-
-  const filteredOrders = filterOrders();
+  }, []);
 
   return (
-    <main className="content orders-page" style={{ maxWidth: '1000px', margin: '0 auto', padding: '3rem 2rem' }}>
-      <header style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900 }}>My Procurement Orders</h1>
-        <p style={{ color: '#64748b' }}>Track and manage your industrial material deliveries</p>
+    <div className="blinkit-orders-page">
+      <header className="orders-header-sticky">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={24} />
+        </button>
+        <div className="header-title">Order History</div>
+        <Link to="/" className="home-btn-link">
+          <Home size={24} />
+        </Link>
       </header>
 
-      <div className="orders-tabs" style={{ display: 'flex', gap: '2rem', borderBottom: '2px solid #f1f5f9', marginBottom: '2.5rem' }}>
-        <button 
-          onClick={() => setActiveTab('in-progress')}
-          style={{ padding: '1rem 0', border: 'none', background: 'none', fontWeight: 800, color: activeTab === 'in-progress' ? 'var(--primary-dark)' : '#94a3b8', borderBottom: activeTab === 'in-progress' ? '3px solid var(--primary)' : '3px solid transparent', cursor: 'pointer', fontSize: '1rem' }}
-        >
-          In Progress ({orders.filter(o => !['delivered', 'cancelled', 'rejected-by-vendor'].includes(o.status)).length})
-        </button>
-        <button 
-          onClick={() => setActiveTab('completed')}
-          style={{ padding: '1rem 0', border: 'none', background: 'none', fontWeight: 800, color: activeTab === 'completed' ? 'var(--primary-dark)' : '#94a3b8', borderBottom: activeTab === 'completed' ? '3px solid var(--primary)' : '3px solid transparent', cursor: 'pointer', fontSize: '1rem' }}
-        >
-          Completed ({orders.filter(o => o.status === 'delivered').length})
-        </button>
-        <button 
-          onClick={() => setActiveTab('cancelled')}
-          style={{ padding: '1rem 0', border: 'none', background: 'none', fontWeight: 800, color: activeTab === 'cancelled' ? 'var(--primary-dark)' : '#94a3b8', borderBottom: activeTab === 'cancelled' ? '3px solid var(--primary)' : '3px solid transparent', cursor: 'pointer', fontSize: '1rem' }}
-        >
-          Cancelled ({orders.filter(o => o.status === 'cancelled' || o.status === 'rejected-by-vendor').length})
-        </button>
-      </div>
+      <main className="orders-content">
+        {loading ? (
+          <div className="loading-box">Fetching your history...</div>
+        ) : orders.length === 0 ? (
+          <div className="empty-orders-state">
+            <RotateCcw size={64} color="#e2e8f0" />
+            <p>No orders placed yet</p>
+            <Link to="/products" className="browse-btn">Start Shopping</Link>
+          </div>
+        ) : (
+          <div className="orders-list-vertical">
+            {orders.map((order) => (
+              <div key={order._id} className="order-history-card">
+                <div className="card-top-summary" onClick={() => navigate(`/tracking/${order._id}`)}>
+                   <div className="summary-text-col">
+                      <span className="savings-msg">Savings of ₹{(Math.random() * 200).toFixed(0)}</span>
+                      <p className="delivery-status-msg">
+                        {order.status === 'Delivered' ? `Delivered in 45 mins` : order.status}
+                      </p>
+                      <span className="order-meta-info">
+                        ₹{order.totalAmount} • {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })} • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                   </div>
+                   <ChevronRight size={20} color="#94a3b8" />
+                </div>
 
-      {filteredOrders.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
-          {activeTab === 'in-progress' ? <Loader2 size={48} className="animate-spin" /> : activeTab === 'completed' ? <CheckCircle2 size={48} /> : <XCircle size={48} />}
-          <h3 style={{ marginTop: '1.5rem' }}>No {activeTab.replace('-', ' ')} orders</h3>
-          <p style={{ color: '#64748b', marginBottom: '2rem' }}>Orders matching this status will appear here.</p>
-          {activeTab === 'in-progress' && <button onClick={() => navigate('/products')} className="btn-primary-lg" style={{ margin: '0 auto' }}>Browse Materials</button>}
-        </div>
-      ) : (
-        <div className="orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {filteredOrders.map(order => (
-            <div key={order._id} className="order-card-user card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                <div style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '12px' }}>
-                  <Package size={24} color="#475569" />
+                <div className="order-items-preview">
+                   {order.items.slice(0, 3).map((item: any, i: number) => (
+                     <div key={i} className="mini-item-thumb">
+                        <img src={item.product.imageUrl} alt="" />
+                     </div>
+                   ))}
+                   {order.items.length > 3 && <span className="extra-items-count">+{order.items.length - 3} more</span>}
                 </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h3 style={{ margin: 0 }}>#BID-{order._id.slice(-6).toUpperCase()}</h3>
-                    <span className={`status-badge-user ${order.status}`} style={{
-                      fontSize: '0.7rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px',
-                      background: order.status === 'delivered' ? '#dcfce7' : (order.status === 'cancelled' || order.status === 'rejected-by-vendor') ? '#fef2f2' : '#eff6ff',
-                      color: order.status === 'delivered' ? '#16a34a' : (order.status === 'cancelled' || order.status === 'rejected-by-vendor') ? '#ef4444' : '#2563eb'
-                    }}>
-                      {order.status.replace(/-/g, ' ').toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: '8px', color: '#64748b', fontSize: '0.9rem', display: 'flex', gap: '1.5rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {new Date(order.createdAt).toLocaleDateString()}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {order.deliveryAddress?.name}</span>
-                  </div>
+
+                <div className="card-action-btns">
+                   <button className="order-action-btn reorder">
+                      <RotateCcw size={16} /> Reorder
+                   </button>
+                   <div className="btn-divider"></div>
+                   <button className="order-action-btn rate">
+                      <Star size={16} /> Rate
+                   </button>
                 </div>
               </div>
-              
-              <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: '1.1rem' }}>₹{order.totalAmount.toFixed(2)}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{order.items.length} items | {order.totalWeight}kg</div>
-                </div>
-                <button 
-                  onClick={() => navigate(`/tracking/${order._id}`)}
-                  className="icon-btn" 
-                  style={{ background: '#0f172a', color: 'white', border: 'none', width: '40px', height: '40px', borderRadius: '10px' }}
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </main>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 };
 

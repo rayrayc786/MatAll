@@ -63,33 +63,33 @@ const groupProductsByVariants = (products) => {
     const key = `${cleanBrand}-${baseName}`;
     
     if (!groupedMap.has(key)) {
-  const groupHeader = { ...p };
-  groupHeader.variants = [];
-
-  groupedMap.set(key, groupHeader);
-}
+      const groupHeader = { ...p };
+      // Keep existing variants if any, otherwise initialize empty array
+      groupHeader.variants = p.variants && p.variants.length > 0 ? [...p.variants] : [];
+      groupedMap.set(key, groupHeader);
+    }
     
     const group = groupedMap.get(key);
     
     // Variant Label: Use the specific part after '|', or the Size field, or the first SubVariant
     let variantName = '';
 
-const nameParts = (p.name || '').toString().split('|');
+    const nameParts = (p.name || '').toString().split('|');
 
-if (nameParts.length > 1) {
-  variantName = nameParts[1].trim();
-} else if (p.subVariants?.length > 0) {
-  variantName = p.subVariants.map(sv => sv.value).join(' / ');
-} else if (p.size && p.size !== 'Material' && p.size !== 'Standard') {
-  variantName = p.size;
-} else {
-  variantName = p.sku;
-}
+    if (nameParts.length > 1) {
+      variantName = nameParts[1].trim();
+    } else if (p.subVariants?.length > 0) {
+      variantName = p.subVariants.map(sv => sv.value).join(' / ');
+    } else if (p.size && p.size !== 'Material' && p.size !== 'Standard') {
+      variantName = p.size;
+    } else {
+      variantName = p.sku;
+    }
     
     if (!variantName) variantName = p.sku || 'Standard';
 
-    // Ensure this specific SKU is added as a variant
-    const exists = group.variants.some(v => v.sku === p.sku);
+    // If variants were dynamically grouped (not pre-defined in DB), add current SKU if not present
+    const exists = group.variants.some(v => v.sku === p.sku || v.name === variantName);
     if (!exists) {
       group.variants.push({
         name: variantName,
