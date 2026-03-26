@@ -40,7 +40,13 @@ const SubCategoryPage: React.FC = () => {
         });
 
         setSubCategories(subData);
-        setQuickLinks(['Plywood', 'Hardware', 'Laminate', 'Tools', 'Electrical']);
+        setQuickLinks([
+          { name: 'Hinges', link: '/products?category=22&subCategory=Hinges' },
+          { name: 'Channels', link: '/products?category=22&subCategory=Channels' },
+          { name: 'Adhesives', link: '/products?category=22&subCategory=Adhesives' },
+          { name: 'Laminate', link: '/category/03' },
+          { name: 'Tools', link: '/products?category=tools' }
+        ]);
       } catch (err) {
         console.error(err);
       } finally {
@@ -68,10 +74,10 @@ const SubCategoryPage: React.FC = () => {
 
         <div className="quick-links-carousel">
           <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
-            <span className="ql-label">Quick Links</span>
+            <span className="ql-label">Similar Products</span>
             <div className="ql-track">
-              {quickLinks.map((link, idx) => (
-                <div key={idx} className="ql-item">{link}</div>
+              {quickLinks.map((item: any, idx) => (
+                <Link key={idx} to={item.link} className="ql-item">{item.name}</Link>
               ))}
             </div>
           </div>

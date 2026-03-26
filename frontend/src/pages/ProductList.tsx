@@ -14,7 +14,12 @@ import './product-list.css';
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [quickLinks] = useState<string[]>(['Modular Hardware', 'Windows & Doors', 'Tools', 'Combos']);
+  const [similarProducts] = useState<any[]>([
+    { name: 'Hinges', link: '/products?category=22&subCategory=Hinges' },
+    { name: 'Channels', link: '/products?category=22&subCategory=Channels' },
+    { name: 'Adhesives', link: '/products?category=22&subCategory=Adhesives' },
+    { name: 'Tools', link: '/products?category=tools' }
+  ]);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,10 +62,10 @@ const ProductList: React.FC = () => {
 
         <div className="quick-links-carousel">
           <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
-            <span className="ql-label">Quick Links</span>
+            <span className="ql-label">Similar Products</span>
             <div className="ql-track">
-              {quickLinks.map((link, idx) => (
-                <div key={idx} className="ql-item">{link}</div>
+              {similarProducts.map((item, idx) => (
+                <Link key={idx} to={item.link} className="ql-item">{item.name}</Link>
               ))}
             </div>
           </div>

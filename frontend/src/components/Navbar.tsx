@@ -121,12 +121,12 @@ const Navbar: React.FC = () => {
           {!hasCustomHeader && (
             <div className="navbar-sub-header">
               <div className="main-content-responsive sub-header-content">
-                <span className="quick-links-label">Quick Links</span>
+                <span className="quick-links-label">Shop by Category</span>
                 <div className="quick-links-list">
                   <Link to="/category/03" className="quick-link-pill">Plywood</Link>
                   <Link to="/category/22" className="quick-link-pill">Hardware</Link>
                   <Link to="/category/03" className="quick-link-pill">Laminate</Link>
-                  <Link to="/tools" className="quick-link-pill">Tools</Link>
+                  <Link to="/products?category=tools" className="quick-link-pill">Tools</Link>
                   <Link to="/category/04" className="quick-link-pill">Electrical</Link>
                 </div>
               </div>
