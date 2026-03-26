@@ -8,12 +8,12 @@ import axios from 'axios';
 import ProductCard from '../components/ProductCard';
 
 const ENRICHED_CATEGORIES = [
-  { id: '03', name: 'Wooden', brands: 12, from: 105, img: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400' },
-  { id: '04', name: 'Electrical', brands: 8, from: 45, img: 'https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=400' },
-  { id: '22', name: 'Hardware', brands: 15, from: 15, img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=400' },
-  { id: '06', name: 'Paint & POP', brands: 6, from: 250, img: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=400' },
-  { id: 'tiles', name: 'Tiles', brands: 10, from: 35, img: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?auto=format&fit=crop&q=80&w=400' },
-  { id: 'tools', name: 'Tools', brands: 20, from: 99, img: 'https://images.unsplash.com/photo-1530124560676-4ce54490356c?auto=format&fit=crop&q=80&w=400' },
+  { id: '03', name: 'Wooden & Boards', brands: 12, from: 105, img: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400', desc: 'Premium Plywood, Boards & Laminates' },
+  { id: '04', name: 'Electricals', brands: 8, from: 45, img: 'https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=400', desc: 'Wires, Switches & Lighting' },
+  { id: '22', name: 'Hardware', brands: 15, from: 15, img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=400', desc: 'Hinges, Locks & Modular Fittings' },
+  { id: '06', name: 'Paint & POP', brands: 6, from: 250, img: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=400', desc: 'Wall Paints, POP & Tools' },
+  { id: 'tiles', name: 'Tiles & Flooring', brands: 10, from: 35, img: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?auto=format&fit=crop&q=80&w=400', desc: 'Floor Tiles & Wall Cladding' },
+  { id: 'tools', name: 'Power Tools', brands: 20, from: 99, img: 'https://images.unsplash.com/photo-1530124560676-4ce54490356c?auto=format&fit=crop&q=80&w=400', desc: 'Drills, Saws & Hand Tools' },
 ];
 
 const BRANDS = [

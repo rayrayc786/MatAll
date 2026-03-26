@@ -37,7 +37,8 @@ const SKUManager: React.FC = () => {
     deliveryTime: '',
     size: '',
     subVariants: [] as any[],
-    isPopular: false
+    isPopular: false,
+    infoPara: ''
   });
 
   const getFullImageUrl = (url?: string) => {
@@ -237,7 +238,8 @@ const SKUManager: React.FC = () => {
       deliveryTime: sku.deliveryTime || '',
       size: sku.size || sku.subVariants?.[0]?.title || '',
       subVariants: sku.subVariants || [],
-      isPopular: sku.isPopular || false
+      isPopular: sku.isPopular || false,
+      infoPara: sku.infoPara || ''
     });
     setShowModal(true);
   };
@@ -262,7 +264,8 @@ const SKUManager: React.FC = () => {
       deliveryTime: '',
       size: '',
       subVariants: [],
-      isPopular: false
+      isPopular: false,
+      infoPara: ''
     });
     setShowModal(true);
   };
@@ -560,6 +563,17 @@ const SKUManager: React.FC = () => {
                 <div className="form-group sku-form-span-3">
                   <label>Image URL</label>
                   <input type="text" placeholder="/images/..." value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} />
+                </div>
+
+                <div className="form-group sku-form-span-3">
+                  <label>Information Paragraph (Dynamic)</label>
+                  <textarea 
+                    placeholder="Enter product detailed information..." 
+                    value={formData.infoPara || ''} 
+                    onChange={e => setFormData({...formData, infoPara: e.target.value})}
+                    rows={3}
+                    style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
+                  />
                 </div>
 
                 <div className="form-group sku-form-span-3">

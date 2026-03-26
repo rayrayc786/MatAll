@@ -96,6 +96,12 @@ const ProductDetail: React.FC = () => {
             {product.brand} {product.name}
           </h1>
 
+          {product.infoPara && (
+            <div className="detail-info-para" style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.5' }}>
+              <p>{product.infoPara}</p>
+            </div>
+          )}
+
           <div className="detail-dropdowns-prd">
             {/* Specifications */}
             <div className="dropdown-item-prd">
