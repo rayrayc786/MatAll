@@ -61,7 +61,8 @@ const ProductSchema = new mongoose.Schema({
     url: { type: String, required: true }
   }],
 
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  isPopular: { type: Boolean, default: false }
   }, { timestamps: true });
 
   ProductSchema.index({ name: 'text', sku: 'text', csiMasterFormat: 'text', description: 'text', category: 'text', brand: 'text' });

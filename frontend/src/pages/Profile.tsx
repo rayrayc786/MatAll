@@ -41,7 +41,7 @@ const Profile: React.FC = () => {
         </div>
       </header>
 
-      <main className="profile-content">
+      <main className="profile-content main-content-responsive">
         {/* Quick Access Icons */}
         <div className="profile-quick-actions">
            <Link to="/support" className="quick-action-item">

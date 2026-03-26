@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
 import { Toaster } from 'react-hot-toast';
@@ -49,6 +49,7 @@ import Navbar from './components/Navbar';
 import AdminSidebar from './components/admin/AdminSidebar';
 import { customerSocket, vendorSocket, connectSocket } from './socket';
 import './App.css';
+import './responsive.css';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -110,60 +111,102 @@ const SocketManager = () => {
   return null;
 };
 
+import Footer from './components/Footer';
+
+const AppContent = () => {
+  const [isFooterVisible, setIsFooterVisible] = useState(false);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+  const isDriverPath = location.pathname.startsWith('/driver');
+  const isVendorPath = location.pathname.startsWith('/vendor');
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsFooterVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (footerRef.current) {
+      observer.observe(footerRef.current);
+    }
+
+    return () => {
+      if (footerRef.current) {
+        observer.unobserve(footerRef.current);
+      }
+    };
+  }, [location.pathname]);
+
+  const showGlobalFooter = !isAdminPath && !isDriverPath && !isVendorPath;
+
+  return (
+    <div className={`app-container app-container-responsive ${isFooterVisible ? 'footer-is-visible' : ''}`}>
+      <Toaster position="top-right" reverseOrder={false} />
+      <SocketManager />
+      <Navbar />
+      <Routes>
+        {/* Prioritize specific routes */}
+        <Route path="/search" element={<SearchFilter />} />
+        
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/products" element={<ProductList />} />
+        <Route path="/category/:id" element={<SubCategoryPage />} />
+        <Route path="/brand/:brandName" element={<BrandStore />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/payment" element={<PaymentMethod />} />
+        <Route path="/tracking/:id" element={<Tracking />} />
+        <Route path="/vendor/:id" element={<VendorStore />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/support" element={<Support />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="inventory" element={<SKUManager />} />
+          <Route path="vendors" element={<VendorManager />} />
+          <Route path="categories" element={<CategoryManager />} />
+          <Route path="sub-categories" element={<SubCategoryManager />} />
+          <Route path="units" element={<UnitManager />} />
+          <Route path="brands" element={<BrandManager />} />
+          <Route path="variant-titles" element={<SubVariantTitleManager />} />
+          <Route path="delivery-times" element={<DeliveryTimeManager />} />
+          <Route path="queue" element={<PickingQueue />} />
+          <Route path="fleet" element={<FleetManager />} />
+          <Route path="invoices" element={<InvoicingReports />} />
+        </Route>
+
+        {/* Driver Routes */}
+        <Route path="/driver" element={<DriverDashboard />} />
+        <Route path="/driver/verify/:id" element={<TaskVerification />} />
+        <Route path="/driver/delivery/:id" element={<DeliveryNavigation />} />
+        <Route path="/driver/pod/:id" element={<ProofOfDelivery />} />
+
+        {/* Vendor Routes */}
+        <Route path="/vendor" element={<VendorDashboard />} />
+      </Routes>
+
+      {showGlobalFooter && (
+        <div ref={footerRef}>
+          <Footer />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
       <CartProvider>
-        <div className="app-container">
-          <Toaster position="top-right" reverseOrder={false} />
-          <SocketManager />
-          <Navbar />
-          <Routes>
-            {/* Prioritize specific routes */}
-            <Route path="/search" element={<SearchFilter />} />
-            
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/products" element={<ProductList />} />
-            <Route path="/category/:id" element={<SubCategoryPage />} />
-            <Route path="/brand/:brandName" element={<BrandStore />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/payment" element={<PaymentMethod />} />
-            <Route path="/tracking/:id" element={<Tracking />} />
-            <Route path="/vendor/:id" element={<VendorStore />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/support" element={<Support />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="inventory" element={<SKUManager />} />
-              <Route path="vendors" element={<VendorManager />} />
-              <Route path="categories" element={<CategoryManager />} />
-              <Route path="sub-categories" element={<SubCategoryManager />} />
-              <Route path="units" element={<UnitManager />} />
-              <Route path="brands" element={<BrandManager />} />
-              <Route path="variant-titles" element={<SubVariantTitleManager />} />
-              <Route path="delivery-times" element={<DeliveryTimeManager />} />
-              <Route path="queue" element={<PickingQueue />} />
-              <Route path="fleet" element={<FleetManager />} />
-              <Route path="invoices" element={<InvoicingReports />} />
-            </Route>
-
-            {/* Driver Routes */}
-            <Route path="/driver" element={<DriverDashboard />} />
-            <Route path="/driver/verify/:id" element={<TaskVerification />} />
-            <Route path="/driver/delivery/:id" element={<DeliveryNavigation />} />
-            <Route path="/driver/pod/:id" element={<ProofOfDelivery />} />
-
-            {/* Vendor Routes */}
-            <Route path="/vendor" element={<VendorDashboard />} />
-          </Routes>
-        </div>
+        <AppContent />
       </CartProvider>
     </Router>
   );

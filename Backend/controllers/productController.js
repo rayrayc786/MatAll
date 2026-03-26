@@ -98,7 +98,8 @@ const groupProductsByVariants = (products) => {
         sku: p.sku,
         _id: p._id,
         image: p.imageUrl,
-        unitLabel: p.unitLabel
+        unitLabel: p.unitLabel,
+        isPopular: p.isPopular
       });
     }
 
@@ -117,7 +118,7 @@ const groupProductsByVariants = (products) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const { category, brand, subCategory, search } = req.query;
+    const { category, brand, subCategory, search, isPopular } = req.query;
     let query = { isActive: true };
 
     if (category) {
@@ -133,6 +134,10 @@ exports.getAllProducts = async (req, res) => {
     if (subCategory) {
       const subCategories = Array.isArray(subCategory) ? subCategory : [subCategory];
       query.subCategory = { $in: subCategories };
+    }
+
+    if (isPopular === 'true') {
+      query.isPopular = true;
     }
 
     if (search) {
@@ -151,7 +156,6 @@ exports.getAllProducts = async (req, res) => {
     
     // 2. Group into variants
     let groupedProducts = groupProductsByVariants(products);
-
 
     // 3. Sort: Products with images first
     groupedProducts.sort((a, b) => {
@@ -212,7 +216,6 @@ exports.autocomplete = async (req, res) => {
 };
 
 exports.getFilters = async (req, res) => {
-  console.log('GET /filters hit');
   try {
     const brands = await Product.distinct('brand', { isActive: true });
     const categories = await Product.distinct('category', { isActive: true });
@@ -223,6 +226,20 @@ exports.getFilters = async (req, res) => {
       categories: categories.filter(Boolean).sort(),
       subCategories: subCategories.filter(Boolean).sort()
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.togglePopularStatus = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    product.isPopular = !product.isPopular;
+    await product.save();
+
+    res.json({ message: `Product is now ${product.isPopular ? 'Popular' : 'Standard'}`, isPopular: product.isPopular });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

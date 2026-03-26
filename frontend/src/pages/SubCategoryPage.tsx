@@ -67,11 +67,13 @@ const SubCategoryPage: React.FC = () => {
         </div>
 
         <div className="quick-links-carousel">
-          <span className="ql-label">Quick Links</span>
-          <div className="ql-track">
-            {quickLinks.map((link, idx) => (
-              <div key={idx} className="ql-item">{link}</div>
-            ))}
+          <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
+            <span className="ql-label">Quick Links</span>
+            <div className="ql-track">
+              {quickLinks.map((link, idx) => (
+                <div key={idx} className="ql-item">{link}</div>
+              ))}
+            </div>
           </div>
         </div>
       </header>

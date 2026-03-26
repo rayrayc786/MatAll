@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, LayoutDashboard, Truck, LogOut, Package, ClipboardList, Heart, Menu, X } from 'lucide-react';
+import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown, Mic, Camera } from 'lucide-react';
 
 import { useCart } from '../contexts/CartContext';
 import AISearch from './AISearch';
 import LocationSelector from './LocationSelector';
 import './navbar.css';
+import LocationModal from './LocationModal';
 
 const Navbar: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true); // Default to true for SSR/initial, update in effect
   
-  const { cart } = useCart();
+  const { cart, totalAmount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
   const isHomePage = location.pathname === '/';
-  const isProductListPage = location.pathname === '/products';
+
+  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth > 850);
+    handleResize(); // Set initial
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setIsMenuOpen(false); // Close menu on route change
@@ -41,7 +51,7 @@ const Navbar: React.FC = () => {
     navigate('/login');
   };
 
-  // Logic to determine if we should hide the global navbar
+  // Logic to determine if we should hide the global navbar on mobile
   const customHeaderPaths = [
     '/search', 
     '/products', 
@@ -60,92 +70,199 @@ const Navbar: React.FC = () => {
                           location.pathname.startsWith('/products/') ||
                           location.pathname.startsWith('/tracking/');
 
-  if (hasCustomHeader) return null;
+  // On mobile, if it has a custom header, hide this navbar
+  if (!isDesktop && hasCustomHeader) return null;
+
+  const isBlinkitHeader = !isLoggedIn && isDesktop;
 
   return (
     <header className={`navbar-new-layout ${isHomePage ? 'landing-header-wrapper' : ''}`}>
-      {isHomePage ? (
+      {(isHomePage && !isDesktop) ? (
         <LocationSelector />
+      ) : isBlinkitHeader ? (
+        <>
+          <div className="standard-navbar main-content-responsive">
+            <div className="nav-left">
+              <div className="logo-container">
+                <Link to="/" className="logo">Mat<span>All</span></Link>
+              </div>
+              <LocationSelectorInNav isBlinkitStyle={true} />
+            </div>
+            
+            <div className="search-container-main">
+              <form className="search-bar" onSubmit={handleSearch}>
+                <Search size={18} className="search-icon" color="#333" />
+                <input 
+                  type="text" 
+                  placeholder='Search "cement", "bricks", "plywood"...' 
+                  value={searchTerm}
+                  onChange={onInputChange}
+                />
+                <div className="search-bar-actions">
+                  <Mic size={18} color="#666" />
+                  <div className="icon-divider"></div>
+                  <Camera size={18} color="#666" />
+                </div>
+                <AISearch />
+              </form>
+            </div>
+
+            <div className="nav-actions">
+              <Link to="/login" className="nav-link-login-text">
+                Login
+              </Link>
+              
+              <Link to="/cart" className="cart-button-blinkit">
+                <ShoppingCart size={20} />
+                <span>My Cart</span>
+              </Link>
+            </div>
+          </div>
+          {!hasCustomHeader && (
+            <div className="navbar-sub-header">
+              <div className="main-content-responsive sub-header-content">
+                <span className="quick-links-label">Quick Links</span>
+                <div className="quick-links-list">
+                  <Link to="/category/03" className="quick-link-pill">Plywood</Link>
+                  <Link to="/category/22" className="quick-link-pill">Hardware</Link>
+                  <Link to="/category/03" className="quick-link-pill">Laminate</Link>
+                  <Link to="/tools" className="quick-link-pill">Tools</Link>
+                  <Link to="/category/04" className="quick-link-pill">Electrical</Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
-        <div className="standard-navbar">
+        <div className="standard-navbar main-content-responsive">
           <div className="nav-left">
             <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <Link to="/" className="logo">MatAll</Link>
+            {isDesktop && <LocationSelectorInNav isBlinkitStyle={false} />}
           </div>
           
-          {!isProductListPage && (
-            <div className="search-container-main">
-              <form className="search-bar" onSubmit={handleSearch}>
-                <Search size={20} className="search-icon" />
-                <input 
-                  type="text" 
-                  placeholder='Search "cement"' 
-                  value={searchTerm}
-                  onChange={onInputChange}
-                />
-                <AISearch />
-              </form>
-            </div>
-          )}
+          <div className="search-container-main">
+            <form className="search-bar" onSubmit={handleSearch}>
+              <Search size={20} className="search-icon" />
+              <input 
+                type="text" 
+                placeholder='Search "cement", "bricks", "plywood"...' 
+                value={searchTerm}
+                onChange={onInputChange}
+              />
+              <AISearch />
+            </form>
+          </div>
 
           <div className={`nav-actions ${isMenuOpen ? 'open' : ''}`}>
-            <Link to="/products" className="nav-link">Materials</Link>
+            {isDesktop && (
+              <Link to="/products" className="nav-link-desktop-pill">
+                Browse Materials
+              </Link>
+            )}
             
             {isLoggedIn && (
               <>
-                <Link to="/favorites" className="nav-link" title="Favorites">
-                  <Heart size={22} className="nav-icon-desktop" />
-                  <span className="nav-text-mobile">Favorites</span>
-                </Link>
-                <Link to="/orders" className="nav-link">
-                  <ClipboardList size={18} /> <span>Orders</span>
+                <Link to="/orders" className="nav-link" title="Orders">
+                  <ClipboardList size={22} className="nav-icon-desktop" />
+                  <span className="nav-text-mobile">Orders</span>
                 </Link>
               </>
             )}
             
             {isLoggedIn && user.role === 'Admin' && (
-              <Link to="/admin" className="nav-link admin-link">
-                <LayoutDashboard size={18} /> <span>Admin</span>
-              </Link>
-            )}
-            
-            {isLoggedIn && user.role === 'Driver' && (
-              <Link to="/driver" className="nav-link driver-link">
-                <Truck size={18} /> <span>Driver Portal</span>
-              </Link>
-            )}
-
-            {isLoggedIn && user.role === 'Vendor' && (
-              <Link to="/vendor" className="nav-link vendor-link">
-                <Package size={18} /> <span>Vendor Portal</span>
+              <Link to="/admin" className="nav-link admin-link" title="Admin">
+                <LayoutDashboard size={22} className="nav-icon-desktop" />
+                <span className="nav-text-mobile">Admin</span>
               </Link>
             )}
 
             {isLoggedIn ? (
               <>
-                <Link to="/profile" className="nav-link user-profile-link">
-                  <User size={24} /> <span className="nav-text-mobile">Profile</span>
+                <Link to="/profile" className="nav-link user-profile-link" title="Profile">
+                  <User size={24} className="nav-icon-desktop" />
+                  <span className="nav-text-mobile">Profile</span>
                 </Link>
-                <button onClick={handleLogout} className="nav-link logout-btn">
-                  <LogOut size={20} /> <span>Logout</span>
-                </button>
+                {isDesktop && (
+                  <button onClick={handleLogout} className="nav-link-logout-desktop">
+                    <LogOut size={18} />
+                  </button>
+                )}
               </>
             ) : (
-              <Link to="/login" className="nav-link">
-                <User size={24} /> <span>Login</span>
+              <Link to="/login" className="nav-link-login-desktop">
+                Login
               </Link>
             )}
           </div>
 
-          <Link to="/cart" className="cart-badge">
-            <ShoppingCart size={24} />
-            {cart.length > 0 && <span className="badge">{cart.length}</span>}
-          </Link>
+          <div className="nav-right-cart">
+            <Link to="/cart" className={`cart-badge-desktop ${cartCount > 0 ? 'has-items' : ''}`}>
+              <div className="cart-icon-wrapper">
+                <ShoppingCart size={24} />
+                {cartCount > 0 && <span className="badge">{cartCount}</span>}
+              </div>
+              {isDesktop && cartCount > 0 && (
+                <div className="cart-info-desktop">
+                  <span className="cart-total-text">₹{totalAmount}</span>
+                  <span className="cart-label-text">VIEW CART</span>
+                </div>
+              )}
+              {isDesktop && cartCount === 0 && (
+                <span className="cart-text-empty">My Cart</span>
+              )}
+            </Link>
+          </div>
         </div>
       )}
     </header>
+  );
+};
+
+const LocationSelectorInNav = ({ isBlinkitStyle }: { isBlinkitStyle?: boolean }) => {
+  const [address, setAddress] = useState<string>('Detecting...');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isLoggedIn = !!localStorage.getItem('token');
+
+  useEffect(() => {
+    if (isLoggedIn && user.jobsites && user.jobsites.length > 0) {
+      setAddress(user.jobsites[0].addressText);
+    }
+  }, [isLoggedIn]);
+
+  if (isBlinkitStyle) {
+    return (
+      <div className="delivery-info-container" onClick={() => setIsModalOpen(true)}>
+        <span className="delivery-title">Delivery in 8 minutes</span>
+        <div className="delivery-address-wrapper">
+          <span className="delivery-address">{address}</span>
+          <ChevronDown size={14} />
+        </div>
+        <LocationModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSelectAddress={(addr) => setAddress(addr)}
+          currentAddress={address}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="location-nav-trigger" onClick={() => setIsModalOpen(true)}>
+      <MapPin size={18} />
+      <span className="addr-nav-text">{address}</span>
+      <ChevronDown size={14} />
+      <LocationModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSelectAddress={(addr) => setAddress(addr)}
+        currentAddress={address}
+      />
+    </div>
   );
 };
 

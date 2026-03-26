@@ -24,42 +24,189 @@
   margin-bottom: 1rem;
 }
 
-.section-title-row h3 {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #000;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.section-title-row.space-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* Category Grid 3x3 */
-.category-grid-3x3 {
+.see-all-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #0c831f;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Popular Demand Horizontal Scroll */
+.popular-horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem 1.5rem;
+  scrollbar-width: none;
+}
+
+.popular-horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.popular-item-wrapper {
+  flex: 0 0 160px; /* Small cards for mobile scroll */
+}
+
+@media (min-width: 851px) {
+  .popular-item-wrapper {
+    flex: 0 0 220px;
+  }
+}
+
+/* Category Modern Grid */
+.category-modern-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
 }
 
-.category-tile {
+.category-modern-card {
+  background: #f8fafc;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.category-modern-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+.category-card-img-box {
+  height: 160px;
+  width: 100%;
+}
+
+.category-card-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-card-info {
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-decoration: none;
-  gap: 0.5rem;
+  text-align: center;
+  background: #fff;
+  flex: 1;
 }
 
-.tile-icon-box {
+.cat-card-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #000;
+  margin: 0 0 0.5rem 0;
+}
+
+.cat-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 1rem;
+}
+
+.cat-brand-count {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cat-price-from {
+  font-size: 0.9rem;
+  color: #000;
+  font-weight: 800;
+}
+
+.cat-explore-btn {
   width: 100%;
-  aspect-ratio: 1;
-  background-color: #FFEA00;
-  border-radius: 12px;
+  background: #FFEA00;
+  color: #000;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000000;
+  gap: 4px;
+  transition: background 0.2s;
 }
 
-.category-tile span {
-  font-size: 0.75rem;
+.cat-explore-btn:hover {
+  background: #f5da00;
+}
+
+@media (max-width: 850px) {
+  .category-modern-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .category-card-img-box {
+    height: 120px;
+  }
+}
+
+/* Brands Horizontal Scroll */
+.brands-horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  scrollbar-width: none;
+}
+
+.brands-horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.brand-tile {
+  flex: 0 0 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.brand-logo-box {
+  width: 80px;
+  height: 80px;
+  background: white;
+  border: 1px solid #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.brand-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brand-tile span {
+  font-size: 0.7rem;
   font-weight: 700;
   color: #475569;
   text-align: center;
@@ -147,6 +294,15 @@
   align-items: center;
   border-top: 1px solid #f1f5f9;
   z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.landing-footer.footer-transparent {
+  background: transparent;
+  border-top-color: transparent;
+  box-shadow: none;
+  pointer-events: none; /* Allow interaction with the main footer links behind it */
+  opacity: 0;
 }
 
 .footer-item {

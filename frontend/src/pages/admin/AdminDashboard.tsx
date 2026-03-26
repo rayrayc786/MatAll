@@ -3,12 +3,18 @@ import {
   Package, 
   Users, 
   Layers, 
-  Clock
+  Clock,
+  Search,
+  Edit2,
+  CheckCircle,
+  Truck,
+  DollarSign
 } from 'lucide-react';
 import './admin-dashboard.css';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>('dashboard');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders'>('list');
 
   const TILES = [
     { label: 'Active Orders', val: '20', icon: <Package size={24} />, color: '#FFEA00' },
@@ -42,10 +48,10 @@ const AdminDashboard: React.FC = () => {
   ];
 
   const ACTION_ITEMS = [
-    { name: 'User Management', sub: 'Enter basic details of a user, send SMS/WhatsApp.', color: '#FFEA00' },
-    { name: 'Order Management', sub: 'Access revenue reports, track trends with charts.', color: '#f1f5f9' },
-    { name: 'Category Management', sub: 'Monitor key categories and invoice metrics.', color: '#f1f5f9' },
-    { name: 'Review Support Tickets', sub: 'Reports about revenue generated per category.', color: '#f1f5f9' }
+    { id: 'users', name: 'User Management', sub: 'Enter basic details of a user, send SMS/WhatsApp.', color: '#FFEA00' },
+    { id: 'orders', name: 'Order Management', sub: 'Access revenue reports, track trends with charts.', color: '#f1f5f9' },
+    { id: 'categories', name: 'Category Management', sub: 'Monitor key categories and invoice metrics.', color: '#f1f5f9' },
+    { id: 'tickets', name: 'Review Support Tickets', sub: 'Reports about revenue generated per category.', color: '#f1f5f9' }
   ];
 
   const renderDashboard = () => (
@@ -139,18 +145,84 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderActions = () => (
+  const renderUserManagement = () => (
     <div className="admin-scroll-content animate-fade-in">
-      <div className="actions-screen-container">
-        {ACTION_ITEMS.map((item, idx) => (
-          <div key={idx} className="action-category-card" style={{ backgroundColor: item.color }}>
-            <h4>{item.name}</h4>
-            <p>{item.sub}</p>
+      <div className="management-header-row">
+        <button className="back-to-actions" onClick={() => setActiveActionTab('list')}>← Actions</button>
+        <div className="search-box-admin">
+          <Search size={18} />
+          <input type="text" placeholder="Search users by name or mobile..." />
+        </div>
+      </div>
+      
+      <div className="admin-list-container">
+        {[1,2,3,4,5,6].map(i => (
+          <div key={i} className="admin-list-row-item">
+            <div className="row-user-avatar"><Users size={20} /></div>
+            <div className="row-user-info">
+              <span className="row-name">User {i}</span>
+              <span className="row-sub">987654321{i}</span>
+            </div>
+            <div className="row-actions-btns">
+              <button className="icon-btn-admin"><Edit2 size={18} /></button>
+              <button className="icon-btn-admin success"><CheckCircle size={18} /></button>
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
+
+  const renderOrderManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-row">
+        <button className="back-to-actions" onClick={() => setActiveActionTab('list')}>← Actions</button>
+        <div className="search-box-admin">
+          <Search size={18} />
+          <input type="text" placeholder="Search order ID..." />
+        </div>
+      </div>
+      
+      <div className="admin-list-container">
+        {[1,2,3,4,5,6].map(i => (
+          <div key={i} className="admin-list-row-item">
+            <div className="row-order-info">
+              <span className="row-name">Order #BID-882{i}</span>
+              <span className="row-sub">Details: Cement (50 Bags)</span>
+            </div>
+            <div className="row-status-icons">
+              <CheckCircle size={18} color="#16a34a" />
+              <Truck size={18} color="#2563eb" />
+              <DollarSign size={18} color="#f59e0b" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderActions = () => {
+    if (activeActionTab === 'users') return renderUserManagement();
+    if (activeActionTab === 'orders') return renderOrderManagement();
+
+    return (
+      <div className="admin-scroll-content animate-fade-in">
+        <div className="actions-screen-container">
+          {ACTION_ITEMS.map((item, idx) => (
+            <div 
+              key={idx} 
+              className="action-category-card" 
+              style={{ backgroundColor: item.color }}
+              onClick={() => (item.id === 'users' || item.id === 'orders') && setActiveActionTab(item.id as any)}
+            >
+              <h4>{item.name}</h4>
+              <p>{item.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="matall-admin-dashboard">
@@ -166,13 +238,13 @@ const AdminDashboard: React.FC = () => {
       <footer className="admin-footer-nav">
          <button 
            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-           onClick={() => setActiveTab('dashboard')}
+           onClick={() => { setActiveTab('dashboard'); setActiveActionTab('list'); }}
          >
            Dashboard
          </button>
          <button 
            className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-           onClick={() => setActiveTab('reports')}
+           onClick={() => { setActiveTab('reports'); setActiveActionTab('list'); }}
          >
            Reports
          </button>

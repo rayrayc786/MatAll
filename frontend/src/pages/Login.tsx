@@ -149,7 +149,17 @@ const Login: React.FC = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       toast.success('Welcome back!');
-      navigate('/');
+      
+      // Role-based redirection
+      if (data.user.role === 'Admin') {
+        navigate('/admin');
+      } else if (data.user.role === 'Driver') {
+        navigate('/driver');
+      } else if (data.user.role === 'Vendor') {
+        navigate('/vendor');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       toast.error('Invalid OTP code');
     }

@@ -347,15 +347,90 @@
 
 @media (min-width: 851px) {
   .cart-content {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
+    padding: 2rem 0;
   }
-  
+
   .cart-footer-fixed {
-    max-width: 800px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+    display: none !important;
+  }
+
+  .cart-grid-responsive {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 3rem;
+    align-items: start;
+  }
+
+  .desktop-only-show {
+    display: block;
+  }
+
+  .bill-summary-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid #f1f5f9;
+    position: sticky;
+    top: 100px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .bill-summary-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .bill-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .bill-row.total {
+    border-top: 2px dashed #f1f5f9;
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    color: #000;
+    font-weight: 900;
+    font-size: 1.2rem;
+  }
+
+  .bill-row .free {
+    color: #16a34a;
+  }
+
+  .place-order-btn-desktop {
+    width: 100%;
+    margin-top: 2rem;
+    background: #000;
+    color: #FFEA00;
+    border: none;
+    padding: 1.25rem;
+    border-radius: 16px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .place-order-btn-desktop:hover {
+    transform: translateY(-2px);
   }
 }
+
+.desktop-only-show {
+  display: none;
+}
+
+.mt-4 { margin-top: 1rem; }
+

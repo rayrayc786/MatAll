@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star } from 'lucide-react';
 import './sku.css';
 
 const SKUManager: React.FC = () => {
@@ -36,7 +36,8 @@ const SKUManager: React.FC = () => {
     salePrice: 0,
     deliveryTime: '',
     size: '',
-    subVariants: [] as any[]
+    subVariants: [] as any[],
+    isPopular: false
   });
 
   const getFullImageUrl = (url?: string) => {
@@ -196,6 +197,16 @@ const SKUManager: React.FC = () => {
     }
   };
 
+  const handleTogglePopular = async (id: string) => {
+    try {
+      await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}/toggle-popular`);
+      fetchSKUs();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to toggle popular status');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure?')) return;
     try {
@@ -225,7 +236,8 @@ const SKUManager: React.FC = () => {
       salePrice: sku.salePrice || 0,
       deliveryTime: sku.deliveryTime || '',
       size: sku.size || sku.subVariants?.[0]?.title || '',
-      subVariants: sku.subVariants || []
+      subVariants: sku.subVariants || [],
+      isPopular: sku.isPopular || false
     });
     setShowModal(true);
   };
@@ -249,7 +261,8 @@ const SKUManager: React.FC = () => {
       salePrice: 0,
       deliveryTime: '',
       size: '',
-      subVariants: []
+      subVariants: [],
+      isPopular: false
     });
     setShowModal(true);
   };
@@ -364,6 +377,13 @@ const SKUManager: React.FC = () => {
                   </td>
                   <td className="actions-cell">
                     <div className="sku-actions-container">
+                      <button 
+                        className={`icon-btn star-btn ${sku.isPopular ? 'is-popular' : ''}`} 
+                        onClick={() => handleTogglePopular(sku._id)} 
+                        title={sku.isPopular ? "Remove from Popular" : "Mark as Popular"}
+                      >
+                        <Star size={16} fill={sku.isPopular ? "#FFEA00" : "none"} />
+                      </button>
                       <button className="icon-btn" onClick={() => openEdit(sku)} title="Edit"><Edit3 size={16} /></button>
                       <button className="icon-btn delete" onClick={() => handleDelete(sku._id)} title="Delete"><Trash2 size={16} /></button>
                     </div>
@@ -540,6 +560,17 @@ const SKUManager: React.FC = () => {
                 <div className="form-group sku-form-span-3">
                   <label>Image URL</label>
                   <input type="text" placeholder="/images/..." value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} />
+                </div>
+
+                <div className="form-group sku-form-span-3">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.isPopular} 
+                      onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
+                    />
+                    Mark as Popular Demand
+                  </label>
                 </div>
               </div>
               <div className="modal-footer sku-modal-footer">

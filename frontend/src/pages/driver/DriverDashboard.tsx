@@ -66,7 +66,7 @@ const DriverDashboard: React.FC = () => {
   if (loading) return <div className="content">Loading Driver Portal...</div>;
 
   return (
-    <main className="content driver-dashboard">
+    <main className="content driver-dashboard main-content-responsive">
       <header className="driver-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>Duty Dashboard</h1>

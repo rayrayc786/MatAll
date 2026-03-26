@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
+import toast from 'react-hot-toast';
 
 interface Product {
   _id: string;
@@ -56,6 +57,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product, quantity: number = 1, variantName?: string) => {
+    if (quantity > 0) {
+      toast.success(`${product.name} added to cart`, {
+        position: 'bottom-center',
+        duration: 2000
+      });
+    }
     setCart(prev => {
       const existing = prev.find(item => 
         item.product._id === product._id && item.selectedVariant === variantName

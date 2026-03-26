@@ -1,0 +1,156 @@
+:root {
+  --desktop-max-width: 1200px;
+}
+
+.app-container-responsive {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content-responsive {
+  flex: 1;
+  width: 100%;
+  max-width: var(--desktop-max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (min-width: 851px) {
+  body {
+    background-color: #f8fafc;
+  }
+}
+
+/* Navbar Enhancements */
+@media (min-width: 851px) {
+  .standard-navbar {
+    max-width: var(--desktop-max-width);
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+  }
+
+  .nav-toggle {
+    display: none !important;
+  }
+
+  .nav-actions {
+    position: static !important;
+    transform: none !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: auto !important;
+    display: flex !important;
+  }
+
+  .nav-link {
+    width: auto !important;
+    padding: 0.5rem 1rem !important;
+    border-bottom: none !important;
+  }
+
+  .nav-text-mobile {
+    display: none !important;
+  }
+
+  .nav-icon-desktop {
+    display: block !important;
+  }
+}
+
+/* Hide mobile footer on desktop */
+@media (min-width: 851px) {
+  .landing-footer, .view-cart-bar-sticky, .detail-footer-fixed, .cart-footer-fixed {
+    display: none !important;
+  }
+  
+  .landing-container, .blinkit-list-page, .blinkit-detail-page, .cart-page-new {
+    padding-bottom: 2rem !important;
+  }
+
+  /* Desktop specific layout for Product Detail */
+  .blinkit-detail-page .detail-header-sticky {
+    max-width: var(--desktop-max-width);
+    margin: 0 auto;
+    border-radius: 0 0 16px 16px;
+    top: 1rem;
+  }
+
+  /* Hide redundant sub-headers on desktop */
+  .list-header-sticky .header-nav,
+  .detail-header-sticky .header-nav-container,
+  .cart-header-sticky .header-nav-container,
+  .checkout-header-sticky .header-nav-container,
+  .sub-cat-header .header-nav,
+  .brand-header-sticky .header-nav,
+  .orders-header-sticky,
+  .tracking-header-sticky,
+  .profile-header .back-btn {
+    display: none !important;
+  }
+
+  .blinkit-list-page .list-header-sticky,
+  .blinkit-detail-page .detail-header-sticky,
+  .blinkit-cart-page .cart-header-sticky,
+  .blinkit-checkout-page .checkout-header-sticky,
+  .sub-cat-page .sub-cat-header,
+  .brand-store-page .brand-header-sticky {
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Desktop specific layout for Cart */
+  .cart-grid-responsive {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 3rem;
+    align-items: start;
+  }
+}
+
+/* Common Screen Utilities */
+.desktop-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .desktop-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.desktop-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .desktop-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.desktop-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .desktop-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

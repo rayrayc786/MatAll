@@ -341,6 +341,153 @@
 @media (min-width: 851px) {
   .matall-admin-dashboard {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 0;
+    padding: 2rem;
+  }
+
+  .admin-footer-nav {
+    display: none !important;
+  }
+
+  .admin-tiles-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .admin-scroll-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 0;
+  }
+
+  .admin-tiles-grid {
+    grid-column: span 2;
+  }
+
+  .reports-screen-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .management-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.back-to-actions {
+  background: #f1f5f9;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-box-admin {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 1rem;
+  height: 45px;
+  gap: 0.75rem;
+}
+
+.search-box-admin input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-weight: 500;
+}
+
+.admin-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1rem;
+}
+
+.admin-list-row-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 1.25rem;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.row-user-avatar {
+  width: 45px;
+  height: 45px;
+  background: #f8fafc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  color: #64748b;
+}
+
+.row-user-info, .row-order-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.row-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.row-actions-btns, .row-status-icons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.icon-btn-admin {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn-admin:hover {
+  background: #e2e8f0;
+}
+
+.icon-btn-admin.success {
+  color: #16a34a;
+}
+
+.icon-btn-admin.success:hover {
+  background: #dcfce7;
+}
+
+@media (min-width: 851px) {
+  .admin-list-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
   }
 }

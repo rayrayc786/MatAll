@@ -6,6 +6,7 @@ const productController = require('../controllers/productController');
 router.get('/filters', productController.getFilters);
 router.get('/autocomplete', productController.autocomplete);
 router.get('/', productController.getAllProducts);
+router.patch('/:id/toggle-popular', productController.togglePopularStatus);
 router.get('/:id', productController.getProductById);
 
 module.exports = router;

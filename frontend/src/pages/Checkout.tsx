@@ -218,101 +218,115 @@ const Checkout: React.FC = () => {
   return (
     <div className="blinkit-checkout-page">
       <header className="checkout-header-sticky">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="header-title">Checkout</div>
-        <Link to="/" className="home-btn-link">
-          <Home size={24} />
-        </Link>
+        <div className="header-nav-container main-content-responsive" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={24} />
+          </button>
+          <div className="header-title">Checkout</div>
+          <Link to="/" className="home-btn-link">
+            <Home size={24} />
+          </Link>
+        </div>
       </header>
 
-      <main className="checkout-content">
-        {/* Top Bar - PRD Page 34 */}
-        <div className="checkout-owner-card">
-          <div className="owner-info">
-            <span>Order for <strong>{user.fullName || 'Guest'}</strong></span>
-            <span className="owner-phone">{user.phoneNumber}</span>
-          </div>
-          <button className="change-btn" onClick={() => setStep('address-list')}>Change</button>
-        </div>
-
-        {/* Delivery Time & Shipment - PRD Page 34 */}
-        <div className="delivery-slot-card">
-           <div className="slot-header">
-              <Clock size={18} />
-              <span>Delivery in 60 Mins</span>
-           </div>
-           <p className="slot-sub">Shipment of {cart.length} Item{cart.length > 1 ? 's' : ''}</p>
-        </div>
-
-        {/* Bill Details - PRD Page 34 */}
-        <section className="checkout-section">
-          <div className="section-title-row">
-            <Receipt size={18} />
-            <h3>Bill Details</h3>
-          </div>
-          <div className="bill-card">
-            <div className="bill-row">
-              <div className="bill-label">
-                <FileText size={14} /> Items Total
+      <main className="checkout-content main-content-responsive">
+        <div className="checkout-grid-responsive">
+          <div className="checkout-left-col">
+            {/* Top Bar - PRD Page 34 */}
+            <div className="checkout-owner-card">
+              <div className="owner-info">
+                <span>Order for <strong>{user.fullName || 'Guest'}</strong></span>
+                <span className="owner-phone">{user.phoneNumber}</span>
               </div>
-              <span className="bill-val">₹{itemsTotal}</span>
+              <button className="change-btn" onClick={() => setStep('address-list')}>Change</button>
             </div>
-            <div className="bill-row">
-              <span className="bill-label">Delivery Charge</span>
-              <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge}` : <span className="free">FREE</span>}</span>
+
+            {/* Order Delivery Address Tab - PRD Page 34 */}
+            <div className="checkout-address-card" onClick={() => setStep('address-list')}>
+               <div className="addr-icon"><MapPin size={20} /></div>
+               <div className="addr-details">
+                  <span className="addr-label">Delivering to <strong>{selectedAddress?.name || 'Select Address'}</strong></span>
+                  <p className="addr-text">{selectedAddress?.addressText || 'Click to select or add new address'}</p>
+               </div>
+               <button className="change-btn">Change</button>
             </div>
-            <div className="bill-row">
-              <span className="bill-label">Handling Charge</span>
-              <span className="bill-val">₹{handlingCharge}</span>
+
+            {/* Delivery Time & Shipment - PRD Page 34 */}
+            <div className="delivery-slot-card">
+               <div className="slot-header">
+                  <Clock size={18} />
+                  <span>Delivery in 60 Mins</span>
+               </div>
+               <p className="slot-sub">Shipment of {cart.length} Item{cart.length > 1 ? 's' : ''}</p>
             </div>
-            <div className="bill-row grand-total-row">
-              <span className="total-label">Grand Total</span>
-              <span className="total-val">₹{grandTotal}</span>
+
+            {/* GSTIN Entry - PRD Page 34 */}
+            <div className="gstin-entry-row">
+               <div className="gst-icon-box">%</div>
+               <div className="gst-text">
+                  <span>Add GSTIN</span>
+                  <p>Claim input tax credit</p>
+               </div>
+               <ChevronRight size={20} />
+            </div>
+
+            {/* Cancellation Policy - PRD Page 34 */}
+            <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
+              <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>
+                 <span>Cancellation policy</span>
+                 <ChevronDown size={18} className={showPolicy ? 'rotate-180' : ''} />
+              </div>
+              {showPolicy && (
+                <div className="policy-content-details">
+                  <p>Orders cannot be cancelled once dispatched. For manufacturing defects, items must be inspected at the time of delivery.</p>
+                </div>
+              )}
             </div>
           </div>
-        </section>
 
-        {/* Total Savings Tile - PRD Page 34 */}
-        {savings > 0 && (
-          <div className="savings-tile">
-            <span className="savings-text">Your total savings</span>
-            <span className="savings-amount">₹{savings}</span>
-          </div>
-        )}
+          <div className="checkout-right-col">
+            {/* Bill Details - PRD Page 34 */}
+            <section className="checkout-section">
+              <div className="section-title-row">
+                <Receipt size={18} />
+                <h3>Bill Details</h3>
+              </div>
+              <div className="bill-card">
+                <div className="bill-row-checkout">
+                  <div className="bill-label">
+                    <FileText size={14} /> Items Total
+                  </div>
+                  <span className="bill-val">₹{itemsTotal}</span>
+                </div>
+                <div className="bill-row-checkout">
+                  <span className="bill-label">Delivery Charge</span>
+                  <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge}` : <span className="free">FREE</span>}</span>
+                </div>
+                <div className="bill-row-checkout">
+                  <span className="bill-label">Handling Charge</span>
+                  <span className="bill-val">₹{handlingCharge}</span>
+                </div>
+                <div className="bill-row-checkout grand-total-row">
+                  <span className="total-label">Grand Total</span>
+                  <span className="total-val">₹{grandTotal}</span>
+                </div>
+              </div>
+            </section>
 
-        {/* GSTIN Entry - PRD Page 34 */}
-        <div className="gstin-entry-row">
-           <div className="gst-icon-box">%</div>
-           <div className="gst-text">
-              <span>Add GSTIN</span>
-              <p>Claim input tax credit</p>
-           </div>
-           <ChevronRight size={20} />
-        </div>
+            {/* Total Savings Tile - PRD Page 34 */}
+            {savings > 0 && (
+              <div className="savings-tile">
+                <span className="savings-text">Your total savings</span>
+                <span className="savings-amount">₹{savings}</span>
+              </div>
+            )}
 
-        {/* Cancellation Policy - PRD Page 34 */}
-        <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
-          <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>
-             <span>Cancellation policy</span>
-             <ChevronDown size={18} className={showPolicy ? 'rotate-180' : ''} />
-          </div>
-          {showPolicy && (
-            <div className="policy-content-details">
-              <p>Orders cannot be cancelled once dispatched. For manufacturing defects, items must be inspected at the time of delivery.</p>
+            <div className="desktop-order-actions desktop-only-show mt-4">
+               <button className="final-place-btn-desktop" onClick={handlePlaceOrder} disabled={loading}>
+                  {loading ? 'Processing...' : `Place Order • ₹${grandTotal}`}
+               </button>
             </div>
-          )}
-        </div>
-
-        {/* Order Delivery Address Tab - PRD Page 34 */}
-        <div className="checkout-address-card" onClick={() => setStep('address-list')}>
-           <div className="addr-icon"><MapPin size={20} /></div>
-           <div className="addr-details">
-              <span className="addr-label">Delivering to <strong>{selectedAddress?.name || 'Select Address'}</strong></span>
-              <p className="addr-text">{selectedAddress?.addressText || 'Click to select or add new address'}</p>
-           </div>
-           <button className="change-btn">Change</button>
+          </div>
         </div>
       </main>
 

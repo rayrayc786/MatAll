@@ -43,7 +43,7 @@ const ProductList: React.FC = () => {
   return (
     <div className="blinkit-list-page">
       <header className="list-header-sticky">
-        <div className="header-nav">
+        <div className="header-nav main-content-responsive">
           <button className="back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={24} />
           </button>
@@ -56,15 +56,17 @@ const ProductList: React.FC = () => {
         </div>
 
         <div className="quick-links-carousel">
-          <span className="ql-label">Quick Links</span>
-          <div className="ql-track">
-            {quickLinks.map((link, idx) => (
-              <div key={idx} className="ql-item">{link}</div>
-            ))}
+          <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
+            <span className="ql-label">Quick Links</span>
+            <div className="ql-track">
+              {quickLinks.map((link, idx) => (
+                <div key={idx} className="ql-item">{link}</div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="horizontal-filters-bar">
+        <div className="horizontal-filters-bar main-content-responsive">
           <button className="filter-chip-pill">Brand <ChevronDown size={12} /></button>
           <button className="filter-chip-pill">Price <ChevronDown size={12} /></button>
           <button className="filter-chip-pill">Sort <ChevronDown size={12} /></button>
@@ -72,7 +74,7 @@ const ProductList: React.FC = () => {
         </div>
       </header>
 
-      <main className="list-results-content">
+      <main className="list-results-content main-content-responsive">
         {loading ? (
           <div className="loading-box">Finding best deals...</div>
         ) : (

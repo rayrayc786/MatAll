@@ -65,16 +65,18 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="blinkit-detail-page">
       <header className="detail-header-sticky">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="header-title">{product.name || 'Details'}</div>
-        <Link to="/" className="home-btn-link">
-          <Home size={24} />
-        </Link>
+        <div className="header-nav-container main-content-responsive" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={24} />
+          </button>
+          <div className="header-title">{product.name || 'Details'}</div>
+          <Link to="/" className="home-btn-link">
+            <Home size={24} />
+          </Link>
+        </div>
       </header>
 
-      <main className="detail-content">
+      <main className="detail-content main-content-responsive">
         <div className="detail-image-section">
           <div className="image-horizontal-scroll">
             {images.map((img: string, idx: number) => (
