@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown, Mic, Camera } from 'lucide-react';
+import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 import { useCart } from '../contexts/CartContext';
@@ -154,44 +154,44 @@ const Navbar: React.FC = () => {
 
           <div className={`nav-actions ${isMenuOpen ? 'open' : ''}`}>
             {isDesktop && (
-              <Link to="/products" className="nav-link-desktop-pill">
-                Browse Materials
+              <Link to="/products" className="browse-materials-btn">
+                Shop
               </Link>
             )}
             
-            {isLoggedIn && (
-              <>
-                <Link to="/orders" className="nav-link" title="Orders">
-                  <ClipboardList size={22} className="nav-icon-desktop" />
+            <div className="user-controls-group">
+              {isLoggedIn && (
+                <Link to="/orders" className="control-icon-btn" title="My Orders">
+                  <ClipboardList size={20} />
                   <span className="nav-text-mobile">Orders</span>
                 </Link>
-              </>
-            )}
-            
-            {isLoggedIn && user.role === 'Admin' && (
-              <Link to="/admin" className="nav-link admin-link" title="Admin">
-                <LayoutDashboard size={22} className="nav-icon-desktop" />
-                <span className="nav-text-mobile">Admin</span>
-              </Link>
-            )}
-
-            {isLoggedIn ? (
-              <>
-                <Link to="/profile" className="nav-link user-profile-link" title="Profile">
-                  <User size={24} className="nav-icon-desktop" />
-                  <span className="nav-text-mobile">Profile</span>
+              )}
+              
+              {isLoggedIn && user.role === 'Admin' && (
+                <Link to="/admin" className="control-icon-btn admin-link" title="Admin Dashboard">
+                  <LayoutDashboard size={20} />
+                  <span className="nav-text-mobile">Admin</span>
                 </Link>
-                {isDesktop && (
-                  <button onClick={handleLogout} className="nav-link-logout-desktop">
-                    <LogOut size={18} />
-                  </button>
-                )}
-              </>
-            ) : (
-              <Link to="/login" className="nav-link-login-desktop">
-                Login
-              </Link>
-            )}
+              )}
+
+              {isLoggedIn ? (
+                <>
+                  <Link to="/profile" className="control-icon-btn profile-btn" title="My Profile">
+                    <User size={20} />
+                    <span className="nav-text-mobile">Profile</span>
+                  </Link>
+                  {isDesktop && (
+                    <button onClick={handleLogout} className="control-icon-btn logout-btn" title="Logout">
+                      <LogOut size={18} />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <Link to="/login" className="nav-link-login-desktop">
+                  Login
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="nav-right-cart">

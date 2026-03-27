@@ -97,9 +97,6 @@
   justify-content: center;
 }
 
-.matall-logo span {
-  color: #fff; /* White for 'All' part as per standard logo in nav but here it's black/yellow focused */
-}
 
 /* Wireframe style tagline */
 .tagline {

@@ -44,9 +44,7 @@
   letter-spacing: -0.04em;
 }
 
-.logo span {
-  color: #0c831f; /* Approximate Blinkit green */
-}
+
 
 .delivery-info-container {
   display: flex;
@@ -271,10 +269,10 @@
   }
 
   .cart-badge-desktop.has-items {
-    background: var(--primary);
+    background: #f1f5f9;
     color: #000;
-    box-shadow: 0 4px 12px rgba(255, 234, 0, 0.3);
-    border-color: #000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-color: #e2e8f0;
   }
 
   .cart-info-desktop {
@@ -300,46 +298,73 @@
     font-size: 0.9rem;
   }
 
-  .nav-link-desktop-pill {
-    background: #000;
-    color: #FFEA00;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 800;
-    text-decoration: none;
-    transition: transform 0.2s;
-  }
+.browse-materials-btn {
+  background: #000;
+  color: #FFEA00;
+  padding: 10px 24px;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  white-space: nowrap;
+}
 
-  .nav-link-desktop-pill:hover {
-    transform: scale(1.05);
-  }
+.browse-materials-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
 
-  .nav-link-logout-desktop {
-    background: #f1f5f9;
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #64748b;
-    transition: all 0.2s;
-  }
+.user-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+}
 
-  .nav-link-logout-desktop:hover {
-    background: #fee2e2;
-    color: #ef4444;
-  }
+.control-icon-btn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.control-icon-btn:hover {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.control-icon-btn.logout-btn:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
 
   .nav-link-login-desktop {
     background: #000;
     color: #fff;
-    padding: 8px 20px;
+    padding: 8px 24px;
     border-radius: 10px;
     font-weight: 800;
     text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .nav-link-login-desktop:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
   }
 }
