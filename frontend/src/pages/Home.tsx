@@ -61,7 +61,7 @@ const Home: React.FC = () => {
           </div>
           <div className="category-modern-grid">
             {ENRICHED_CATEGORIES.map(cat => (
-              <Link to={`/category/${cat.id}`} key={cat.name} className="category-modern-card">
+              <Link to={`/category/${cat.name.toLowerCase().replace(/ & /g, '-').replace(/\s+/g, '-')}/${cat.id}`} key={cat.name} className="category-modern-card">
                 <div className="category-card-img-box">
                   <img src={cat.img} alt={cat.name} />
                 </div>

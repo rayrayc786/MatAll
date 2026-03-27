@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Minus, ChevronDown, Heart, Star } from 'lucide-react';
+import { Plus, Minus, Heart, Star, X, Clock } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import toast from 'react-hot-toast';
 import './product-card.css';
@@ -21,7 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [selectedVariant, setSelectedVariant] = useState<any>(
     product.variants && product.variants.length > 0 ? product.variants[0] : null
   );
-  const [showVariants, setShowVariants] = useState(false);
+  const [showVariantModal, setShowVariantModal] = useState(false);
 
   // Sync selected variant if product changes (e.g. on navigation or filter change)
   useEffect(() => {
@@ -42,7 +42,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowVariants(false);
+        setShowVariantModal(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -117,6 +117,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <div className="blinkit-list-card" onClick={handleCardClick}>
+      {/* 1. Image Section */}
       <div className="list-card-image-section">
         <button 
           className={`list-fav-btn ${isFavorite ? 'active' : ''}`} 
@@ -140,90 +141,132 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </div>
 
       <div className="list-card-details">
-        <div className="list-variant-row">
-          <div 
-            className={`list-unit-info ${product.variants && product.variants.length > 1 ? 'dropdown-trigger' : 'standard-unit'}`}
-            onClick={(e) => {
-              if (product.variants && product.variants.length > 1) {
-                e.stopPropagation();
-                setShowVariants(!showVariants);
-              }
-            }}
-          >
-            <span className="unit-text-truncate">{selectedVariant?.name || product.unitLabel || 'Standard'}</span>
-            {product.variants && product.variants.length > 1 && (
-              <ChevronDown size={10} className={`ml-1 transition-transform ${showVariants ? 'rotate-180' : ''}`} />
-            )}
-            
-            {showVariants && product.variants && product.variants.length > 1 && (
-              <div className="variants-dropdown" ref={dropdownRef} onClick={e => e.stopPropagation()}>
-                <div className="variants-dropdown-header">Select Option</div>
-                {product.variants.map((v: any, idx: number) => (
-                  <div 
-                    key={idx} 
-                    className={`variant-option ${selectedVariant?.name === v.name ? 'selected' : ''}`}
-                    onClick={() => {
-                      setSelectedVariant(v);
-                      setShowVariants(false);
-                    }}
-                  >
-                    <div className="variant-info">
-                      <span className="variant-name">{v.name}</span>
-                      <span className="variant-price">₹{v.price}</span>
-                    </div>
-                    {selectedVariant?.name === v.name && <div className="selected-check">✓</div>}
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* 2. Unit & Action Row */}
+        <div className="list-action-row">
+          <div className="list-unit-info">
+            {selectedVariant?.name || product.unitLabel || 'Standard'}
           </div>
           
           <div className="list-add-container">
             {cartItem ? (
               <div className="list-qty-control" onClick={e => e.stopPropagation()}>
-                <button onClick={() => addToCart(product, -1, currentVariantName)}><Minus size={10} /></button>
+                <button onClick={() => addToCart(product, -1, currentVariantName)}><Minus size={12} /></button>
                 <span className="list-qty-val">{cartItem.quantity}</span>
-                <button onClick={() => addToCart(product, 1, currentVariantName)}><Plus size={10} /></button>
+                <button onClick={() => addToCart(product, 1, currentVariantName)}><Plus size={12} /></button>
               </div>
             ) : (
-              <button 
-                onClick={handleAddToCart} 
-                className="list-add-btn"
-              >
-                ADD
-              </button>
+              <div className="add-btn-wrapper">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (product.variants && product.variants.length > 1) {
+                      setShowVariantModal(true);
+                    } else {
+                      handleAddToCart(e);
+                    }
+                  }} 
+                  className="list-add-btn"
+                >
+                  ADD
+                </button>
+                {product.variants && product.variants.length > 1 && (
+                  <span className="options-text">{product.variants.length} options</span>
+                )}
+              </div>
             )}
           </div>
         </div>
 
+        {/* 3. Pricing Section */}
         <div className="list-pricing-section">
            <div className="list-price-row">
               <span className="list-price">₹{currentPrice}</span>
               <span className="list-mrp">{currentMrp > currentPrice ? `₹${currentMrp}` : ''}</span>
            </div>
-           <div className="list-discount-row">
-              {discount > 0 ? (
-                <span className="list-discount-tag">{discount}% OFF</span>
-              ) : (
-                <span className="list-discount-spacer"></span>
-              )}
-           </div>
+           {discount > 0 && (
+             <div className="list-discount-badge-blinkit">
+               {discount}% OFF on MRP
+             </div>
+           )}
         </div>
 
+        {/* 4. Product Name */}
         <h3 className="list-product-name">
           <span className="brand-bold">{product.brand}</span> {displayName}
         </h3>
         
+        {/* 5. Meta/Footer Row */}
         <div className="list-meta-row">
           <div className="list-rating">
             <Star size={10} fill="#facc15" color="#facc15" />
             <span className="rating-val">{ratingData.rating}</span>
+            <span className="rating-count">({ratingData.count})</span>
           </div>
           <div className="list-delivery-time">
-             {product.deliveryTime || '10m'}
+             <Clock size={10} />
+             <span>{product.deliveryTime || '10 mins'}</span>
           </div>
         </div>
       </div>
+
+      {/* Variant Selection Modal (Bottom Sheet style) */}
+      {showVariantModal && (
+        <div className="variant-modal-overlay" onClick={() => setShowVariantModal(false)}>
+          <div className="variant-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-sticky">
+              <div className="modal-title-box">
+                <h3>{product.brand} {displayName}</h3>
+                <p>Select Variant</p>
+              </div>
+              <button className="close-modal-btn" onClick={() => setShowVariantModal(false)}><X size={20} /></button>
+            </div>
+            <div className="variants-list">
+              {product.variants.map((v: any, idx: number) => {
+                const isSelected = selectedVariant?.name === v.name;
+                const vCartItem = cart.find(
+                  (item) => item.product._id === product._id && item.selectedVariant === v.name
+                );
+                const vDisc = v.mrp > v.price ? Math.round(((v.mrp - v.price)/v.mrp)*100) : 0;
+                
+                return (
+                  <div key={idx} className={`variant-list-item ${isSelected ? 'selected' : ''}`}>
+                    <div className="v-item-left">
+                       {vDisc > 0 && <div className="v-discount-badge">{vDisc}% OFF</div>}
+                       <img src={getFullImageUrl(v.image || product.imageUrl)} alt={v.name} />
+                    </div>
+                    <div className="v-item-mid">
+                      <span className="v-name">{v.name}</span>
+                      <div className="v-price-row">
+                        <span className="v-price">₹{v.price}</span>
+                        <span className="v-mrp">₹{v.mrp}</span>
+                      </div>
+                    </div>
+                    <div className="v-item-right">
+                      {vCartItem ? (
+                        <div className="list-qty-control scale-sm">
+                          <button onClick={() => addToCart(product, -1, v.name)}><Minus size={10} /></button>
+                          <span className="list-qty-val">{vCartItem.quantity}</span>
+                          <button onClick={() => addToCart(product, 1, v.name)}><Plus size={10} /></button>
+                        </div>
+                      ) : (
+                        <button 
+                          className="list-add-btn"
+                          onClick={() => {
+                            setSelectedVariant(v);
+                            addToCart(product, 1, v.name);
+                          }}
+                        >
+                          ADD
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
