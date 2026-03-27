@@ -1,31 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   ArrowLeft, 
-  Home, 
   Share2, 
   Search, 
+  Heart,
+  ChevronRight,
   ChevronDown,
-  ChevronRight
+  Clock,
+  Star,
+  ShieldCheck,
+  Plus,
+  Minus,
+  ShoppingCart
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import ProductCard from '../components/ProductCard';
 import './product-detail.css';
 import toast from 'react-hot-toast';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cart, addToCart } = useCart();
+  
   const [product, setProduct] = useState<any>(null);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string | null>('specs');
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
+      setLoading(true);
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`);
         setProduct(data);
+        
+        // Fetch similar products in same category
+        const similarRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${data.category}`);
+        setSimilarProducts(similarRes.data.filter((p: any) => p._id !== data._id).slice(0, 8));
       } catch (err) {
         console.error(err);
       } finally {
@@ -35,6 +52,13 @@ const ProductDetail: React.FC = () => {
     fetchProduct();
   }, [id]);
 
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
+      setActiveImgIdx(idx);
+    }
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -43,132 +67,221 @@ const ProductDetail: React.FC = () => {
           text: `Check out ${product?.brand} ${product?.name} on MatAll`,
           url: window.location.href,
         });
-      } catch (err) {
-        console.error('Share failed:', err);
-      }
+      } catch (err) { console.error(err); }
     } else {
-      toast.success('Link copied to clipboard!');
+      toast.success('Link copied!');
       navigator.clipboard.writeText(window.location.href);
     }
   };
 
-  if (loading) return <div className="loading-box">Loading details...</div>;
-  if (!product) return <div>Product not found</div>;
+  if (loading) return <div className="loading-box">Finding best deals...</div>;
+  if (!product) return <div className="no-products">Product not found</div>;
 
-  const toggleTab = (tab: string) => {
-    setActiveTab(activeTab === tab ? null : tab);
-  };
-
-  // Multiple images logic (fallback to single if array empty)
   const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
+  
+  const cartItem = cart.find(item => item.product._id === product._id);
+  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const totalCartAmount = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
   return (
     <div className="blinkit-detail-page">
+      {/* Header */}
       <header className="detail-header-sticky">
-        <div className="header-nav-container main-content-responsive" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={24} />
-          </button>
-          <div className="header-title">{product.name || 'Details'}</div>
-          <Link to="/" className="home-btn-link">
-            <Home size={24} />
-          </Link>
+        <button className="header-icon-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={24} />
+        </button>
+        <div className="header-title-scroll">
+          {product.brand} {product.name}
+        </div>
+        <div className="header-actions">
+           <button className="header-icon-btn"><Heart size={20} /></button>
+           <button className="header-icon-btn"><Search size={20} /></button>
+           <button className="header-icon-btn" onClick={handleShare}><Share2 size={20} /></button>
         </div>
       </header>
 
-      <main className="detail-content main-content-responsive">
-        <div className="detail-image-section">
-          <div className="image-horizontal-scroll">
-            {images.map((img: string, idx: number) => (
-              <div key={idx} className="scroll-img-item">
-                <img src={img} alt={`${product.name} ${idx}`} />
+      <div className="detail-content-wrapper main-content-responsive">
+        {/* <div className="detail-desktop-breadcrumbs hide-mobile">
+           <button className="desktop-back-btn" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} /> Back
+           </button>
+           <div className="breadcrumb-path">
+              <Link to="/">Home</Link> 
+              <ChevronRight size={12} />
+              <Link to={`/products?category=${product.category}`}>{product.category}</Link>
+              <ChevronRight size={12} />
+              <span className="current-crumb">{product.brand} {product.name}</span>
+           </div>
+        </div> */}
+
+        <div className="detail-left-col">
+          {/* 1. Image Carousel */}
+          <section className="detail-image-section">
+            <div className="image-carousel-container">
+              <div className="image-snap-track" ref={scrollRef} onScroll={handleScroll}>
+                {images.map((img: string, idx: number) => (
+                  <div key={idx} className="snap-img-item">
+                    <img src={img} alt={product.name} />
+                  </div>
+                ))}
               </div>
+              <div className="carousel-dots">
+                {images.map((_: any, idx: number) => (
+                  <div key={idx} className={`dot ${activeImgIdx === idx ? 'active' : ''}`} />
+                ))}
+              </div>
+              <div className="veg-indicator-box">
+                <div className="veg-icon" />
+              </div>
+            </div>
+
+            {/* highlights row */}
+            <div className="highlights-scroll-row">
+               <div className="highlight-chip">
+                  <span className="h-label">Shelf Life</span>
+                  <span className="h-value">150 days</span>
+               </div>
+               <div className="highlight-chip">
+                  <span className="h-label">Type</span>
+                  <span className="h-value">{product.category || 'Standard'}</span>
+               </div>
+               <div className="highlight-chip">
+                  <span className="h-label">SKU</span>
+                  <span className="h-value">{product.sku || 'Mat-X'}</span>
+               </div>
+               <div className="view-more-chip">View more</div>
+            </div>
+          </section>
+        </div>
+
+        <div className="detail-right-col">
+          <main className="detail-main-info">
+             {/* Metadata */}
+             <div className="meta-stats-row">
+                <div className="delivery-mini"><Clock size={12} /> <span>10 mins</span></div>
+                <div className="rating-mini">
+                   <Star size={12} fill="#facc15" color="#facc15" /> 
+                   <span>4.5</span> 
+                   <span className="count">(3.2 lac)</span>
+                </div>
+             </div>
+
+             <h1 className="prd-title-large">
+                <span className="brand-bold-large">{product.brand}</span> {product.name}
+             </h1>
+             <div className="prd-unit-label">{product.unitLabel || 'Standard Unit'}</div>
+
+             <div className="prd-price-block">
+                <div className="prd-price-row">
+                   <span className="current-p">₹{product.price}</span>
+                   <span className="original-mrp">MRP ₹{product.mrp}</span>
+                </div>
+                <div className="list-discount-badge-blinkit" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                   {Math.round(((product.mrp - product.price)/product.mrp)*100)}% OFF on MRP
+                </div>
+             </div>
+
+             {/* View Details Dropdown */}
+             <div className="view-details-trigger" onClick={() => setShowDetails(!showDetails)}>
+                <span>View product details</span>
+                <ChevronDown size={20} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+             </div>
+             {showDetails && (
+               <div className="details-expanded-text" style={{ padding: '1rem 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  {product.infoPara || "High-quality material sourced for durability and aesthetic perfection."}
+               </div>
+             )}
+
+             {/* Brand Explore */}
+             <div className="brand-explore-banner">
+                <div className="brand-banner-left">
+                   <img className="brand-mini-logo" src={product.imageUrl} alt={product.brand} />
+                   <div className="brand-banner-text">
+                      <h4>{product.brand}</h4>
+                      <p>Explore all products</p>
+                   </div>
+                </div>
+                <ChevronRight size={20} color="#cbd5e1" />
+             </div>
+
+             {/* Policy Card */}
+             <div className="policy-card">
+                <div className="policy-icon-box">
+                   <ShieldCheck size={20} />
+                </div>
+                <div className="policy-text">
+                   <h5>72 hours only replacement</h5>
+                   <p>Only Replacement of the item is permitted, within 72 hours of...</p>
+                </div>
+                <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: 'auto' }} />
+             </div>
+
+             {/* Desktop Add to Cart Section */}
+             <div className="desktop-add-container hide-mobile">
+                {cartItem ? (
+                  <div className="f-qty-control desktop-qty">
+                    <button onClick={() => addToCart(product, -1)}><Minus size={20} /></button>
+                    <span className="f-qty-val">{cartItem.quantity}</span>
+                    <button onClick={() => addToCart(product, 1)}><Plus size={20} /></button>
+                  </div>
+                ) : (
+                  <button className="f-add-btn desktop-add-btn" onClick={() => addToCart(product, 1)}>
+                    Add to cart
+                  </button>
+                )}
+             </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <section className="recommendations-section main-content-responsive">
+         <div className="section-head">
+            <h3>Similar products</h3>
+            <button className="see-all-btn-blinkit">See all <ChevronRight size={14} /></button>
+         </div>
+         <div className="cat-grid-standard">
+            {similarProducts.map((p) => (
+              <ProductCard key={p._id} product={p} />
             ))}
-          </div>
-          <div className="image-actions-overlay">
-            <button className="img-action-btn"><Search size={20} /></button>
-            <button className="img-action-btn" onClick={handleShare}><Share2 size={20} /></button>
-          </div>
-        </div>
+         </div>
+      </section>
 
-        <div className="detail-info-card">
-          <h1 className="detail-product-name-format">
-            {product.brand} {product.name}
-          </h1>
-
-          {product.infoPara && (
-            <div className="detail-info-para" style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.5' }}>
-              <p>{product.infoPara}</p>
-            </div>
-          )}
-
-          <div className="detail-dropdowns-prd">
-            {/* Specifications */}
-            <div className="dropdown-item-prd">
-              <div className="dropdown-header-prd" onClick={() => toggleTab('specs')}>
-                <span>Specifications</span>
-                <ChevronDown size={20} className={`transition-transform ${activeTab === 'specs' ? 'rotate-180' : ''}`} />
+      {/* Sticky Footer */}
+      <footer className="detail-sticky-footer">
+         <div className="footer-price-info">
+            <span className="f-unit">{product.unitLabel || 'Piece'}</span>
+            <span className="f-price">₹{product.price}</span>
+            <span className="f-tax">Inclusive of all taxes</span>
+         </div>
+         <div className="footer-action">
+            {cartItem ? (
+              <div className="f-qty-control">
+                <button onClick={() => addToCart(product, -1)}><Minus size={20} /></button>
+                <span className="f-qty-val">{cartItem.quantity}</span>
+                <button onClick={() => addToCart(product, 1)}><Plus size={20} /></button>
               </div>
-              <div className={`dropdown-content-prd ${activeTab === 'specs' ? 'open' : ''}`}>
-                <div className="spec-table">
-                  <div className="spec-row"><span>Category</span> <span>{product.category}</span></div>
-                  <div className="spec-row"><span>Sub Category</span> <span>{product.subCategory}</span></div>
-                  <div className="spec-row"><span>SKU</span> <span>{product.sku}</span></div>
-                  <div className="spec-row"><span>Unit</span> <span>{product.unitLabel}</span></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Return & Info */}
-            <div className="dropdown-item-prd">
-              <div className="dropdown-header-prd" onClick={() => toggleTab('return')}>
-                <span>Return & other information</span>
-                <ChevronDown size={20} className={`transition-transform ${activeTab === 'return' ? 'rotate-180' : ''}`} />
-              </div>
-              <div className={`dropdown-content-prd ${activeTab === 'return' ? 'open' : ''}`}>
-                <div className="info-text">
-                  <p>• Standard 7-day replacement policy.</p>
-                  <p>• Logistics handling fees may apply for returns.</p>
-                  <p>• Manufacturer warranty applicable as per brand policy.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="detail-extra-links-prd">
-            <Link to={`/brand/${product.brand}`} className="extra-link-prd">
-              <div className="link-text">
-                <span>Explore {product.brand} Products</span>
-              </div>
-              <ChevronRight size={20} />
-            </Link>
-            <Link to={`/products?category=${product.category}`} className="extra-link-prd">
-              <div className="link-text">
-                <span>Similar Products</span>
-              </div>
-              <ChevronRight size={20} />
-            </Link>
-          </div>
-        </div>
-      </main>
-
-      <footer className="detail-footer-fixed">
-        <div className="price-info-footer">
-          <div className="price-row-main">
-            <span className="sale-price">Rs. {product.price}</span>
-            <span className="mrp-strikethrough">MRP {product.mrp}</span>
-          </div>
-          <span className="tax-info-label">incl. of all taxes</span>
-        </div>
-        <div className="detail-actions-footer">
-          <button className="buy-now-btn-prd" onClick={() => { addToCart(product, 1); navigate('/checkout'); }}>
-            Buy Now
-          </button>
-          <button className="add-to-cart-btn-prd" onClick={() => addToCart(product, 1)}>
-            Add to cart
-          </button>
-        </div>
+            ) : (
+              <button className="f-add-btn" onClick={() => addToCart(product, 1)}>
+                Add to cart
+              </button>
+            )}
+         </div>
       </footer>
+
+      {/* Floating Cart Pill */}
+      {totalCartCount > 0 && (
+        <div className="floating-cart-pill" onClick={() => navigate('/cart')}>
+           <div className="cart-pill-icon">
+              <ShoppingCart size={18} />
+           </div>
+           <div className="cart-pill-text">
+              <h5>View cart</h5>
+              <p>{totalCartCount} item • ₹{totalCartAmount}</p>
+           </div>
+           <ChevronRight size={18} />
+        </div>
+      )}
     </div>
   );
 };
