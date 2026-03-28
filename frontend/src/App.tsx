@@ -91,20 +91,21 @@ const SocketManager = () => {
 
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
-    // Connect Customer Socket
-    connectSocket(customerSocket);
-    
-    // Remove existing listeners to avoid duplicates
-    customerSocket.off('order-status-update');
-    customerSocket.on('order-status-update', (data: any) => {
-      toast.success(`Order Update: ${data.status.replace(/-/g, ' ').toUpperCase()}`, {
-        icon: '📋',
-        duration: 5000,
-        position: 'bottom-right'
+    // Role-based Socket Connection Management
+    if (!user.role || user.role === 'Buyer' || user.role === 'Driver') {
+      connectSocket(customerSocket);
+      
+      // Remove existing listeners to avoid duplicates
+      customerSocket.off('order-status-update');
+      customerSocket.on('order-status-update', (data: any) => {
+        toast.success(`Order Update: ${data.status.replace(/-/g, ' ').toUpperCase()}`, {
+          icon: '📋',
+          duration: 5000,
+          position: 'bottom-right'
+        });
       });
-    });
+    }
 
-    // Connect Vendor Socket if applicable
     if (user.role === 'Vendor') {
       connectSocket(vendorSocket);
       vendorSocket.off('new-order');
@@ -117,6 +118,8 @@ const SocketManager = () => {
         });
       });
     }
+    
+    // Admin socket is uniquely managed inside AdminDashboard.tsx to handle local component state refreshes.
   }, [location.pathname]);
 
   return null;

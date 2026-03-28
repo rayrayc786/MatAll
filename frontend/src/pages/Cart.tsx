@@ -11,6 +11,7 @@ import {
 import { useCart } from '../contexts/CartContext';
 import ProductCard from '../components/ProductCard';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import './cart.css';
 
 const Cart: React.FC = () => {
@@ -147,7 +148,14 @@ const Cart: React.FC = () => {
                <span>₹{totalAmount + 2}</span>
             </div>
 
-            <button className="d-place-btn" onClick={() => navigate('/checkout')}>
+            <button className="d-place-btn" onClick={() => {
+               if (!localStorage.getItem('token')) {
+                  toast.error('Please login to continue to checkout');
+                  navigate('/login', { state: { from: '/cart' } });
+               } else {
+                  navigate('/checkout');
+               }
+            }}>
                Place Order <ArrowRight size={20} style={{ marginLeft: '8px' }} />
             </button>
           </div>
@@ -165,7 +173,14 @@ const Cart: React.FC = () => {
           <button className="addr-change-btn">Change</button>
         </div>
 
-        <div className="payment-place-order-bar" onClick={() => navigate('/checkout')}>
+        <div className="payment-place-order-bar" onClick={() => {
+           if (!localStorage.getItem('token')) {
+              toast.error('Please login to continue to checkout');
+              navigate('/login', { state: { from: '/cart' }, replace: true });
+           } else {
+              navigate('/checkout');
+           }
+        }}>
           <div className="pay-info-left">
              <div className="pay-total-row">
                 <span>₹{totalAmount + 2}</span>

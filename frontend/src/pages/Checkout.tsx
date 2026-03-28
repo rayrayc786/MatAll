@@ -16,7 +16,29 @@ import {
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import './checkout.css';
+
+// Fix for Leaflet icons
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+const MapUpdater = ({ coords }: { coords: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (coords) map.setView(coords, map.getZoom());
+  }, [coords]);
+  return null;
+};
 
 interface Address {
   _id?: string;
@@ -37,6 +59,23 @@ const Checkout: React.FC = () => {
   const [isSelf, setIsSelf] = useState(true);
   const [showPolicy, setShowPolicy] = useState(false);
   
+  // Map States
+  const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]);
+  const [detectedAddr, setDetectedAddr] = useState({ main: 'Detecting...', sub: 'Please wait' });
+  const [fullAddress, setFullAddress] = useState('');
+  
+  // Form States
+  const [addressData, setAddressData] = useState({
+     nickname: '',
+     house: '',
+     floor: '',
+     tower: '',
+     landmark: '',
+     directions: '',
+     recipientName: '',
+     recipientPhone: ''
+  });
+  
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const itemsTotal = totalAmount;
@@ -47,6 +86,13 @@ const Checkout: React.FC = () => {
   const grandTotal = itemsTotal + deliveryCharge + handlingCharge;
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+       toast.error('Please login to proceed to checkout');
+       navigate('/login', { state: { from: '/cart' }, replace: true });
+       return;
+    }
+
     if (user.jobsites) {
       setAddresses(user.jobsites);
       if (user.jobsites.length > 0) setSelectedAddress(user.jobsites[0]);
@@ -144,29 +190,61 @@ const Checkout: React.FC = () => {
     </div>
   );
 
+  const handleMapMove = async (lat: number, lon: number) => {
+    setMapCenter([lat, lon]);
+    try {
+      const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const parts = data.display_name.split(',');
+      setDetectedAddr({
+        main: parts[0] || 'Unknown',
+        sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
+      });
+      setFullAddress(data.display_name);
+    } catch (err) {
+      console.error('Reverse Geocode failed');
+    }
+  };
+
+  const MapEventsController = () => {
+    useMapEvents({
+      dragend: (e) => {
+        const center = e.target.getCenter();
+        handleMapMove(center.lat, center.lng);
+      }
+    });
+    return null;
+  };
+
   const renderMapConfirm = () => (
     <div className="map-confirm-screen">
       <header className="map-header">
-        <button onClick={() => setStep('location-ask')}><ArrowLeft /></button>
+        <button className="icon-btn-plain" onClick={() => setStep('location-ask')}><ArrowLeft size={20} /></button>
         <span>Confirm location on map</span>
-        <Home onClick={() => navigate('/')} />
+        <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
       </header>
-      <div className="map-placeholder">
-        {/* Mock Map View */}
-        <div className="mock-map">
-           <MapPin size={48} color="#ef4444" fill="#ef4444" />
-           <div className="map-pulse"></div>
+      <div className="map-placeholder dynamic">
+        <MapContainer center={mapCenter} zoom={16} zoomControl={false} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={mapCenter} />
+            <MapUpdater coords={mapCenter} />
+            <MapEventsController />
+        </MapContainer>
+        <div className="center-marker-overlay">
+           <MapPin size={40} color="#ef4444" fill="#ef4444" />
         </div>
       </div>
       <div className="map-bottom-sheet">
         <div className="detected-addr-box">
-          <MapPin size={20} className="yellow-pin" />
+          <MapPin size={22} className="yellow-pin" />
           <div className="detected-text">
-            <strong>D Block</strong>
-            <p>Sector 44, Gurgaon</p>
+            <strong>{detectedAddr.main}</strong>
+            <p>{detectedAddr.sub}</p>
           </div>
         </div>
-        <button className="btn-input-complete" onClick={() => setStep('address-form')}>
+        <button className="btn-input-complete" onClick={() => {
+           setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
+           setStep('address-form');
+        }}>
           Add complete address
         </button>
       </div>
@@ -176,39 +254,95 @@ const Checkout: React.FC = () => {
   const renderAddressForm = () => (
     <div className="address-form-screen">
       <header className="map-header">
-        <button onClick={() => setStep('map-confirm')}><ArrowLeft /></button>
+        <button className="icon-btn-plain" onClick={() => setStep('map-confirm')}><ArrowLeft size={20} /></button>
         <span>Add more address details</span>
-        <Home onClick={() => navigate('/')} />
+        <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
       </header>
       
       <div className="form-scroll-content">
         <div className="who-ordering-section">
           <p>Who are you ordering for?</p>
           <div className="toggle-row">
-            <button className={`toggle-btn ${isSelf ? 'active' : ''}`} onClick={() => setIsSelf(true)}>Yourself</button>
-            <button className={`toggle-btn ${!isSelf ? 'active' : ''}`} onClick={() => setIsSelf(false)}>Someone else</button>
+            <button className={`toggle-btn ${isSelf ? 'active' : ''}`} onClick={() => {
+               setIsSelf(true);
+               setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
+            }}>Yourself</button>
+            <button className={`toggle-btn ${!isSelf ? 'active' : ''}`} onClick={() => {
+               setIsSelf(false);
+               setAddressData({ ...addressData, recipientName: '', recipientPhone: '' });
+            }}>Someone else</button>
           </div>
         </div>
 
         <div className="input-group">
-          <input type="text" placeholder="Address Nickname (e.g. Home, Site 1)" />
-          <input type="text" placeholder="House/ Unit Number" />
-          <input type="text" placeholder="Floor" />
-          <input type="text" placeholder="Tower/ Block (optional)" />
-          <input type="text" placeholder="Nearby Landmark" />
+          <input 
+            type="text" 
+            placeholder="Address Nickname (e.g. Home, Site 1)" 
+            value={addressData.nickname}
+            onChange={(e) => setAddressData({ ...addressData, nickname: e.target.value })}
+          />
+          <input 
+            type="text" 
+            placeholder="House/ Unit Number" 
+            value={addressData.house}
+            onChange={(e) => setAddressData({ ...addressData, house: e.target.value })}
+          />
+          <input 
+            type="text" 
+            placeholder="Floor" 
+            value={addressData.floor}
+            onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
+          />
+          <input 
+            type="text" 
+            placeholder="Tower/ Block (optional)" 
+            value={addressData.tower}
+            onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
+          />
+          <input 
+            type="text" 
+            placeholder="Nearby Landmark" 
+            value={addressData.landmark}
+            onChange={(e) => setAddressData({ ...addressData, landmark: e.target.value })}
+          />
           <div className="textarea-wrapper">
-            <textarea placeholder="Any directions. Help rider reach your location"></textarea>
+            <textarea 
+               placeholder="Any directions. Help rider reach your location"
+               value={addressData.directions}
+               onChange={(e) => setAddressData({ ...addressData, directions: e.target.value })}
+            ></textarea>
             <Mic size={18} className="mic-icon-small" />
           </div>
           {!isSelf && (
             <>
-              <input type="text" placeholder="Enter Recipient's name" />
-              <input type="tel" placeholder="Recipient's mobile number" />
+              <input 
+                type="text" 
+                placeholder="Enter Recipient's name" 
+                value={addressData.recipientName}
+                onChange={(e) => setAddressData({ ...addressData, recipientName: e.target.value })}
+              />
+              <input 
+                type="tel" 
+                placeholder="Recipient's mobile number" 
+                value={addressData.recipientPhone}
+                onChange={(e) => setAddressData({ ...addressData, recipientPhone: e.target.value })}
+              />
             </>
           )}
         </div>
 
-        <button className="btn-input-complete" onClick={() => setStep('checkout')}>
+        <button className="btn-input-complete" onClick={() => {
+           const finalAddr = {
+              name: addressData.nickname || 'Unknown',
+              addressText: `${addressData.house ? addressData.house + ', ' : ''}${addressData.floor ? 'Floor ' + addressData.floor + ', ' : ''}${fullAddress}`,
+              type: 'Home' as any,
+              recipientName: addressData.recipientName,
+              recipientPhone: addressData.recipientPhone
+           };
+           setSelectedAddress(finalAddr);
+           setStep('checkout');
+           toast.success('Location confirmed!');
+        }}>
           Save & Continue
         </button>
       </div>

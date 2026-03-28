@@ -312,7 +312,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0,0,0,0.6);
-  z-index: 4000; /* Increased to stay above sticky footer */
+  z-index: 99999; /* Highest priority to cover everything */
   display: flex;
   align-items: flex-end;
 }
@@ -482,7 +482,7 @@
   right: 0;
   bottom: 0;
   background: white;
-  z-index: 3000;
+  z-index: 99999;
   display: flex;
   flex-direction: column;
 }
@@ -628,6 +628,35 @@
 
 
 
+
+.center-marker-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  z-index: 1000;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.map-placeholder.dynamic {
+  background: #f8fafc;
+}
+
+.icon-btn-plain {
+  background: none;
+  border: none;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1e293b;
+}
+
+.icon-btn-plain:active {
+  transform: scale(0.9);
+}
 
 /* Transactional Sticky Footer for Mobile */
 .checkout-footer-sticky-final {

@@ -3,7 +3,10 @@ const Order = require('../models/Order');
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find({}).sort({ createdAt: -1 });
+    const orders = await Order.find({})
+      .populate('userId', 'fullName phoneNumber email')
+      .populate('items.productId', 'name images sku')
+      .sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +37,15 @@ exports.checkout = async (req, res) => {
     const io = req.app.get('socketio');
     if (order.vendorId) {
       io.of('/vendor').to(order.vendorId.toString()).emit('new-order', order);
-      console.log(`Real-time notification sent to vendor: ${order.vendorId}`);
+    }
+    const safeOrder = order.toJSON ? order.toJSON() : order;
+    
+    // Real-time notification for Admin
+    if (io) {
+      console.log(`[Socket] Broadcasting new order ${safeOrder._id} to /admin namespace`);
+      io.of('/admin').emit('new-order', safeOrder);
+    } else {
+      console.warn('[Socket] Server io instance not found in orderController!');
     }
 
     res.status(201).json(order);

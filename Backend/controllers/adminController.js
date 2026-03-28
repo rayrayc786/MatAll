@@ -177,7 +177,11 @@ const createHandlers = (Model, name) => ({
 const vh = createHandlers(Vendor, 'Vendor');
 exports.getAllVendors = vh.getAll; exports.createVendor = vh.create; exports.updateVendor = vh.update; exports.deleteVendor = vh.delete;
 
-exports.getAllUsers = async (req, res) => { try { res.json(await User.find({}).sort({ createdAt: -1 })); } catch (err) { res.status(500).json({ error: err.message }); } };
+const uh = createHandlers(User, 'User');
+exports.getAllUsers = uh.getAll;
+exports.createUser = uh.create;
+exports.updateUser = uh.update;
+exports.deleteUser = uh.delete;
 
 const ch = createHandlers(Category, 'Category');
 exports.getAllCategories = ch.getAll; exports.createCategory = ch.create; exports.updateCategory = ch.update; exports.deleteCategory = ch.delete;

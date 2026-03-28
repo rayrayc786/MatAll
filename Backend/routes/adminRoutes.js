@@ -21,6 +21,9 @@ router.delete('/products/:id', adminController.deleteProduct);
 
 // User management
 router.get('/users', adminController.getAllUsers);
+router.post('/users', adminController.createUser);
+router.put('/users/:id', adminController.updateUser);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Vendor management
 router.get('/vendors', adminController.getAllVendors);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Construction, 
@@ -39,6 +39,7 @@ const Login: React.FC = () => {
   const [showLegalModal, setShowLegalModal] = useState<{ show: boolean, type: 'Terms' | 'Privacy' }>({ show: false, type: 'Terms' });
   const [bannerImages, setBannerImages] = useState<string[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
   // const autoRedirectTimer = useRef<any>(null);
   const resendTimer = useRef<any>(null);
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -150,11 +151,12 @@ const Login: React.FC = () => {
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/verify`, { phoneNumber, otp: code });
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      toast.success('Welcome back!');
+      const from = (location.state as any)?.from || '/';
       
-      // Role-based redirection
-      if (data.user.role === 'Admin') {
+      // Role-based redirection if not coming from a specific path
+      if (from !== '/') {
+        navigate(from, { replace: true });
+      } else if (data.user.role === 'Admin') {
         navigate('/admin');
       } else if (data.user.role === 'Driver') {
         navigate('/driver');
