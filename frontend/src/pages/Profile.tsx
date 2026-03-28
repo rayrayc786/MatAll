@@ -2,11 +2,9 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  User, 
   MessageSquare, 
   History, 
   MapPin, 
-  Users, 
   TrendingUp, 
   Package, 
   Clock, 

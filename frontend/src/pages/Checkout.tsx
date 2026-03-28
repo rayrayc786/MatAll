@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Home, 
@@ -74,7 +74,7 @@ const Checkout: React.FC = () => {
         paymentMethod: 'COD'
       };
 
-      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, orderData, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, orderData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

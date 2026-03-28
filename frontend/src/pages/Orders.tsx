@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   Home, 
   ChevronRight, 
-  Star, 
   RotateCcw
 } from 'lucide-react';
 import './orders.css';

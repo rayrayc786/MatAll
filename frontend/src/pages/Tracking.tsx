@@ -4,12 +4,10 @@ import axios from 'axios';
 import { 
   ArrowLeft, 
   Home, 
-  Heart, 
   ChevronRight, 
   ChevronDown, 
   MessageCircle, 
   Star, 
-  HelpCircle,
   Package
 } from 'lucide-react';
 import { customerSocket } from '../socket';
@@ -23,11 +21,6 @@ const Tracking: React.FC = () => {
   const [activeAction, setActiveTab] = useState<'none' | 'track' | 'feedback' | 'faqs'>('track');
   const [rating, setRating] = useState(5);
 
-  const FAQS = [
-    { q: 'When will I get my order?', a: 'Your order is currently being processed and will be delivered within the estimated timeline shown above.' },
-    { q: 'Can I change my delivery address?', a: 'Address changes are not permitted once the order is confirmed for security reasons.' },
-    { q: 'How do I cancel my order?', a: 'Cancellations are only possible within the first 5 minutes of placing the order.' }
-  ];
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -121,16 +114,6 @@ const Tracking: React.FC = () => {
     </div>
   );
 
-  const renderFAQs = () => (
-    <div className="faqs-list-prd animate-fade-in">
-      {FAQS.map((faq, idx) => (
-        <div key={idx} className="faq-item-prd">
-          <div className="faq-q"><strong>{faq.q}</strong></div>
-          <p className="faq-a">{faq.a}</p>
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <div className="blinkit-tracking-page">

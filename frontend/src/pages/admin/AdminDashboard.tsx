@@ -10,8 +10,7 @@ import {
   Edit2,
   CheckCircle,
   ChevronRight,
-  User,
-  Menu
+  User
 } from 'lucide-react';
 import Reports from '../Reports';
 import { 
