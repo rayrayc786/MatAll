@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { 
   Package, 
   Users, 
@@ -7,8 +9,6 @@ import {
   Search,
   Edit2,
   CheckCircle,
-  Truck,
-  DollarSign,
   ChevronRight,
   User,
   Menu
@@ -45,8 +45,60 @@ const ORDERS_STATS_DATA = [
 ];
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>('dashboard');
-  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders'>('list');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>((tabParam as any) || 'dashboard');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'tickets'>('list');
+  const [loading, setLoading] = useState(false);
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') + '/api';
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      console.log('--- Initializing Admin Data Fetch ---');
+      console.log('API Base:', API_BASE);
+      
+      // Ping check
+      const ping = await axios.get(`${API_BASE}/admin/ping`).catch(e => e.response);
+      console.log('Admin Ping Result:', ping?.status || 'network error', ping?.data);
+
+      const [uRes, oRes, cRes] = await Promise.all([
+        axios.get(`${API_BASE}/admin/users`),
+        axios.get(`${API_BASE}/orders`),
+        axios.get(`${API_BASE}/admin/categories`)
+      ]);
+      
+      if (uRes.data) setUsers(uRes.data);
+      if (oRes.data) setOrders(oRes.data);
+      if (cRes.data) setCategories(cRes.data);
+    } catch (err: any) {
+      console.error('Fetch failed:', err.response?.status || err.message, err.response?.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (tabParam && ['dashboard', 'reports', 'actions'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'dashboard' | 'reports' | 'actions') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+    setActiveActionTab('list');
+  };
 
   const TILES = [
     { label: 'Active Orders', val: '20', icon: <Package size={20} />, color: '#FFEA00' },
@@ -200,20 +252,12 @@ const AdminDashboard: React.FC = () => {
       </div>
       
       <div className="admin-list-container">
-        {[
-          { name: 'Rahul Arora', mobile: '9876543210' },
-          { name: 'Aman Deep', mobile: '9123456789' },
-          { name: 'Sonia Verma', mobile: '8877665544' },
-          { name: 'Vikram Singh', mobile: '7766554433' },
-          { name: 'Priya Raj', mobile: '9988776655' },
-          { name: 'Arjun Dev', mobile: '6655443322' },
-          { name: 'Meera Kapur', mobile: '5544332211' }
-        ].map((user, i) => (
-          <div key={i} className="admin-list-row-item">
+        {users.length === 0 ? <p className="text-center py-4">No users found.</p> : users.map((user, i) => (
+          <div key={user._id || i} className="admin-list-row-item">
             <div className="row-user-avatar"><User size={20} /></div>
             <div className="row-user-info">
-              <span className="row-name">{user.name}</span>
-              <span className="row-sub">{user.mobile}</span>
+              <span className="row-name">{user.name || 'No Name'}</span>
+              <span className="row-sub">{user.mobile || user.email || 'No Mobile'}</span>
             </div>
             <div className="row-actions-btns">
               <button className="list-icon-btn"><Edit2 size={16} /></button>
@@ -236,27 +280,18 @@ const AdminDashboard: React.FC = () => {
       </div>
       
       <div className="admin-list-container">
-        {[
-          { user: 'User 123', mobile: '9876543210', details: 'Cement (50 Bags)' },
-          { user: 'User 456', mobile: '9123456789', details: 'Bricks (2000 Units)' },
-          { user: 'User 789', mobile: '8877665544', details: 'Steel Rods (10 Bundles)' },
-          { user: 'User 101', mobile: '7766554433', details: 'Sand (2 Trucks)' },
-          { user: 'User 202', mobile: '9988776655', details: 'Gravel (1 Truck)' },
-          { user: 'User 303', mobile: '6655443322', details: 'Paint (20 Liters)' }
-        ].map((item, i) => (
-          <div key={i} className="admin-list-row-item order-variant">
+        {orders.length === 0 ? <p className="text-center py-4">No orders found.</p> : orders.map((order, i) => (
+          <div key={order._id || i} className="admin-list-row-item order-variant">
             <div className="row-left-info">
-               <span className="row-name">{item.user}</span>
-               <span className="row-sub">{item.mobile}</span>
+               <span className="row-name">{order.user?.name || 'Guest'}</span>
+               <span className="row-sub">{order.user?.mobile || 'No Contact'}</span>
             </div>
             <div className="row-mid-info">
-               <span className="row-name">Order</span>
-               <span className="row-sub">{item.details}</span>
+               <span className="row-name">Order #{i+1}</span>
+               <span className="row-sub">{order.totalAmount ? `₹${order.totalAmount}` : 'No Amount'}</span>
             </div>
             <div className="row-status-icons">
-              <CheckCircle size={18} color="#000" />
-              <Truck size={18} color="#000" />
-              <DollarSign size={18} color="#000" />
+               <span className={`status-pill ${order.status}`}>{order.status}</span>
             </div>
           </div>
         ))}
@@ -264,9 +299,52 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const renderCategoryManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-card grey">
+        <div className="header-info">
+          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
+          <h2>Category Management</h2>
+        </div>
+        <Search size={20} className="search-icon-right" />
+      </div>
+      <div className="admin-list-container">
+        {categories.length === 0 ? <p className="text-center py-4">No categories found.</p> : categories.map((cat, i) => (
+          <div key={cat._id || i} className="admin-list-row-item">
+            <div className="row-left-info">
+              <span className="row-name">{cat.name}</span>
+              <span className="row-sub">{cat.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div className="row-actions-btns">
+              <button className="list-icon-btn"><Edit2 size={16} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderTicketManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-card grey">
+        <div className="header-info">
+          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
+          <h2>Support Tickets</h2>
+        </div>
+      </div>
+      <div className="admin-list-container">
+        <p className="text-center py-10" style={{ fontFamily: 'monospace' }}>
+          Ticket System Implementation Pending Backend Integration.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderActions = () => {
     if (activeActionTab === 'users') return renderUserManagement();
     if (activeActionTab === 'orders') return renderOrderManagement();
+    if (activeActionTab === 'categories') return renderCategoryManagement();
+    if (activeActionTab === 'tickets') return renderTicketManagement();
 
     return (
       <div className="admin-scroll-content animate-fade-in">
@@ -276,7 +354,7 @@ const AdminDashboard: React.FC = () => {
               key={idx} 
               className="action-category-card" 
               style={{ backgroundColor: item.color }}
-              onClick={() => (item.id === 'users' || item.id === 'orders') && setActiveActionTab(item.id as any)}
+              onClick={() => setActiveActionTab(item.id as any)}
             >
               <div className="card-content">
                 <h4>{item.name}</h4>
@@ -289,6 +367,12 @@ const AdminDashboard: React.FC = () => {
       </div>
     );
   };
+
+  if (loading) return (
+    <div className="flex items-center justify-center p-20" style={{ height: '70vh', fontFamily: 'monospace' }}>
+      Loading Dashboard Data...
+    </div>
+  );
 
   return (
     <div className="matall-admin-dashboard">
@@ -310,19 +394,19 @@ const AdminDashboard: React.FC = () => {
       <footer className="admin-footer-nav">
          <button 
            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-           onClick={() => { setActiveTab('dashboard'); setActiveActionTab('list'); }}
+           onClick={() => handleTabChange('dashboard')}
          >
            Dashboard
          </button>
          <button 
            className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-           onClick={() => { setActiveTab('reports'); setActiveActionTab('list'); }}
+           onClick={() => handleTabChange('reports')}
          >
            Reports
          </button>
          <button 
            className={`nav-item ${activeTab === 'actions' ? 'active' : ''}`}
-           onClick={() => { setActiveTab('actions'); setActiveActionTab('list'); }}
+           onClick={() => handleTabChange('actions')}
          >
            Actions
          </button>

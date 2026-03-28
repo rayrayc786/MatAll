@@ -2,16 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Package, 
-  Store,
-  Tag,
-  Layers,
-  Ruler,
-  Award,
-  Type,
-  Clock,
   ClipboardList, 
-  Truck, 
   FileBarChart,
   LogOut,
   X
@@ -24,18 +15,9 @@ interface AdminSidebarProps {
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin' },
-    { icon: <Package size={20} />, label: 'SKU Manager', path: '/admin/inventory' },
-    { icon: <Store size={20} />, label: 'Manage Vendors', path: '/admin/vendors' },
-    { icon: <Tag size={20} />, label: 'Categories', path: '/admin/categories' },
-    { icon: <Layers size={20} />, label: 'Sub-Categories', path: '/admin/sub-categories' },
-    { icon: <Award size={20} />, label: 'Brands', path: '/admin/brands' },
-    { icon: <Type size={20} />, label: 'Attribute Titles', path: '/admin/variant-titles' },
-    { icon: <Ruler size={20} />, label: 'Units', path: '/admin/units' },
-    { icon: <Clock size={20} />, label: 'Delivery Times', path: '/admin/delivery-times' },
-    { icon: <ClipboardList size={20} />, label: 'Picking Queue', path: '/admin/queue' },
-    { icon: <Truck size={20} />, label: 'Fleet Manager', path: '/admin/fleet' },
-    { icon: <FileBarChart size={20} />, label: 'Reports', path: '/admin/invoices' },
+    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin?tab=dashboard' },
+    { icon: <FileBarChart size={20} />, label: 'Reports', path: '/admin?tab=reports' },
+    { icon: <ClipboardList size={20} />, label: 'Actions', path: '/admin?tab=actions' },
   ];
 
   const handleLogout = () => {

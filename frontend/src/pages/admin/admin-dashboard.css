@@ -337,6 +337,20 @@
   text-align: center;
 }
 
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 1.5px solid #000;
+}
+
+.status-pill.pending { background: #ff4d4d; color: #fff; }
+.status-pill.dispatched { background: #FFEA00; color: #000; }
+.status-pill.delivered { background: #16a34a; color: #fff; }
+.status-pill.picking { background: #f1f5f9; color: #000; }
+
 /* Footer Nav Styling */
 .admin-footer-nav {
   position: fixed;
@@ -375,7 +389,7 @@
   .matall-admin-dashboard {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0 2rem 2rem 2rem;
   }
 
   .admin-footer-nav {
@@ -392,8 +406,8 @@
   }
 
   .admin-list-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 }
