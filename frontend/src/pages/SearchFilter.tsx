@@ -14,6 +14,7 @@ import './search-filter.css';
 const SearchFilter: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [baseSuggestions, setBaseSuggestions] = useState<any[]>([]);
   const [trending, setTrending] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -21,12 +22,13 @@ const SearchFilter: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitial = async () => {
       setLoading(true);
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
         const { data } = await axios.get(`${baseUrl}/api/products?limit=20`);
         if (data && Array.isArray(data)) {
+          setBaseSuggestions(data.slice(0, 6));
           setSuggestions(data.slice(0, 6));
           setTrending(data.slice(6, 12));
         }
@@ -36,8 +38,28 @@ const SearchFilter: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchInitial();
   }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim().length > 1) {
+      const delayDebounceFn = setTimeout(async () => {
+        setLoading(true);
+        try {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+          const { data } = await axios.get(`${baseUrl}/api/products/autocomplete?q=${searchTerm}`);
+          setSuggestions(data.slice(0, 6));
+        } catch (err) {
+          console.error('Suggestions error:', err);
+        } finally {
+          setLoading(false);
+        }
+      }, 300);
+      return () => clearTimeout(delayDebounceFn);
+    } else if (searchTerm.trim().length === 0) {
+      setSuggestions(baseSuggestions);
+    }
+  }, [searchTerm, baseSuggestions]);
 
   const handleVoiceSearch = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;

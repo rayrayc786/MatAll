@@ -17,14 +17,14 @@ const ENRICHED_CATEGORIES = [
 ];
 
 const BRANDS = [
-  { name: 'Century Ply', logo: 'https://logo.clearbit.com/centuryply.com' },
-  { name: 'Greenlam', logo: 'https://logo.clearbit.com/greenlam.com' },
-  { name: 'Polycab', logo: 'https://logo.clearbit.com/polycab.com' },
-  { name: 'Havells', logo: 'https://logo.clearbit.com/havells.com' },
-  { name: 'Asian Paints', logo: 'https://logo.clearbit.com/asianpaints.com' },
-  { name: 'Astral', logo: 'https://logo.clearbit.com/astralpipes.com' },
-  { name: 'Jaquar', logo: 'https://logo.clearbit.com/jaquar.com' },
-  { name: 'UltraTech', logo: 'https://logo.clearbit.com/ultratechcement.com' },
+  { name: 'Century Ply', logo: 'https://ui-avatars.com/api/?name=CP&background=1e293b&color=fff&bold=true' },
+  { name: 'Greenlam', logo: 'https://ui-avatars.com/api/?name=GL&background=1e293b&color=fff&bold=true' },
+  { name: 'Polycab', logo: 'https://ui-avatars.com/api/?name=PC&background=1e293b&color=fff&bold=true' },
+  { name: 'Havells', logo: 'https://ui-avatars.com/api/?name=HV&background=1e293b&color=fff&bold=true' },
+  { name: 'Asian Paints', logo: 'https://ui-avatars.com/api/?name=AP&background=1e293b&color=fff&bold=true' },
+  { name: 'Astral', logo: 'https://ui-avatars.com/api/?name=AS&background=1e293b&color=fff&bold=true' },
+  { name: 'Jaquar', logo: 'https://ui-avatars.com/api/?name=JQ&background=1e293b&color=fff&bold=true' },
+  { name: 'UltraTech', logo: 'https://ui-avatars.com/api/?name=UT&background=1e293b&color=fff&bold=true' },
 ];
 
 const OFFERS = [
