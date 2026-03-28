@@ -30,6 +30,7 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +40,9 @@ const ProductDetail: React.FC = () => {
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`);
         setProduct(data);
+        if (data.variants && data.variants.length > 0) {
+          setSelectedVariant(data.variants[0]);
+        }
         
         // Fetch similar products in same category
         const similarRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${data.category}`);
@@ -59,12 +63,26 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const currentVariantName = selectedVariant?.name || 'Standard';
+  const currentPrice = selectedVariant ? selectedVariant.price : (product?.salePrice || product?.price);
+  const currentMrp = selectedVariant ? selectedVariant.mrp : (product?.mrp || 0);
+  const currentUnit = selectedVariant?.name || product?.unitLabel || 'Piece';
+
+  const cartItem = cart.find(item => item.product._id === product?._id && item.selectedVariant === currentVariantName);
+  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const totalCartAmount = cart.reduce((acc, item) => {
+    const itemPrice = item.product.variants && item.product.variants.length > 0
+      ? (item.product.variants.find((v: any) => v.name === item.selectedVariant)?.price || item.product.price)
+      : item.product.price;
+    return acc + (itemPrice * item.quantity);
+  }, 0);
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: product?.name,
-          text: `Check out ${product?.brand} ${product?.name} on MatAll`,
+          text: `Check out ${product?.brand} ${product?.name} on BuildItQuick`,
           url: window.location.href,
         });
       } catch (err) { console.error(err); }
@@ -78,10 +96,6 @@ const ProductDetail: React.FC = () => {
   if (!product) return <div className="no-products">Product not found</div>;
 
   const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
-  
-  const cartItem = cart.find(item => item.product._id === product._id);
-  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartAmount = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
   return (
     <div className="blinkit-detail-page">
@@ -101,19 +115,6 @@ const ProductDetail: React.FC = () => {
       </header>
 
       <div className="detail-content-wrapper main-content-responsive">
-        {/* <div className="detail-desktop-breadcrumbs hide-mobile">
-           <button className="desktop-back-btn" onClick={() => navigate(-1)}>
-              <ArrowLeft size={16} /> Back
-           </button>
-           <div className="breadcrumb-path">
-              <Link to="/">Home</Link> 
-              <ChevronRight size={12} />
-              <Link to={`/products?category=${product.category}`}>{product.category}</Link>
-              <ChevronRight size={12} />
-              <span className="current-crumb">{product.brand} {product.name}</span>
-           </div>
-        </div> */}
-
         <div className="detail-left-col">
           {/* 1. Image Carousel */}
           <section className="detail-image-section">
@@ -129,9 +130,6 @@ const ProductDetail: React.FC = () => {
                 {images.map((_: any, idx: number) => (
                   <div key={idx} className={`dot ${activeImgIdx === idx ? 'active' : ''}`} />
                 ))}
-              </div>
-              <div className="veg-indicator-box">
-                <div className="veg-icon" />
               </div>
             </div>
 
@@ -149,7 +147,6 @@ const ProductDetail: React.FC = () => {
                   <span className="h-label">SKU</span>
                   <span className="h-value">{product.sku || 'Mat-X'}</span>
                </div>
-               <div className="view-more-chip">View more</div>
             </div>
           </section>
         </div>
@@ -169,16 +166,36 @@ const ProductDetail: React.FC = () => {
              <h1 className="prd-title-large">
                 <span className="brand-bold-large">{product.brand}</span> {product.name}
              </h1>
-             <div className="prd-unit-label">{product.unitLabel || 'Standard Unit'}</div>
+             <div className="prd-unit-label">{currentUnit}</div>
+
+             {/* Variant Selector */}
+             {product.variants && product.variants.length > 0 && (
+               <div className="detail-variants-section">
+                  <p className="v-section-title">Select Unit</p>
+                  <div className="v-chips-row">
+                    {product.variants.map((v: any, idx: number) => (
+                      <button 
+                        key={idx}
+                        className={`v-chip-btn ${selectedVariant?.name === v.name ? 'active' : ''}`}
+                        onClick={() => setSelectedVariant(v)}
+                      >
+                        {v.name}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+             )}
 
              <div className="prd-price-block">
                 <div className="prd-price-row">
-                   <span className="current-p">₹{product.price}</span>
-                   <span className="original-mrp">MRP ₹{product.mrp}</span>
+                   <span className="current-p">₹{currentPrice}</span>
+                   {currentMrp > currentPrice && <span className="original-mrp">MRP ₹{currentMrp}</span>}
                 </div>
-                <div className="list-discount-badge-blinkit" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                   {Math.round(((product.mrp - product.price)/product.mrp)*100)}% OFF on MRP
-                </div>
+                {currentMrp > currentPrice && (
+                  <div className="list-discount-badge-blinkit" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                    {Math.round(((currentMrp - currentPrice)/currentMrp)*100)}% OFF on MRP
+                  </div>
+                )}
              </div>
 
              {/* View Details Dropdown */}
@@ -192,40 +209,16 @@ const ProductDetail: React.FC = () => {
                </div>
              )}
 
-             {/* Brand Explore */}
-             <div className="brand-explore-banner">
-                <div className="brand-banner-left">
-                   <img className="brand-mini-logo" src={product.imageUrl} alt={product.brand} />
-                   <div className="brand-banner-text">
-                      <h4>{product.brand}</h4>
-                      <p>Explore all products</p>
-                   </div>
-                </div>
-                <ChevronRight size={20} color="#cbd5e1" />
-             </div>
-
-             {/* Policy Card */}
-             <div className="policy-card">
-                <div className="policy-icon-box">
-                   <ShieldCheck size={20} />
-                </div>
-                <div className="policy-text">
-                   <h5>72 hours only replacement</h5>
-                   <p>Only Replacement of the item is permitted, within 72 hours of...</p>
-                </div>
-                <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: 'auto' }} />
-             </div>
-
-             {/* Desktop Add to Cart Section */}
+             {/* Desktop Add to Cart */}
              <div className="desktop-add-container hide-mobile">
                 {cartItem ? (
                   <div className="f-qty-control desktop-qty">
-                    <button onClick={() => addToCart(product, -1)}><Minus size={20} /></button>
+                    <button onClick={() => addToCart(product, -1, currentVariantName)}><Minus size={20} /></button>
                     <span className="f-qty-val">{cartItem.quantity}</span>
-                    <button onClick={() => addToCart(product, 1)}><Plus size={20} /></button>
+                    <button onClick={() => addToCart(product, 1, currentVariantName)}><Plus size={20} /></button>
                   </div>
                 ) : (
-                  <button className="f-add-btn desktop-add-btn" onClick={() => addToCart(product, 1)}>
+                  <button className="f-add-btn desktop-add-btn" onClick={() => addToCart(product, 1, currentVariantName)}>
                     Add to cart
                   </button>
                 )}
@@ -250,19 +243,19 @@ const ProductDetail: React.FC = () => {
       {/* Sticky Footer */}
       <footer className="detail-sticky-footer">
          <div className="footer-price-info">
-            <span className="f-unit">{product.unitLabel || 'Piece'}</span>
-            <span className="f-price">₹{product.price}</span>
+            <span className="f-unit">{currentUnit}</span>
+            <span className="f-price">₹{currentPrice}</span>
             <span className="f-tax">Inclusive of all taxes</span>
          </div>
          <div className="footer-action">
             {cartItem ? (
               <div className="f-qty-control">
-                <button onClick={() => addToCart(product, -1)}><Minus size={20} /></button>
+                <button onClick={() => addToCart(product, -1, currentVariantName)}><Minus size={20} /></button>
                 <span className="f-qty-val">{cartItem.quantity}</span>
-                <button onClick={() => addToCart(product, 1)}><Plus size={20} /></button>
+                <button onClick={() => addToCart(product, 1, currentVariantName)}><Plus size={20} /></button>
               </div>
             ) : (
-              <button className="f-add-btn" onClick={() => addToCart(product, 1)}>
+              <button className="f-add-btn" onClick={() => addToCart(product, 1, currentVariantName)}>
                 Add to cart
               </button>
             )}

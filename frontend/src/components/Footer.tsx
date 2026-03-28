@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, RotateCcw, ShoppingCart, Headphones } from 'lucide-react';
+import { Home, RotateCcw, ShoppingCart, Headphones, Heart } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import './footer.css';
 
@@ -34,22 +34,26 @@ const Footer: React.FC = () => {
   return (
     <footer className={`landing-footer ${isAtBottom ? 'is-transparent' : ''}`}>
       <Link to="/" className={`footer-item ${isActive('/') ? 'active' : ''}`}>
-        <Home size={24} />
+        <Home size={22} />
         <span>Home</span>
       </Link>
       <Link to="/orders" className={`footer-item ${isActive('/orders') ? 'active' : ''}`}>
-        <RotateCcw size={24} />
+        <RotateCcw size={22} />
         <span>Repeat</span>
+      </Link>
+      <Link to="/favorites" className={`footer-item ${isActive('/favorites') ? 'active' : ''}`}>
+        <Heart size={22} />
+        <span>Wishlist</span>
       </Link>
       <Link to="/cart" className={`footer-item ${isActive('/cart') ? 'active' : ''}`}>
         <div className="footer-cart-icon">
-          <ShoppingCart size={24} />
+          <ShoppingCart size={22} />
           {cartCount > 0 && <span className="cart-dot">{cartCount}</span>}
         </div>
         <span>Cart</span>
       </Link>
       <Link to="/support" className={`footer-item ${isActive('/support') ? 'active' : ''}`}>
-        <Headphones size={24} />
+        <Headphones size={22} />
         <span>Support</span>
       </Link>
     </footer>

@@ -5,61 +5,73 @@ import { ArrowLeft, Home, ArrowUpDown, Filter } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import './sub-category.css';
 
+const SLUG_MAP: {[key: string]: string} = {
+  'wooden-boards': 'Wooden & Boards',
+  'electricals': 'Electricals',
+  'hardware': 'Hardware',
+  'paint-pop': 'Paint & POP',
+  'tiles-flooring': 'Tiles & Flooring',
+  'power-tools': 'Power Tools',
+  'hand-tools': 'Hand Tools',
+  'sanitaryware': 'Sanitaryware',
+  'pipes-fittings': 'Pipes & Fittings',
+  'safety-gear': 'Safety Gear',
+  'kitchen-hardware': 'Kitchen Hardware',
+  'adhesives-sealants': 'Adhesives & Sealants',
+  'screws-nails': 'Screws & Nails',
+  'modular-fittings': 'Modular Fittings',
+  'garden-outdoor': 'Garden & Outdoor',
+  'home-automation': 'Home Automation',
+  'solar-products': 'Solar Products',
+  'glass-glazing': 'Glass & Glazing',
+  'wall-cladding': 'Wall Cladding',
+  'door-window': 'Door & Window',
+  'bath-fittings': 'Bath Fittings',
+  'locks-security': 'Locks & Security',
+  'wires-cables': 'Wires & Cables',
+  'plumbing': 'Plumbing',
+  'civil': 'Civil'
+};
+
 const SubCategoryPage: React.FC = () => {
-  const { id } = useParams();
+  const { categoryName: slug } = useParams();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubCat, setSelectedSubCat] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>('default'); // 'price-low', 'price-high'
-  const [categoryName, setCategoryName] = useState('Category');
+  const [sortBy, setSortBy] = useState<string>('default');
+  const [displayCategory, setDisplayCategory] = useState('Category');
   const [subCategories, setSubCategories] = useState<any[]>([]);
-  const [quickLinks, setQuickLinks] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${id}`);
-        setProducts(data);
+        const dbCategoryName = SLUG_MAP[slug || ''] || slug;
+        const encodedCat = encodeURIComponent(dbCategoryName || '');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${encodedCat}`);
         
-        if (data.length > 0) {
-          const catMap: {[key: string]: string} = {
-            '03': 'Wooden & Boards',
-            '04': 'Electricals',
-            '22': 'Hardware',
-            '06': 'Paint & POP',
-            'tiles': 'Tiles & Flooring',
-            'tools': 'Power Tools'
-          };
-          setCategoryName(catMap[id || ''] || data[0].category || 'Category');
-        }
+        setProducts(data);
+        setDisplayCategory(dbCategoryName || 'Category');
 
-        // Extract unique subcategories from products
+        // Extract unique subcategories
         const uniqueSubs = Array.from(new Set(data.map((p: any) => p.subCategory))).filter(Boolean);
         const subData = uniqueSubs.map(sub => {
           const firstProd = data.find((p: any) => p.subCategory === sub);
           return {
             name: sub,
-            image: firstProd?.imageUrl || 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400',
+            image: firstProd?.imageUrl || 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
           };
         });
         setSubCategories(subData);
-
-        setQuickLinks([
-          { name: 'Hinges', link: '/products?category=22&subCategory=Hinges' },
-          { name: 'Channels', link: '/products?category=22&subCategory=Channels' },
-          { name: 'Adhesives', link: '/products?category=22&subCategory=Adhesives' },
-          { name: 'Tools', link: '/products?category=tools' }
-        ]);
       } catch (err) {
-        console.error(err);
+        console.error('Fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [id]);
+  }, [slug]);
 
   const filteredProducts = useMemo(() => {
     let result = selectedSubCat 
@@ -77,85 +89,80 @@ const SubCategoryPage: React.FC = () => {
 
   return (
     <div className="sub-category-page">
-      <header className="sub-cat-header">
-        <div className="header-nav">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={24} />
-          </button>
-          <div className="header-title-box">
-            <h2>{categoryName}</h2>
-            <span>Material</span>
-          </div>
-          <Link to="/" className="home-btn-link">
-            <Home size={24} />
-          </Link>
-        </div>
-
-        {/* Similar Products (Shop by Category) Row */}
-        <div className="quick-links-carousel">
-          <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
-            <span className="ql-label">Similar Products</span>
-            <div className="ql-track">
-              {quickLinks.map((item: any, idx) => (
-                <Link key={idx} to={item.link} className="ql-item">{item.name}</Link>
-              ))}
+      <header className="sub-cat-header-v2">
+        <div className="main-content-responsive header-content-box">
+          <div className="header-nav-v2">
+            <button className="back-btn-v2" onClick={() => navigate(-1)}>
+              <ArrowLeft size={20} />
+            </button>
+            <div className="title-section">
+              <h2 className="main-category-title">{displayCategory}</h2>
+              <p className="subtitle-material">Material Collection</p>
             </div>
+            <Link to="/" className="home-btn-v2"><Home size={20} /></Link>
           </div>
-        </div>
-        <div className="horizontal-filters-bar main-content-responsive">
-          <div className="filter-group">
+          
+          <div className="filter-row-v2">
             <button 
-              className={`filter-chip-pill ${sortBy !== 'default' ? 'active' : ''}`}
+              className={`filter-pill ${sortBy !== 'default' ? 'active' : ''}`}
               onClick={() => setSortBy(sortBy === 'price-low' ? 'price-high' : 'price-low')}
             >
               <ArrowUpDown size={14} /> 
-              Sort: {sortBy === 'price-low' ? 'Low to High' : sortBy === 'price-high' ? 'High to Low' : 'Price'}
+              {sortBy === 'price-low' ? 'Low to High' : sortBy === 'price-high' ? 'High to Low' : 'Price'}
             </button>
-            <button className="filter-chip-pill">
-              <Filter size={14} /> Filter
-            </button>
+            <button className="filter-pill"><Filter size={14} /> Filters</button>
           </div>
         </div>
       </header>
 
-      <main className="sub-cat-main-layout main-content-responsive">
-        {/* Sidebar: Sub-Categories */}
-        <aside className="cat-sidebar">
+      <main className="sub-cat-main-layout main-content-responsive" style={{ minHeight: '600px' }}>
+        {/* Sidebar: Categories */}
+        <aside className="cat-sidebar-v2">
           <div 
-            className={`cat-sidebar-item ${selectedSubCat === null ? 'active' : ''}`}
+            className={`cat-sidebar-item-v2 ${selectedSubCat === null ? 'active' : ''}`}
             onClick={() => setSelectedSubCat(null)}
           >
-            <div className="cat-sidebar-img">
-              <div className="cat-all-icon">All</div>
+            <div className="cat-img-v2">
+              <div className="all-icon-v2">All</div>
             </div>
-            <span>All {categoryName}</span>
+            <span className="cat-label-v2">All {displayCategory}</span>
           </div>
+          
           {subCategories.map((sub, idx) => (
             <div 
               key={idx} 
-              className={`cat-sidebar-item ${selectedSubCat === sub.name ? 'active' : ''}`}
+              className={`cat-sidebar-item-v2 ${selectedSubCat === sub.name ? 'active' : ''}`}
               onClick={() => setSelectedSubCat(sub.name)}
             >
-              <div className="cat-sidebar-img">
+              <div className="cat-img-v2">
                 <img src={sub.image} alt={sub.name} />
               </div>
-              <span>{sub.name}</span>
+              <span className="cat-label-v2">{sub.name}</span>
             </div>
           ))}
         </aside>
 
-        {/* Main Content: Products */}
-        <section className="cat-product-results">
+        {/* Results Area */}
+        <section className="results-grid-v2">
           {loading ? (
-            <div className="loading-box">Finding best deals...</div>
+            <div className="loading-state-v2">
+              <div className="skeleton-grid">
+                {[...Array(6)].map((_, i) => <div key={i} className="skeleton-card"></div>)}
+              </div>
+              <p>Fetching best materials for you...</p>
+            </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="cat-grid-standard">
+            <div className="product-grid-v2">
               {filteredProducts.map(product => (
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
           ) : (
-            <div className="no-products">No products found for this category.</div>
+            <div className="empty-state-v2">
+              <h3>No items found</h3>
+              <p>We couldn't find any products in {displayCategory} at the moment.</p>
+              <button onClick={() => navigate('/')} className="browse-home-btn">Browse Home</button>
+            </div>
           )}
         </section>
       </main>

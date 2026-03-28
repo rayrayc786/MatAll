@@ -1,4 +1,4 @@
-.sub-category-page {
+.sub-category-page, .brand-store-page {
   background: #ffffff;
   min-height: 100vh;
   display: flex;
@@ -131,9 +131,9 @@
 /* Sidebar Layout */
 .sub-cat-main-layout {
   display: flex;
-  margin-top: 2rem;
-  gap: 1.5rem;
-  padding-bottom: 40px;
+  margin-top: 1.5rem !important;
+  gap: 2rem;
+  padding: 0 1.5rem 60px 1.5rem;
 }
 
 .cat-sidebar {
@@ -224,11 +224,12 @@
 }
 
 @media (max-width: 850px) {
-  .sub-cat-main-layout {
+  .sub-category-page .sub-cat-main-layout,
+  .brand-store-page .sub-cat-main-layout {
     flex-direction: row;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0 0.5rem;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0 0.75rem 40px 0.75rem;
   }
   
   .cat-sidebar {
@@ -313,5 +314,217 @@
 
   .cat-grid-standard .unit-text-truncate {
     max-width: 45px; /* Narrower truncate for unit name */
+  }
+}
+/* V2 Layout Styles - Blinkit Inspired */
+.sub-cat-header-v2 {
+  background: white;
+  border-bottom: 1px solid #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0.75rem 0;
+}
+
+.header-nav-v2 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1rem;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.main-category-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin: 0;
+  color: #000;
+  letter-spacing: -0.02em;
+}
+
+.subtitle-material {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.back-btn-v2, .home-btn-v2 {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #1e293b;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-row-v2 {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0 1rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.75rem;
+}
+
+.filter-pill {
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #1e293b;
+}
+
+.filter-pill.active {
+  background: #000;
+  color: #FFEA00;
+  border-color: #000;
+}
+
+.cat-sidebar-v2 {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem 1rem 2rem 0;
+  border-right: 1px solid #f1f5f9;
+  position: sticky;
+  top: 120px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.cat-sidebar-item-v2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: center;
+  padding: 8px;
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.cat-sidebar-item-v2.active {
+  background: #f0fdf4;
+  border-left: 4px solid #5bbd1c;
+}
+
+.cat-img-v2 {
+  width: 70px;
+  height: 70px;
+  background: #f8fafc;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.cat-img-v2 img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.all-icon-v2 {
+  font-weight: 900;
+  color: #5bbd1c;
+}
+
+.cat-label-v2 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.cat-sidebar-item-v2.active .cat-label-v2 {
+  color: #000;
+}
+
+.results-grid-v2 {
+  flex: 1;
+  padding: 2rem 0;
+}
+
+.product-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.loading-state-v2, .empty-state-v2 {
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.skeleton-card {
+  height: 250px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0.6; }
+}
+
+.empty-state-v2 h3 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+}
+
+.browse-home-btn {
+  margin-top: 1.5rem;
+  padding: 10px 24px;
+  background: #000;
+  color: #FFEA00;
+  border-radius: 12px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 850px) {
+  .cat-sidebar-v2 {
+    width: 80px;
+    padding-right: 0.5rem;
+    top: 110px;
+  }
+  
+  .cat-img-v2 {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .product-grid-v2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
   }
 }

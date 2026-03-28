@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   ArrowLeft, 
   Home, 
-  Share2, 
+  ArrowUpDown, 
+  Filter,
   ShoppingCart
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/CartContext';
-import './brand-store.css';
+import './sub-category.css'; // Reusing established layout styles
 
 const BrandStore: React.FC = () => {
   const { brandName } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { cart, totalAmount } = useCart();
-  const [products, setProducts] = useState<any[]>([]);
-  const [subCategories, setSubCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   
-  const params = new URLSearchParams(location.search);
-  const activeSub = params.get('subCategory');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSubCat, setSelectedSubCat] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('default');
+  const [subCategories, setSubCategories] = useState<any[]>([]);
 
   const cartTotal = totalAmount;
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -33,8 +33,16 @@ const BrandStore: React.FC = () => {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?brand=${brandName}`);
         setProducts(data);
         
+        // Extract unique subcategories within this brand
         const uniqueSubs = Array.from(new Set(data.map((p: any) => p.subCategory))).filter(Boolean) as string[];
-        setSubCategories(uniqueSubs);
+        const subData = uniqueSubs.map(sub => {
+          const firstProd = data.find((p: any) => p.subCategory === sub);
+          return {
+            name: sub,
+            image: firstProd?.imageUrl || 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
+          };
+        });
+        setSubCategories(subData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -44,9 +52,19 @@ const BrandStore: React.FC = () => {
     fetchData();
   }, [brandName]);
 
-  const filteredProducts = activeSub 
-    ? products.filter(p => p.subCategory === activeSub)
-    : products;
+  const filteredProducts = useMemo(() => {
+    let result = selectedSubCat 
+      ? products.filter(p => p.subCategory === selectedSubCat)
+      : [...products];
+      
+    if (sortBy === 'price-low') {
+      result.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-high') {
+      result.sort((a, b) => b.price - a.price);
+    }
+    
+    return result;
+  }, [products, selectedSubCat, sortBy]);
 
   return (
     <div className="brand-store-page">
@@ -57,49 +75,72 @@ const BrandStore: React.FC = () => {
           </button>
           <div className="header-title-box">
             <h2>{brandName}</h2>
+            <span>Official Brand Store</span>
           </div>
-          <div className="header-actions-right">
-             <Share2 size={24} />
-             <Link to="/" className="home-btn-link"><Home size={24} /></Link>
-          </div>
+          <Link to="/" className="home-btn-link">
+            <Home size={24} />
+          </Link>
         </div>
 
-        <div className="brand-quick-links">
-          <div className="ql-track">
+        <div className="horizontal-filters-bar main-content-responsive">
+          <div className="filter-group">
             <button 
-              className={`ql-item ${!activeSub ? 'active' : ''}`}
-              onClick={() => navigate(`/brand/${brandName}`)}
-            > All </button>
-            {subCategories.map((sub, idx) => (
-              <button 
-                key={idx} 
-                className={`ql-item ${activeSub === sub ? 'active' : ''}`}
-                onClick={() => navigate(`/brand/${brandName}?subCategory=${sub}`)}
-              >
-                {sub}
-              </button>
-            ))}
+              className={`filter-chip-pill ${sortBy !== 'default' ? 'active' : ''}`}
+              onClick={() => setSortBy(sortBy === 'price-low' ? 'price-high' : 'price-low')}
+            >
+              <ArrowUpDown size={14} /> 
+              Sort: {sortBy === 'price-low' ? 'Low to High' : sortBy === 'price-high' ? 'High to Low' : 'Price'}
+            </button>
+            <button className="filter-chip-pill">
+              <Filter size={14} /> Filter
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="brand-content">
-        <div className="brand-hero-banner">
-           <img src="https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=1200" alt={brandName} />
-           <div className="hero-label">{brandName} Official Store</div>
-        </div>
-
-        {loading ? (
-          <div className="loading-box">Loading brand collection...</div>
-        ) : (
-          <div className="brand-product-grid">
-            {filteredProducts.map(product => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+      <main className="sub-cat-main-layout main-content-responsive">
+        {/* Sidebar: Sub-Categories within this Brand */}
+        <aside className="cat-sidebar">
+          <div 
+            className={`cat-sidebar-item ${selectedSubCat === null ? 'active' : ''}`}
+            onClick={() => setSelectedSubCat(null)}
+          >
+            <div className="cat-sidebar-img">
+              <div className="cat-all-icon">All</div>
+            </div>
+            <span>All {brandName}</span>
           </div>
-        )}
+          {subCategories.map((sub, idx) => (
+            <div 
+              key={idx} 
+              className={`cat-sidebar-item ${selectedSubCat === sub.name ? 'active' : ''}`}
+              onClick={() => setSelectedSubCat(sub.name)}
+            >
+              <div className="cat-sidebar-img">
+                <img src={sub.image} alt={sub.name} />
+              </div>
+              <span>{sub.name}</span>
+            </div>
+          ))}
+        </aside>
+
+        {/* Main Content: Brand Products Grid */}
+        <section className="cat-product-results">
+          {loading ? (
+            <div className="loading-box">Entering {brandName} Store...</div>
+          ) : filteredProducts.length > 0 ? (
+            <div className="cat-grid-standard">
+              {filteredProducts.map(product => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="no-products">No specialized products found for this brand.</div>
+          )}
+        </section>
       </main>
 
+      {/* Persistent Cart Bar for Brand Shopping */}
       {cartCount > 0 && (
         <div className="view-cart-bar-sticky">
           <div className="cart-bar-info">

@@ -121,9 +121,29 @@ exports.getAllProducts = async (req, res) => {
     const { category, brand, subCategory, search, isPopular } = req.query;
     let query = { isActive: true };
 
+    const CATEGORY_MAP = {
+      'Wooden & Boards': '03',
+      'Electricals': '04',
+      'Hardware': '22',
+      'Paint & POP': '06',
+      'Tiles & Flooring': 'tiles',
+      'Power Tools': 'tools',
+      'Civil': '26'
+    };
+
+    const getCategoryIdFromName = (name) => CATEGORY_MAP[name] || null;
+
     if (category) {
-      const categories = Array.isArray(category) ? category : [category];
-      query.category = { $in: categories };
+      let categoryValues = Array.isArray(category) ? category : [category];
+      
+      // Expand query to include numeric IDs if names were provided
+      const expandedValues = [...categoryValues];
+      categoryValues.forEach(val => {
+        const id = getCategoryIdFromName(val);
+        if (id) expandedValues.push(id);
+      });
+      
+      query.category = { $in: expandedValues };
     }
     
     if (brand) {
@@ -142,11 +162,20 @@ exports.getAllProducts = async (req, res) => {
 
     if (search) {
       const regex = new RegExp(search, 'i');
-      query.$or = [
+      const orConditions = [
         { name: regex }, { sku: regex }, { productCode: regex },
         { category: regex }, { subCategory: regex }, { brand: regex },
         { size: regex }, { deliveryTime: regex }, { unitLabel: regex }
       ];
+
+      // If search matches a category name, add the numeric ID too
+      Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
+        if (name.toLowerCase().includes(search.toLowerCase())) {
+          orConditions.push({ category: id });
+        }
+      });
+
+      query.$or = orConditions;
     }
 
     let products = await Product.find(query).lean();

@@ -84,8 +84,8 @@
   .detail-header-sticky .header-nav-container,
   .cart-header-sticky .header-nav-container,
   .checkout-header-sticky .header-nav-container,
-  .sub-cat-header .header-nav,
   .brand-header-sticky .header-nav,
+  .sub-cat-header-v2,
   .orders-header-sticky,
   .tracking-header-sticky,
   .profile-header .back-btn {
@@ -96,7 +96,6 @@
   .blinkit-detail-page .detail-header-sticky,
   .blinkit-cart-page .cart-header-sticky,
   .blinkit-checkout-page .checkout-header-sticky,
-  .sub-cat-page .sub-cat-header,
   .brand-store-page .brand-header-sticky {
     padding: 0 !important;
     box-shadow: none !important;

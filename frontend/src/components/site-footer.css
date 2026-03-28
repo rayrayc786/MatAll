@@ -20,14 +20,34 @@
   font-weight: 700;
   color: #000;
   margin-bottom: 24px;
+  display: flex;
+  align-items: center;
 }
 
-.footer-section-title span {
-  color: #5bbd1c; /* Blinkit green */
+.footer-sub-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.see-all-btn {
+  color: #5bbd1c !important; /* Blinkit green */
   font-size: 14px;
   font-weight: 500;
   margin-left: 8px;
+  text-decoration: none;
+  background: none;
+  border: none;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.see-all-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline !important;
 }
 
 .useful-links-grid {

@@ -583,3 +583,48 @@
   }
 }
 
+/* Variant Selection Styling */
+.detail-variants-section {
+  margin: 1.5rem 0;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1rem;
+}
+
+.v-section-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.v-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.v-chip-btn {
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.v-chip-btn:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.v-chip-btn.active {
+  background: #000;
+  color: #FFEA00;
+  border-color: #000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+

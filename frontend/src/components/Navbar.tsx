@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown, Heart } from 'lucide-react';
 import axios from 'axios';
 
 import { useCart } from '../contexts/CartContext';
@@ -95,7 +95,7 @@ const Navbar: React.FC = () => {
                 <Search size={18} className="search-icon" color="#333" />
                 <input 
                   type="text" 
-                  placeholder='Search "cement", "bricks", "plywood"...' 
+                  placeholder='Search products' 
                   value={searchTerm}
                   onChange={onInputChange}
                 />
@@ -144,7 +144,7 @@ const Navbar: React.FC = () => {
               <Search size={20} className="search-icon" />
               <input 
                 type="text" 
-                placeholder='Search "cement", "bricks", "plywood"...' 
+                placeholder='Search products...' 
                 value={searchTerm}
                 onChange={onInputChange}
               />
@@ -164,6 +164,13 @@ const Navbar: React.FC = () => {
                 <Link to="/orders" className="control-icon-btn" title="My Orders">
                   <ClipboardList size={20} />
                   <span className="nav-text-mobile">Orders</span>
+                </Link>
+              )}
+              
+              {isLoggedIn && (
+                <Link to="/favorites" className="control-icon-btn" title="My Favorites">
+                  <Heart size={20} />
+                  <span className="nav-text-mobile">Favorites</span>
                 </Link>
               )}
               

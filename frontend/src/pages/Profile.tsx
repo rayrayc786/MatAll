@@ -28,18 +28,22 @@ const Profile: React.FC = () => {
 
   return (
     <div className="blinkit-profile-page">
-      <header className="profile-header">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="profile-user-info">
-           <h2>Your Account</h2>
-           <span>{user.fullName || 'Guest User'}</span>
-           <p>+91 {user.phoneNumber || 'XXXXXXXXXX'}</p>
-        </div>
-      </header>
+      <main className="profile-content">
+        <div className="profile-inner-container">
+          <header className="profile-header-new">
+            <button className="back-btn" onClick={() => navigate(-1)}>
+              <ArrowLeft size={22} />
+            </button>
+            <div className="profile-user-info">
+              <h2>Your Account</h2>
+              <div className="user-details-box">
+                 <span className="user-name">{user.fullName || 'New User'}</span>
+                 <p className="user-phone">+91 {user.phoneNumber || '8888888888'}</p>
+              </div>
+            </div>
+          </header>
 
-      <main className="profile-content main-content-responsive">
+          <div className="profile-scroll-area">
         {/* Quick Access Icons */}
         <div className="profile-quick-actions">
            <Link to="/support" className="quick-action-item">
@@ -126,17 +130,19 @@ const Profile: React.FC = () => {
               </div>
               <ChevronRight size={20} />
            </div>
-           <div className="list-option-row logout" onClick={handleLogout}>
+            <div className="list-option-row logout-action" onClick={handleLogout}>
               <div className="opt-label-box">
-                 <LogOut size={20} />
-                 <span>Logout</span>
+                <LogOut size={20} />
+                <span>Logout</span>
               </div>
-              <ChevronRight size={20} />
-           </div>
-        </div>
-      </main>
-    </div>
-  );
+              <ChevronRight size={18} />
+            </div>
+          </div> {/* end profile-list-options */}
+        </div> {/* end profile-scroll-area */}
+      </div> {/* end profile-inner-container */}
+    </main>
+  </div>
+);
 };
 
 export default Profile;
