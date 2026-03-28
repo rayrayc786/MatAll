@@ -13,6 +13,7 @@ import {
   User,
   Menu
 } from 'lucide-react';
+import Reports from '../Reports';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -186,23 +187,7 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderReports = () => (
-    <div className="admin-scroll-content animate-fade-in">
-       <div className="actions-screen-container">
-          <header className="reports-outside-label">Reports</header>
-          {ACTION_ITEMS.map((item, idx) => (
-            <div 
-              key={idx} 
-              className="action-category-card" 
-              style={{ backgroundColor: item.color }}
-            >
-              <h4>{item.name}</h4>
-              <p>{item.sub}</p>
-            </div>
-          ))}
-        </div>
-    </div>
-  );
+  // renderReports removed, using imported Reports component directly
 
   const renderUserManagement = () => (
     <div className="admin-scroll-content animate-fade-in">
@@ -309,21 +294,17 @@ const AdminDashboard: React.FC = () => {
     <div className="matall-admin-dashboard">
       <header className="admin-dash-header">
         <div className="header-left">
-          {/* <button 
-            className="mobile-menu-trigger" 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
-            }}
-          >
-            <Menu size={24} />
-          </button> */}
           <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
         </div>
         <div className="admin-profile-dot"></div>
       </header>
 
       {activeTab === 'dashboard' && renderDashboard()}
-      {activeTab === 'reports' && renderReports()}
+      {activeTab === 'reports' && (
+        <div className="admin-scroll-content animate-fade-in">
+          <Reports contentOnly={true} />
+        </div>
+      )}
       {activeTab === 'actions' && renderActions()}
 
       <footer className="admin-footer-nav">

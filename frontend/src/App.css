@@ -95,7 +95,7 @@ a {
   gap: 1rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  color: #94a3b8;
+  /* color: #94a3b8; */
   font-weight: 600;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -620,6 +620,16 @@ a {
 
 .nav-text-mobile {
   display: none;
+}
+
+.app-container-responsive.with-footer-padding {
+  padding-bottom: 90px;
+}
+
+@media (min-width: 851px) {
+  .app-container-responsive.with-footer-padding {
+    padding-bottom: 0;
+  }
 }
 
 @media (max-width: 768px) {

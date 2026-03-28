@@ -44,6 +44,7 @@ import DeliveryNavigation from './pages/driver/DeliveryNavigation';
 import ProofOfDelivery from './pages/driver/ProofOfDelivery';
 
 // Other
+import Reports from './pages/Reports';
 import VendorDashboard from './pages/VendorDashboard';
 import Navbar from './components/Navbar';
 import AdminSidebar from './components/admin/AdminSidebar';
@@ -128,7 +129,7 @@ const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
   const isDriverPath = location.pathname.startsWith('/driver');
-  const isVendorPath = location.pathname.startsWith('/vendor');
+  const isVendorPath = location.pathname.startsWith('/vendor') || location.pathname === '/reports';
   const isLoginPage = location.pathname === '/login';
 
   const isCartPath = location.pathname === '/cart';
@@ -140,7 +141,7 @@ const AppContent = () => {
   const showBottomNav = !isAdminPath && !isDriverPath && !isVendorPath && !isPaymentPath;
 
   return (
-    <div className="app-container app-container-responsive">
+    <div className={`app-container app-container-responsive ${showBottomNav ? 'with-footer-padding' : ''}`}>
       <Toaster position="top-right" reverseOrder={false} />
       <SocketManager />
       {showNavbar && <Navbar />}
@@ -188,6 +189,7 @@ const AppContent = () => {
 
         {/* Vendor Routes */}
         <Route path="/vendor" element={<VendorDashboard />} />
+        <Route path="/reports" element={<Reports />} />
       </Routes>
 
       {showSiteFooter && <SiteFooter />}

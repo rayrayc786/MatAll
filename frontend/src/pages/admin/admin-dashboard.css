@@ -353,20 +353,22 @@
 }
 
 .nav-item {
-  background: none;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 900;
+  background-color: #CDCDCD; /* Light grey for inactive */
+  border: 2px solid #000;
   color: #000;
-  padding: 8px 16px;
-  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 10px 20px;
+  border-radius: 4px;
   cursor: pointer;
-  border: 2px solid transparent;
+  transition: transform 0.1s, background-color 0.2s;
+  opacity: 1; /* Keep text solid */
 }
 
 .nav-item.active {
-  background: #FFEA00;
-  border-color: #000;
+  background-color: #FFEA00; /* Yellow for active */
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
 @media (min-width: 851px) {

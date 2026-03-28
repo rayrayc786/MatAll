@@ -34,7 +34,7 @@ const Login: React.FC = () => {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [step, setStep] = useState(1); // 1: Login/Sign up, 2: OTP
   const [timer, setTimer] = useState(30);
-  // const [countdown, setCountdown] = useState(15); // 15s auto-redirect per PRD page 4
+  // const [timer, setTimer] = useState(30);
   const [showCallButton, setShowCallButton] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState<{ show: boolean, type: 'Terms' | 'Privacy' }>({ show: false, type: 'Terms' });
   const [bannerImages, setBannerImages] = useState<string[]>([]);
@@ -71,24 +71,27 @@ const Login: React.FC = () => {
     return `${cleanBase}${cleanUrl}`;
   };
 
-  // Auto-redirect to landing page if no action for 15 seconds (PRD Page 4)
-  // useEffect(() => {
-  //   if (step === 1 && phoneNumber === '') {
-  //     autoRedirectTimer.current = setInterval(() => {
-  //       setCountdown(prev => {
-  //         if (prev <= 1) {
-  //           clearInterval(autoRedirectTimer.current);
-  //           navigate('/');
-  //           return 0;
-  //         }
-  //         return prev - 1;
-  //       });
-  //     }, 1000);
-  //   } else {
-  //     if (autoRedirectTimer.current) clearInterval(autoRedirectTimer.current);
-  //   }
-  //   return () => clearInterval(autoRedirectTimer.current);
-  // }, [step, phoneNumber]);
+  const [countdown, setCountdown] = useState(5); // 5s auto-redirect per spec
+  const autoRedirectTimer = useRef<any>(null);
+
+  // Auto-redirect to landing page if no action for 5 seconds
+  useEffect(() => {
+    if (step === 1 && phoneNumber === '') {
+      autoRedirectTimer.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(autoRedirectTimer.current);
+            navigate('/');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (autoRedirectTimer.current) clearInterval(autoRedirectTimer.current);
+    }
+    return () => clearInterval(autoRedirectTimer.current);
+  }, [step, phoneNumber, navigate]);
 
   // Resend / Call timer (PRD Page 6)
   useEffect(() => {
@@ -110,7 +113,7 @@ const Login: React.FC = () => {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
     setPhoneNumber(value);
-    // setCountdown(15); // Reset countdown on activity
+    setCountdown(5); // Reset countdown on activity
   };
 
   const handleSendOTP = async (e: React.FormEvent) => {
@@ -230,9 +233,9 @@ const Login: React.FC = () => {
                 Continue as guest
               </button>
               
-              {/* {phoneNumber === '' && (
-                <p className="auto-redirect-hint">Auto-redirecting in {countdown}s...</p>
-              )} */}
+              {phoneNumber === '' && (
+                <p className="auto-redirect-hint">Redirecting to home in {countdown}s...</p>
+              )}
             </>
           ) : (
             <>

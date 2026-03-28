@@ -3,7 +3,12 @@ import axios from 'axios';
 import { 
   AlertCircle,
   Boxes,
+  LayoutDashboard,
+  ClipboardList,
+  Zap
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import './vendor-dashboard.css';
 import { vendorSocket, connectSocket } from '../socket';
 import toast from 'react-hot-toast';
 
@@ -12,6 +17,7 @@ const VendorDashboard: React.FC = () => {
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'available' | 'in-progress' | 'completed' | 'cancelled'>('available');
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const fetchOrders = async () => {
@@ -268,6 +274,21 @@ const VendorDashboard: React.FC = () => {
           </section>
         )}
       </div>
+
+      <nav className="vendor-bottom-nav">
+        <button className="nav-btn active">
+          <LayoutDashboard size={24} />
+          <span>Dashboard</span>
+        </button>
+        <button className="nav-btn" onClick={() => navigate('/reports')}>
+          <ClipboardList size={24} />
+          <span>Reports</span>
+        </button>
+        <button className="nav-btn" onClick={() => navigate('/actions')}>
+          <Zap size={24} />
+          <span>Actions</span>
+        </button>
+      </nav>
     </main>
   );
 };

@@ -79,8 +79,3 @@
     display: none !important;
   }
 }
-
-/* Ensure main content doesn't get hidden behind footer */
-.app-container-responsive {
-  padding-bottom: 70px;
-}
