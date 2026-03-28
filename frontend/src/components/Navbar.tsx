@@ -11,8 +11,10 @@ import LocationModal from './LocationModal';
 
 const Navbar: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(true); // Default to true for SSR/initial, update in effect
+  const [isDesktop, setIsDesktop] = useState(true);
   
   const { cart, totalAmount } = useCart();
   const navigate = useNavigate();
@@ -20,30 +22,67 @@ const Navbar: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
   const isHomePage = location.pathname === '/';
+  const suggestionRef = React.useRef<HTMLDivElement>(null);
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth > 850);
-    handleResize(); // Set initial
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    setIsMenuOpen(false); // Close menu on route change
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim().length > 1) {
+      const delayDebounceFn = setTimeout(async () => {
+        try {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+          const { data } = await axios.get(`${baseUrl}/api/products/autocomplete?q=${searchTerm}`);
+          setSuggestions(data);
+          setShowSuggestions(true);
+        } catch (err) {
+          console.error('Suggestions error:', err);
+        }
+      }, 300);
+      return () => clearTimeout(delayDebounceFn);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setShowSuggestions(false);
   }, [location.pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      navigate(`/products?search=${searchTerm}`);
+      navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+      setShowSuggestions(false);
     }
   };
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSuggestionClick = (s: any) => {
+    setSearchTerm(s.name);
+    setShowSuggestions(false);
+    navigate(`/products/${s._id}`);
   };
 
   const handleLogout = () => {
@@ -90,7 +129,7 @@ const Navbar: React.FC = () => {
               <LocationSelectorInNav isBlinkitStyle={true} />
             </div>
             
-            <div className="search-container-main">
+            <div className="search-container-main" ref={suggestionRef}>
               <form className="search-bar" onSubmit={handleSearch}>
                 <Search size={18} className="search-icon" color="#333" />
                 <input 
@@ -98,9 +137,28 @@ const Navbar: React.FC = () => {
                   placeholder='Search products' 
                   value={searchTerm}
                   onChange={onInputChange}
+                  onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 />
                 <AISearch />
               </form>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="search-suggestions-dropdown">
+                  {suggestions.map((s) => (
+                    <div 
+                      key={s._id} 
+                      className="suggestion-item"
+                      onClick={() => handleSuggestionClick(s)}
+                    >
+                      <div className="s-info">
+                         <span className="s-brand">{s.brand}</span>
+                         <span className="s-name">{s.name}</span>
+                      </div>
+                      <span className="s-price">₹{s.price}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="nav-actions">
@@ -139,7 +197,7 @@ const Navbar: React.FC = () => {
             {isDesktop && <LocationSelectorInNav isBlinkitStyle={false} />}
           </div>
           
-          <div className="search-container-main">
+          <div className="search-container-main" ref={suggestionRef}>
             <form className="search-bar" onSubmit={handleSearch}>
               <Search size={20} className="search-icon" />
               <input 
@@ -147,9 +205,28 @@ const Navbar: React.FC = () => {
                 placeholder='Search products...' 
                 value={searchTerm}
                 onChange={onInputChange}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
               />
               <AISearch />
             </form>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="search-suggestions-dropdown">
+                {suggestions.map((s) => (
+                  <div 
+                    key={s._id} 
+                    className="suggestion-item"
+                    onClick={() => handleSuggestionClick(s)}
+                  >
+                    <div className="s-info">
+                       <span className="s-brand">{s.brand}</span>
+                       <span className="s-name">{s.name}</span>
+                    </div>
+                    <span className="s-price">₹{s.price}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={`nav-actions ${isMenuOpen ? 'open' : ''}`}>
