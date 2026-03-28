@@ -135,63 +135,113 @@ const Tracking: React.FC = () => {
   return (
     <div className="blinkit-tracking-page">
       <header className="tracking-header-sticky">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="header-title">Order Status</div>
+        <div className="header-left-group">
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={22} />
+          </button>
+          <div className="header-title">Order Details</div>
+        </div>
         <Link to="/" className="home-btn-link">
-          <Home size={24} />
+          <Home size={22} />
         </Link>
       </header>
 
-      <main className="tracking-content">
+      <main className="tracking-content full-width-mobile">
         {/* Dynamic Status Display */}
         <div className="order-confirmation-hero">
            <div className="conf-icon-box">
-              <Heart size={32} fill="#ef4444" color="#ef4444" />
+              <Package size={32} color="#16a34a" />
            </div>
            <h2>{getStatusText(order.status)}</h2>
+           <span className="order-id-label">Order ID: #{order._id.slice(-8).toUpperCase()}</span>
         </div>
 
-        {/* Order Summary Section - PRD Page 48 */}
-        <div className="order-summary-tiles-container">
-           {order.items.map((item: any, idx: number) => (
-              <div key={idx} className="order-item-tile-prd">
-                 <div className="item-img-prd">
-                    <img src={item?.product?.imageUrl} alt="" />
-                 </div>
-                 <div className="item-details-prd">
-                    <h4>{item?.product?.brand} {item?.product?.name}</h4>
-                    <span className="item-qty-prd">Qty: {item?.quantity}</span>
-                    <div className="price-row-prd">
-                       <span className="sale-price-prd">₹{item?.price * item?.quantity}</span>
-                       <span className="mrp-prd">₹{item?.product?.mrp * item?.quantity}</span>
-                    </div>
-                 </div>
+        {/* Shipment Details */}
+        <div className="section-container card-style">
+           <div className="section-header">
+              <h3>Shipment Details</h3>
+              <span className="items-count-tag">{order.items.length} {order.items.length === 1 ? 'Item' : 'Items'}</span>
+           </div>
+           <div className="order-item-list-detailed">
+              {order.items.map((item: any, idx: number) => (
+                <div key={idx} className="item-row-detailed">
+                   <div className="item-thumb-box">
+                      <img src={item?.productId?.imageUrl || item?.product?.imageUrl} alt="" />
+                   </div>
+                   <div className="item-info-col">
+                      <p className="item-name-bold">{item?.productId?.brand} {item?.productId?.name || item?.product?.name}</p>
+                      <span className="item-variant-label">{item?.selectedVariant || 'Standard'}</span>
+                      <div className="item-price-qty-row">
+                         <span className="qty-pill">Qty: {item.quantity}</span>
+                         <span className="price-bold">₹{item.unitPrice || item.price || 0}</span>
+                      </div>
+                   </div>
+                </div>
+              ))}
+           </div>
+        </div>
+
+        {/* Bill Summary - Reusing Premium Style */}
+        <div className="section-container card-style">
+           <div className="section-header"><h3>Bill Summary</h3></div>
+           <div className="bill-summary-rows">
+              <div className="bill-row">
+                 <div className="label-with-icon"><Package size={14} /> <span>Items Total</span></div>
+                 <span>₹{order.items.reduce((acc: number, item: any) => acc + ((item.unitPrice || item.price || 0) * item.quantity), 0)}</span>
               </div>
-           ))}
+              <div className="bill-row">
+                 <div className="label-with-icon"><span>Delivery Charge</span></div>
+                 <span className="free-tag">₹150</span>
+              </div>
+              <div className="bill-row">
+                 <div className="label-with-icon"><span>Handling Charge</span></div>
+                 <span>₹25</span>
+              </div>
+              <div className="bill-row grand-total-row">
+                 <strong>Grand Total</strong>
+                 <strong>₹{order.totalAmount}</strong>
+              </div>
+              <div className="bill-row-footer">
+                 <span className="payment-tag">PAID VIA {order.paymentMethod?.toUpperCase() || 'COD'}</span>
+              </div>
+           </div>
         </div>
 
-        {/* Action Buttons - PRD Page 48 */}
-        <div className="tracking-actions-list">
+        {/* Delivery Address Details */}
+        <div className="section-container card-style">
+           <div className="section-header"><h3>Order Information</h3></div>
+           <div className="order-info-grid">
+              <div className="info-block">
+                 <span className="info-label">Placed At</span>
+                 <p className="info-value">{new Date(order.createdAt).toLocaleString('en-GB')}</p>
+              </div>
+              <div className="info-block">
+                 <span className="info-label">Delivering to</span>
+                 <p className="info-value">{order.shippingAddress || order.deliveryAddress?.name}</p>
+              </div>
+           </div>
+        </div>
+
+        {/* Collapsible Secondary Actions */}
+        <div className="tracking-actions-list secondary-list">
            <div 
              className={`action-btn-row-prd ${activeAction === 'track' ? 'active' : ''}`} 
              onClick={() => setActiveTab(activeAction === 'track' ? 'none' : 'track')}
            >
               <div className="action-label-box">
-                 <Package size={20} />
-                 <span>Track order</span>
+                 <Package size={18} />
+                 <span>Detailed Tracking</span>
               </div>
-              <ChevronDown size={20} className={activeAction === 'track' ? 'rotate-180' : ''} />
+              <ChevronDown size={18} className={activeAction === 'track' ? 'rotate-180 transition-transform' : 'transition-transform'} />
            </div>
            {activeAction === 'track' && renderTimeline()}
 
            <div className="action-btn-row-prd" onClick={() => navigate('/support')}>
               <div className="action-label-box">
-                 <MessageCircle size={20} />
+                 <MessageCircle size={18} />
                  <span>Need support</span>
               </div>
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
            </div>
 
            <div 
@@ -199,24 +249,12 @@ const Tracking: React.FC = () => {
              onClick={() => setActiveTab(activeAction === 'feedback' ? 'none' : 'feedback')}
            >
               <div className="action-label-box">
-                 <Star size={20} />
-                 <span>Please help us improve</span>
+                 <Star size={18} />
+                 <span>Help us improve</span>
               </div>
-              <ChevronDown size={20} className={activeAction === 'feedback' ? 'rotate-180' : ''} />
+              <ChevronDown size={18} className={activeAction === 'feedback' ? 'rotate-180 transition-transform' : 'transition-transform'} />
            </div>
            {activeAction === 'feedback' && renderFeedback()}
-
-           <div 
-             className={`action-btn-row-prd ${activeAction === 'faqs' ? 'active' : ''}`}
-             onClick={() => setActiveTab(activeAction === 'faqs' ? 'none' : 'faqs')}
-           >
-              <div className="action-label-box">
-                 <HelpCircle size={20} />
-                 <span>FAQs</span>
-              </div>
-              <ChevronDown size={20} className={activeAction === 'faqs' ? 'rotate-180' : ''} />
-           </div>
-           {activeAction === 'faqs' && renderFAQs()}
         </div>
       </main>
     </div>

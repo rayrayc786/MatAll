@@ -80,7 +80,7 @@ const Checkout: React.FC = () => {
 
       toast.success('Order placed successfully!');
       clearCart();
-      navigate(`/tracking/${data._id}`);
+      navigate('/orders');
     } catch (err: any) {
       toast.error('Failed to place order');
     } finally {

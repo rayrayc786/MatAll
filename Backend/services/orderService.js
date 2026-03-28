@@ -50,12 +50,17 @@ const createOrder = async (orderData) => {
   // Auto-fetch darkStoreId if missing
   let darkStoreId = orderData.darkStoreId;
   if (!darkStoreId) {
-    const defaultStore = await DarkStore.findOne();
-    if (defaultStore) {
-      darkStoreId = defaultStore._id;
-    } else {
-      throw new Error('No DarkStore available to fulfill the order');
+    let defaultStore = await DarkStore.findOne();
+    if (!defaultStore) {
+      console.log('No DarkStore found. Creating a Default Hub for you...');
+      defaultStore = await DarkStore.create({
+        storeName: 'Default Hub - Punjab',
+        location: { type: 'Point', coordinates: [76.7179, 30.7046] },
+        serviceabilityRadius: 50000,
+        isOpen: true
+      });
     }
+    darkStoreId = defaultStore._id;
   }
 
   const newOrder = new Order({

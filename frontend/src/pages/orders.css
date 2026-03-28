@@ -1,8 +1,8 @@
+/* Premium Orders Page Styling */
 .blinkit-orders-page {
   background: #f1f5f9;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  padding-bottom: 80px; /* Space for bottom nav */
 }
 
 .orders-header-sticky {
@@ -12,133 +12,147 @@
   z-index: 1000;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.25rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 1rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.header-title {
+  font-size: 1.15rem;
+  font-weight: 950;
+  color: #1e293b;
+}
+
+.back-btn, .home-btn-link {
+  background: none;
+  border: none;
+  color: #1e293b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .orders-content {
   padding: 1rem;
-  flex: 1;
 }
 
-.orders-list-vertical {
+.orders-stack {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.order-history-card {
+.order-history-tile {
   background: white;
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  border: 1px solid #f8fafc;
 }
 
-.card-top-summary {
+.tile-top-info {
   padding: 1.25rem;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #f1f5f9;
+  align-items: flex-start;
   cursor: pointer;
 }
 
-.summary-text-col {
+.tile-main-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.savings-msg {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #10b981;
+.savings-highlight {
+  font-size: 0.85rem;
+  font-weight: 950;
+  color: #000;
 }
 
-.delivery-status-msg {
-  font-size: 1rem;
-  font-weight: 900;
-  color: #000;
+.order-sub-meta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
   margin: 0;
 }
 
-.order-meta-info {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.order-items-preview {
-  padding: 1rem 1.25rem;
+.order-thumbs-row {
+  padding: 0 1.25rem 1.25rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.mini-item-thumb {
-  width: 40px;
-  height: 40px;
+.mini-thumb {
+  width: 52px;
+  height: 52px;
   background: #f8fafc;
-  border-radius: 8px;
-  padding: 4px;
+  border-radius: 12px;
+  padding: 6px;
   border: 1px solid #f1f5f9;
 }
 
-.mini-item-thumb img {
+.mini-thumb img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.extra-items-count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #64748b;
+.thumbs-count-more {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #94a3b8;
 }
 
-.card-action-btns {
+.tile-actions {
   display: flex;
+  background: #fafafa;
   border-top: 1px solid #f1f5f9;
 }
 
-.order-action-btn {
+.tile-btn-action {
   flex: 1;
-  padding: 1rem;
+  padding: 0.85rem;
   background: none;
   border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #16a34a;
   cursor: pointer;
 }
 
-.order-action-btn.reorder {
-  color: #16a34a;
+.btn-v-sep {
+  width: 1.5px;
+  background: #f1f5f9;
+  margin: 0.6rem 0;
 }
 
-.btn-divider {
-  width: 1px;
-  background: #f1f5f9;
-  margin: 0.75rem 0;
+.loading-box {
+  text-align: center;
+  padding: 5rem;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 .empty-orders-state {
   text-align: center;
-  padding: 5rem 2rem;
+  padding: 8rem 2rem;
   color: #64748b;
 }
 
 .browse-btn {
   display: inline-block;
   margin-top: 1.5rem;
-  padding: 0.75rem 2rem;
-  background: #000;
-  color: #FFEA00;
+  padding: 0.85rem 2.5rem;
+  background: #16a34a;
+  color: #fff;
   border-radius: 12px;
   text-decoration: none;
   font-weight: 800;
@@ -147,7 +161,13 @@
 @media (min-width: 851px) {
   .orders-content {
     max-width: 800px;
-    margin: 0 auto;
+    margin: 2rem auto;
     width: 100%;
+  }
+
+  .orders-header-sticky {
+    max-width: 800px;
+    margin: 0 auto;
+    border-radius: 0 0 16px 16px;
   }
 }

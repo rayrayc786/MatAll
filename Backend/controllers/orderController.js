@@ -10,6 +10,17 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.user.id })
+      .populate('items.productId')
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.checkout = async (req, res) => {
   try {
     const orderData = {
