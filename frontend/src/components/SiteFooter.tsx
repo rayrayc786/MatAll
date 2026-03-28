@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Instagram, Linkedin, MessageCircle } from 'lucide-react';
 import './site-footer.css';
 
 const SiteFooter: React.FC = () => {

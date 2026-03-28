@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Clock,
   Star,
-  ShieldCheck,
   Plus,
   Minus,
   ShoppingCart
