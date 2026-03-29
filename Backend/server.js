@@ -54,7 +54,8 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve images from the "public/images" directory
 const imagePath = path.join(__dirname, 'public', 'images');
@@ -88,13 +89,15 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const vendorRoutes = require('./routes/vendorRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
+const userRequestRoutes = require('./routes/userRequestRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/vendor', vendorRoutes);
+app.use('/api/supplier', supplierRoutes);
+app.use('/api/user-requests', userRequestRoutes);
 
 app.set('socketio', io);
 
@@ -105,25 +108,25 @@ app.get('/', (req, res) => {
 // Socket Namespaces
 const adminNamespace = io.of('/admin');
 const customerNamespace = io.of('/customer');
-const vendorNamespace = io.of('/vendor');
+const supplierNamespace = io.of('/supplier');
 
 adminNamespace.use(socketAuth(['Admin']));
-vendorNamespace.use(socketAuth(['Vendor']));
-customerNamespace.use(socketAuth(['Buyer', 'Driver']));
+supplierNamespace.use(socketAuth(['Supplier']));
+customerNamespace.use(socketAuth(['End User', 'Rider']));
 
 adminNamespace.on('connection', (socket) => {
   console.log(`Admin connected: ${socket.id}`);
 });
 
-vendorNamespace.on('connection', (socket) => {
-  console.log(`Vendor connected: ${socket.id} (Vendor ID: ${socket.user.vendorId})`);
-  if (socket.user.vendorId) {
-    socket.join(socket.user.vendorId.toString());
+supplierNamespace.on('connection', (socket) => {
+  console.log(`Supplier connected: ${socket.id} (Supplier ID: ${socket.user.supplierId})`);
+  if (socket.user.supplierId) {
+    socket.join(socket.user.supplierId.toString());
   }
 });
 
 customerNamespace.on('connection', (socket) => {
-  console.log(`Customer/Driver connected: ${socket.id} (User ID: ${socket.user.id})`);
+  console.log(`Customer/Rider connected: ${socket.id} (User ID: ${socket.user.id})`);
   if (socket.user.id) {
     socket.join(socket.user.id.toString());
   }

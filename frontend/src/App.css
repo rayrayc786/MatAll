@@ -2084,7 +2084,7 @@ a {
   color: white;
 }
 
-.driver-info {
+.rider-info {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -2309,8 +2309,8 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
-/* Vendor & Expansion Styles */
-.vendor-profile {
+/* Supplier & Expansion Styles */
+.supplier-profile {
   display: flex;
   justify-content: space-between;
   align-items: center;

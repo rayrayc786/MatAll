@@ -35,8 +35,8 @@ exports.checkout = async (req, res) => {
     const order = await OrderService.createOrder(orderData);
 
     const io = req.app.get('socketio');
-    if (order.vendorId) {
-      io.of('/vendor').to(order.vendorId.toString()).emit('new-order', order);
+    if (order.supplierId) {
+      io.of('/supplier').to(order.supplierId.toString()).emit('new-order', order);
     }
     const safeOrder = order.toJSON ? order.toJSON() : order;
     
@@ -77,7 +77,7 @@ exports.acceptOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.id, 
-      { status: 'dispatched', driverId: req.user.id }, 
+      { status: 'dispatched', riderId: req.user.id }, 
       { new: true }
     );
 

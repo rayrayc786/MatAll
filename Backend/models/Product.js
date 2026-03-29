@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const ProductSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   description: { type: String },
-  sku: { type: String, required: true, unique: true },
+  sku: { type: String, required: false },
   
   // Smart Units: individual, weight-based (lbs/kg), or packs/bundles
   unitType: { 

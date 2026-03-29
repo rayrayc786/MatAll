@@ -30,13 +30,13 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, sparse: true }, // Made sparse for OTP-only signup
   role: { 
     type: String, 
-    enum: ['Buyer', 'Admin', 'Driver', 'Vendor'], 
-    default: 'Buyer' 
+    enum: ['End User', 'Admin', 'Rider', 'Supplier'], 
+    default: 'End User' 
   },
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }, // Links user to a Vendor entity
+  supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' }, // Links user to a Supplier entity
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   
-  // Driver Specific Fields
+  // Rider Specific Fields
   vehicleType: { 
     type: String, 
     enum: ['Scooter', 'Pickup Truck', 'Flatbed', 'Heavy Trailer', 'None'], 

@@ -239,7 +239,38 @@
   font-size: 0.9rem;
   font-weight: 500;
   color: #64748b;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0px;
+}
+
+/* New Right Column Highlights */
+.highlights-detail-row {
+  display: flex;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.highlight-mini-box {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.h-mini-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.h-mini-value {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #1e293b;
 }
 
 .prd-price-block {
@@ -274,6 +305,53 @@
   font-weight: 800;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+.details-expanded-content {
+  padding: 1rem 0;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.details-para {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.specifications-section h4 {
+  font-size: 0.95rem;
+  font-weight: 850;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+}
+
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.specs-table td {
+  padding: 10px 12px;
+  border: 1px solid #f1f5f9;
+  font-size: 0.8rem;
+}
+
+.spec-title {
+  background: #f8fafc;
+  font-weight: 800;
+  color: #475569;
+  width: 40%;
+}
+
+.spec-value {
+  color: #1e293b;
+  font-weight: 600;
 }
 
 /* 4. Brand & Policies */
@@ -359,6 +437,25 @@
 .section-head h3 {
   font-size: 1.1rem;
   font-weight: 900;
+}
+
+.see-all-btn-blinkit {
+  background: none;
+  border: none;
+  color: #16a34a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.see-all-btn-blinkit:hover {
+  transform: translateX(3px);
+  color: #15803d;
 }
 
 /* Sticky Footer and Quantity Controls */

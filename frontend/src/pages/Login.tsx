@@ -14,6 +14,7 @@ import {
   Paintbrush
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import logoImg from '../assets/logo.jpeg';
 import './login.css';
 
 const BANNER_ICONS = [
@@ -35,7 +36,6 @@ const Login: React.FC = () => {
   const [step, setStep] = useState(1); // 1: Login/Sign up, 2: OTP
   const [timer, setTimer] = useState(30);
   // const [timer, setTimer] = useState(30);
-  const [showCallButton, setShowCallButton] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState<{ show: boolean, type: 'Terms' | 'Privacy' }>({ show: false, type: 'Terms' });
   const [bannerImages, setBannerImages] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -94,14 +94,14 @@ const Login: React.FC = () => {
   //   return () => clearInterval(autoRedirectTimer.current);
   // }, [step, phoneNumber, navigate]);
 
-  // Resend / Call timer (PRD Page 6)
+  // Resend timer
   useEffect(() => {
     if (step === 2) {
+      setTimeout(() => otpRefs[0].current?.focus(), 50);
       resendTimer.current = setInterval(() => {
         setTimer(prev => {
           if (prev <= 1) {
             clearInterval(resendTimer.current);
-            setShowCallButton(true);
             return 0;
           }
           return prev - 1;
@@ -125,7 +125,6 @@ const Login: React.FC = () => {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, { phoneNumber });
       setStep(2);
       setTimer(30);
-      setShowCallButton(false);
       toast.success('OTP sent successfully');
     } catch (err: any) {
       toast.error('Failed to send OTP');
@@ -158,21 +157,16 @@ const Login: React.FC = () => {
         navigate(from, { replace: true });
       } else if (data.user.role === 'Admin') {
         navigate('/admin');
-      } else if (data.user.role === 'Driver') {
-        navigate('/driver');
-      } else if (data.user.role === 'Vendor') {
-        navigate('/vendor');
+      } else if (data.user.role === 'Rider') {
+        navigate('/rider');
+      } else if (data.user.role === 'Supplier') {
+        navigate('/supplier');
       } else {
         navigate('/');
       }
     } catch (err: any) {
       toast.error('Invalid OTP code');
     }
-  };
-
-  const handleCallVerify = () => {
-    toast.success('Initiating verification call...');
-    // Mock logic for call verification
   };
 
   return (
@@ -200,7 +194,7 @@ const Login: React.FC = () => {
       <div className="login-content-wrapper">
         {/* Brand Section */}
         <div className="login-branding">
-          <div className="matall-logo">Mat<span>All</span></div>
+          <img src={logoImg} alt="MatAll Logo" className="matall-logo-img" />
           <div className="tagline">Building Materials, Delivered in Minutes.</div>
         </div>
 
@@ -250,7 +244,9 @@ const Login: React.FC = () => {
                   <input
                     key={idx}
                     ref={otpRefs[idx]}
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     maxLength={1}
                     className="otp-box"
                     value={val}
@@ -265,11 +261,7 @@ const Login: React.FC = () => {
               </div>
               
               <div className="otp-actions">
-                {showCallButton ? (
-                  <p className="resend-text">Did not get OTP? <button className="call-link" onClick={handleCallVerify}>Call me to verify</button></p>
-                ) : (
-                  <p className="resend-text">Did not get code? <button className="resend-link" disabled={timer > 0} onClick={handleSendOTP}>Resend {timer > 0 ? `(${timer}s)` : ''}</button></p>
-                )}
+                <p className="resend-text">Did not get code? <button className="resend-link" disabled={timer > 0} onClick={handleSendOTP}>Resend {timer > 0 ? `(${timer}s)` : ''}</button></p>
               </div>
 
               <button 

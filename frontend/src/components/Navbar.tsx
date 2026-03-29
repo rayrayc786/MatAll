@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown, Heart } from 'lucide-react';
+import { Search, ShoppingCart, User, LayoutDashboard, LogOut, ClipboardList, Menu, MapPin, X, ChevronDown, Heart, Headset } from 'lucide-react';
 import axios from 'axios';
 
 import { useCart } from '../contexts/CartContext';
@@ -8,6 +8,7 @@ import AISearch from './AISearch';
 import LocationSelector from './LocationSelector';
 import './navbar.css';
 import LocationModal from './LocationModal';
+import logoImg from '../assets/logo.jpeg';
 
 const Navbar: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +94,6 @@ const Navbar: React.FC = () => {
 
   // Logic to determine if we should hide the global navbar on mobile
   const customHeaderPaths = [
-    '/search', 
     '/products', 
     '/cart', 
     '/checkout', 
@@ -115,51 +115,57 @@ const Navbar: React.FC = () => {
 
   const isBlinkitHeader = !isLoggedIn && isDesktop;
 
+  const renderSearchBar = () => (
+    <div className="search-container-main" ref={suggestionRef}>
+      <form className="search-bar" onSubmit={handleSearch}>
+        <Search size={20} className="search-icon" color="#333" />
+        <input 
+          type="text" 
+          placeholder='Search products...' 
+          value={searchTerm}
+          onChange={onInputChange}
+          onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+        />
+        <AISearch />
+      </form>
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="search-suggestions-dropdown">
+          {suggestions.map((s) => (
+            <div 
+              key={s._id} 
+              className="suggestion-item"
+              onClick={() => handleSuggestionClick(s)}
+            >
+              <div className="s-info">
+                 <span className="s-brand">{s.brand}</span>
+                 <span className="s-name">{s.name}</span>
+              </div>
+              <span className="s-price">₹{s.price}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <header className={`navbar-new-layout ${isHomePage ? 'landing-header-wrapper' : ''}`}>
       {(isHomePage && !isDesktop) ? (
-        <LocationSelector />
+        <LocationSelector searchNode={renderSearchBar()} />
       ) : isBlinkitHeader ? (
         <>
           <div className="standard-navbar main-content-responsive">
             <div className="nav-left">
               <div className="logo-container">
-                <Link to="/" className="logo">Mat<span>All</span></Link>
+                <Link to="/" className="logo">
+                  <img src={logoImg} alt="MatAll" className="navbar-logo-img" />
+                </Link>
               </div>
               <LocationSelectorInNav isBlinkitStyle={true} />
             </div>
             
-            <div className="search-container-main" ref={suggestionRef}>
-              <form className="search-bar" onSubmit={handleSearch}>
-                <Search size={18} className="search-icon" color="#333" />
-                <input 
-                  type="text" 
-                  placeholder='Search products' 
-                  value={searchTerm}
-                  onChange={onInputChange}
-                  onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-                />
-                <AISearch />
-              </form>
-
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="search-suggestions-dropdown">
-                  {suggestions.map((s) => (
-                    <div 
-                      key={s._id} 
-                      className="suggestion-item"
-                      onClick={() => handleSuggestionClick(s)}
-                    >
-                      <div className="s-info">
-                         <span className="s-brand">{s.brand}</span>
-                         <span className="s-name">{s.name}</span>
-                      </div>
-                      <span className="s-price">₹{s.price}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {renderSearchBar()}
 
             <div className="nav-actions">
               <Link to="/login" className="nav-link-login-text">
@@ -193,41 +199,13 @@ const Navbar: React.FC = () => {
             <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <Link to="/" className="logo">MatAll</Link>
+            <Link to="/" className="logo">
+              <img src={logoImg} alt="MatAll" className="navbar-logo-img" />
+            </Link>
             {isDesktop && <LocationSelectorInNav isBlinkitStyle={false} />}
           </div>
           
-          <div className="search-container-main" ref={suggestionRef}>
-            <form className="search-bar" onSubmit={handleSearch}>
-              <Search size={20} className="search-icon" />
-              <input 
-                type="text" 
-                placeholder='Search products...' 
-                value={searchTerm}
-                onChange={onInputChange}
-                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-              />
-              <AISearch />
-            </form>
-
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="search-suggestions-dropdown">
-                {suggestions.map((s) => (
-                  <div 
-                    key={s._id} 
-                    className="suggestion-item"
-                    onClick={() => handleSuggestionClick(s)}
-                  >
-                    <div className="s-info">
-                       <span className="s-brand">{s.brand}</span>
-                       <span className="s-name">{s.name}</span>
-                    </div>
-                    <span className="s-price">₹{s.price}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {renderSearchBar()}
 
           <div className={`nav-actions ${isMenuOpen ? 'open' : ''}`}>
             {isDesktop && (
@@ -250,6 +228,11 @@ const Navbar: React.FC = () => {
                   <span className="nav-text-mobile">Favorites</span>
                 </Link>
               )}
+              
+              <Link to="/support" className="control-icon-btn" title="Support">
+                <Headset size={20} />
+                <span className="nav-text-mobile">Support</span>
+              </Link>
               
               {isLoggedIn && user.role === 'Admin' && (
                 <Link to="/admin" className="control-icon-btn admin-link" title="Admin Dashboard">
@@ -347,7 +330,7 @@ const LocationSelectorInNav = ({ isBlinkitStyle }: { isBlinkitStyle?: boolean })
   if (isBlinkitStyle) {
     return (
       <div className="delivery-info-container" onClick={() => setIsModalOpen(true)}>
-        <span className="delivery-title">Delivery in 8 minutes</span>
+        <span className="delivery-title">Delivery in 60 minutes</span>
         <div className="delivery-address-wrapper">
           <span className="delivery-address">{address}</span>
           <ChevronDown size={14} />

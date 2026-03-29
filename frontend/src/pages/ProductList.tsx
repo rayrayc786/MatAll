@@ -6,7 +6,8 @@ import {
   Home, 
   ShoppingCart,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  X
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/CartContext';
@@ -19,22 +20,32 @@ const ProductList: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('default'); // 'price-low', 'price-high'
   const [showFilters, setShowFilters] = useState(false);
   
-  const [similarProducts] = useState<any[]>([
-    { name: 'Hinges', link: '/products?category=22&subCategory=Hinges' },
-    { name: 'Channels', link: '/products?category=22&subCategory=Channels' },
-    { name: 'Adhesives', link: '/products?category=22&subCategory=Adhesives' },
-    { name: 'Tools', link: '/products?category=tools' }
-  ]);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [modalSubCats, setModalSubCats] = useState<any[]>([]);
+  const [activeModalCat, setActiveModalCat] = useState<string | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const subCategoryName = params.get('subCategory');
+  const categoryId = params.get('category');
   const initialBrand = params.get('brand');
   const { cart, totalAmount } = useCart();
 
   const cartTotal = totalAmount;
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  useEffect(() => {
+    const fetchAllCats = async () => {
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/categories`);
+        setAllCategories(data);
+        if (categoryId) setActiveModalCat(categoryId);
+      } catch (err) { console.error(err); }
+    };
+    fetchAllCats();
+  }, [categoryId]);
 
   useEffect(() => {
     if (initialBrand) {
@@ -46,7 +57,6 @@ const ProductList: React.FC = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Fetch all products for the category to get all brands
         const searchUrl = `${import.meta.env.VITE_API_BASE_URL}/api/products${location.search}`;
         const { data } = await axios.get(searchUrl);
         setProducts(data);
@@ -58,6 +68,37 @@ const ProductList: React.FC = () => {
     };
     fetchProducts();
   }, [location.search]);
+
+  useEffect(() => {
+    const fetchSubCategories = async () => {
+      if (!categoryId) {
+        setSimilarProducts([]);
+        return;
+      }
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories?categoryId=${categoryId}`);
+        const list = data.map((sc: any) => ({
+          name: sc.name,
+          link: `/products?category=${categoryId}&subCategory=${sc.name}`
+        }));
+        setSimilarProducts(list);
+      } catch (err) {
+        console.error('Failed to fetch similar subcategories:', err);
+      }
+    };
+    fetchSubCategories();
+  }, [categoryId]);
+
+  useEffect(() => {
+    const fetchModalSubCats = async () => {
+      if (!activeModalCat) return;
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories?categoryId=${activeModalCat}`);
+        setModalSubCats(data);
+      } catch (err) { console.error(err); }
+    };
+    if (showFilters) fetchModalSubCats();
+  }, [activeModalCat, showFilters]);
 
   const brands = useMemo(() => {
     const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
@@ -79,6 +120,11 @@ const ProductList: React.FC = () => {
     return result;
   }, [products, selectedBrand, sortBy]);
 
+  const currentCategoryMetadata = useMemo(() => {
+    if (!categoryId) return null;
+    return allCategories.find(c => c.name === categoryId || c._id === categoryId);
+  }, [allCategories, categoryId]);
+
   return (
     <div className="blinkit-list-page">
       <header className="list-header-sticky">
@@ -94,16 +140,24 @@ const ProductList: React.FC = () => {
           </Link>
         </div>
 
-        <div className="quick-links-carousel">
-          <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
-            <span className="ql-label">Similar Products</span>
-            <div className="ql-track">
-              {similarProducts.map((item, idx) => (
-                <Link key={idx} to={item.link} className="ql-item">{item.name}</Link>
-              ))}
+        {subCategoryName && similarProducts.length > 0 && (
+          <div className="quick-links-carousel">
+            <div className="main-content-responsive ql-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: 0 }}>
+              <span className="ql-label">Similar Products</span>
+              <div className="ql-track">
+                {similarProducts.map((item, idx) => (
+                  <Link 
+                    key={idx} 
+                    to={item.link} 
+                    className={`ql-item ${item.name === subCategoryName ? 'active' : ''}`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="horizontal-filters-bar main-content-responsive">
           <div className="filter-group">
@@ -160,6 +214,15 @@ const ProductList: React.FC = () => {
           ) : (
             <div className="no-products">No products found for this selection.</div>
           )}
+
+          {/* Blog Space */}
+          {currentCategoryMetadata?.description && (
+            <div className="category-blog-space">
+               {currentCategoryMetadata.description.split('\n').filter((p: string) => p.trim() !== '').map((para: string, idx: number) => (
+                 <p key={idx}>{para}</p>
+               ))}
+            </div>
+          )}
         </section>
       </main>
 
@@ -172,6 +235,51 @@ const ProductList: React.FC = () => {
           <div className="view-cart-btn">
             View Cart <ShoppingCart size={18} />
           </div>
+        </div>
+      )}
+
+      {/* Categories & Subcategories Filter Modal */}
+      {showFilters && (
+        <div className="category-filter-modal-overlay">
+           <div className="category-filter-modal-container">
+              <header className="modal-header">
+                 <span>Shop by Category</span>
+                 <button className="close-btn" onClick={() => setShowFilters(false)}><X size={24} /></button>
+              </header>
+              <div className="modal-body-layout">
+                 <aside className="cat-sidebar">
+                    {allCategories.map(cat => (
+                       <div 
+                         key={cat._id} 
+                         className={`cat-tab ${activeModalCat === cat.name || activeModalCat === cat._id ? 'active' : ''}`}
+                         onClick={() => setActiveModalCat(cat.name)}
+                       >
+                          {cat.name}
+                       </div>
+                    ))}
+                 </aside>
+                 <section className="subcat-grid-area">
+                    <h3>{activeModalCat}</h3>
+                    <div className="subcat-grid">
+                       {modalSubCats.length > 0 ? modalSubCats.map(sc => (
+                         <div 
+                           key={sc._id} 
+                           className="subcat-card"
+                           onClick={() => {
+                              navigate(`/products?category=${encodeURIComponent(activeModalCat || '')}&subCategory=${encodeURIComponent(sc.name)}`);
+                              setShowFilters(false);
+                           }}
+                         >
+                            <div className="subcat-img">
+                               <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(sc.name)}&background=f1f5f9&color=000&bold=true`} alt={sc.name} />
+                            </div>
+                            <span>{sc.name}</span>
+                         </div>
+                       )) : <p>No subcategories found.</p>}
+                    </div>
+                 </section>
+              </div>
+           </div>
         </div>
       )}
     </div>

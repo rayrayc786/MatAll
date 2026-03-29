@@ -16,12 +16,12 @@ const OrderSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
-    enum: ['pending', 'vendor-confirmed', 'picking', 'packing', 'handover-ready', 'dispatched', 'delivered', 'cancelled', 'rejected-by-vendor'], 
-    default: 'pending' 
+    enum: ['Accepted', 'Order Ready to Ship', 'Rider at hub for pickup', 'Order Picked', 'Order on way', 'Order Delivered', 'Cancelled'], 
+    default: 'Accepted' 
   },
   
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
-  driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+  riderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   paymentMethod: { type: String, enum: ['upi', 'credit', 'bank', 'COD'], default: 'COD' },
   proofImageUrl: { type: String },
 

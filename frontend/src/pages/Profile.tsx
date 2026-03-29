@@ -61,7 +61,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Team Management (B2B) */}
-        {/* {user.role === 'Buyer' && (
+        {/* {user.role === 'End User' && (
           <section className="profile-section-tile team-tile">
              <div className="section-header-row">
                 <Users size={20} />

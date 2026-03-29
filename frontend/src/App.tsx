@@ -13,7 +13,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Tracking from './pages/Tracking';
-import VendorStore from './pages/VendorStore';
+import SupplierStore from './pages/SupplierStore';
 import BrandStore from './pages/BrandStore';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
@@ -26,7 +26,7 @@ import PaymentMethod from './pages/PaymentMethod';
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import SKUManager from './pages/admin/SKUManager';
-import VendorManager from './pages/admin/VendorManager';
+import SupplierManager from './pages/admin/SupplierManager';
 import CategoryManager from './pages/admin/CategoryManager';
 import SubCategoryManager from './pages/admin/SubCategoryManager';
 import UnitManager from './pages/admin/UnitManager';
@@ -34,21 +34,22 @@ import BrandManager from './pages/admin/BrandManager';
 import SubVariantTitleManager from './pages/admin/SubVariantTitleManager';
 import DeliveryTimeManager from './pages/admin/DeliveryTimeManager';
 import PickingQueue from './pages/admin/PickingQueue';
-import FleetManager from './pages/admin/FleetManager';
+import RiderManager from './pages/admin/RiderManager';
 import InvoicingReports from './pages/admin/InvoicingReports';
+import OfferManager from './pages/admin/OfferManager';
 
-// Driver Pages
-import DriverDashboard from './pages/driver/DriverDashboard';
-import TaskVerification from './pages/driver/TaskVerification';
-import DeliveryNavigation from './pages/driver/DeliveryNavigation';
-import ProofOfDelivery from './pages/driver/ProofOfDelivery';
+// Rider Pages
+import RiderDashboard from './pages/rider/RiderDashboard';
+import TaskVerification from './pages/rider/TaskVerification';
+import DeliveryNavigation from './pages/rider/DeliveryNavigation';
+import ProofOfDelivery from './pages/rider/ProofOfDelivery';
 
 // Other
 import Reports from './pages/Reports';
-import VendorDashboard from './pages/VendorDashboard';
+import SupplierDashboard from './pages/SupplierDashboard';
 import Navbar from './components/Navbar';
 import AdminSidebar from './components/admin/AdminSidebar';
-import { customerSocket, vendorSocket, connectSocket } from './socket';
+import { customerSocket, supplierSocket, connectSocket } from './socket';
 import './App.css';
 import './responsive.css';
 
@@ -92,7 +93,7 @@ const SocketManager = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
     // Role-based Socket Connection Management
-    if (!user.role || user.role === 'Buyer' || user.role === 'Driver') {
+    if (!user.role || user.role === 'End User' || user.role === 'Rider') {
       connectSocket(customerSocket);
       
       // Remove existing listeners to avoid duplicates
@@ -106,10 +107,10 @@ const SocketManager = () => {
       });
     }
 
-    if (user.role === 'Vendor') {
-      connectSocket(vendorSocket);
-      vendorSocket.off('new-order');
-      vendorSocket.on('new-order', (order: any) => {
+    if (user.role === 'Supplier') {
+      connectSocket(supplierSocket);
+      supplierSocket.off('new-order');
+      supplierSocket.on('new-order', (order: any) => {
         toast.success(`NEW PROCUREMENT REQUEST! #BID-${order._id.slice(-6).toUpperCase()}`, {
           icon: '📦',
           duration: 10000,
@@ -131,17 +132,17 @@ import SiteFooter from './components/SiteFooter';
 const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
-  const isDriverPath = location.pathname.startsWith('/driver');
-  const isVendorPath = location.pathname.startsWith('/vendor') || location.pathname === '/reports';
+  const isRiderPath = location.pathname.startsWith('/rider');
+  const isSupplierPath = location.pathname.startsWith('/supplier') || location.pathname === '/reports';
   const isLoginPage = location.pathname === '/login';
 
   const isCartPath = location.pathname === '/cart';
   const isCheckoutPath = location.pathname === '/checkout';
   const isPaymentPath = location.pathname === '/payment';
 
-  const showNavbar = !isAdminPath && !isDriverPath && !isVendorPath && !isLoginPage && !isPaymentPath;
-  const showSiteFooter = !isAdminPath && !isDriverPath && !isVendorPath && !isLoginPage && !isCartPath && !isCheckoutPath && !isPaymentPath;
-  const showBottomNav = !isAdminPath && !isDriverPath && !isVendorPath && !isPaymentPath;
+  const showNavbar = !isAdminPath && !isRiderPath && !isSupplierPath && !isLoginPage && !isPaymentPath;
+  const showSiteFooter = !isAdminPath && !isRiderPath && !isSupplierPath && !isLoginPage && !isCartPath && !isCheckoutPath && !isPaymentPath;
+  const showBottomNav = !isAdminPath && !isRiderPath && !isSupplierPath && !isPaymentPath;
 
   return (
     <div className={`app-container app-container-responsive ${showBottomNav ? 'with-footer-padding' : ''}`}>
@@ -162,7 +163,7 @@ const AppContent = () => {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment" element={<PaymentMethod />} />
         <Route path="/tracking/:id" element={<Tracking />} />
-        <Route path="/vendor/:id" element={<VendorStore />} />
+        <Route path="/supplier/:id" element={<SupplierStore />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/favorites" element={<Favorites />} />
@@ -172,7 +173,7 @@ const AppContent = () => {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="inventory" element={<SKUManager />} />
-          <Route path="vendors" element={<VendorManager />} />
+          <Route path="suppliers" element={<SupplierManager />} />
           <Route path="categories" element={<CategoryManager />} />
           <Route path="sub-categories" element={<SubCategoryManager />} />
           <Route path="units" element={<UnitManager />} />
@@ -180,18 +181,19 @@ const AppContent = () => {
           <Route path="variant-titles" element={<SubVariantTitleManager />} />
           <Route path="delivery-times" element={<DeliveryTimeManager />} />
           <Route path="queue" element={<PickingQueue />} />
-          <Route path="fleet" element={<FleetManager />} />
+          <Route path="fleet" element={<RiderManager />} />
           <Route path="invoices" element={<InvoicingReports />} />
+          <Route path="offers" element={<OfferManager />} />
         </Route>
 
-        {/* Driver Routes */}
-        <Route path="/driver" element={<DriverDashboard />} />
-        <Route path="/driver/verify/:id" element={<TaskVerification />} />
-        <Route path="/driver/delivery/:id" element={<DeliveryNavigation />} />
-        <Route path="/driver/pod/:id" element={<ProofOfDelivery />} />
+        {/* Rider Routes */}
+        <Route path="/rider" element={<RiderDashboard />} />
+        <Route path="/rider/verify/:id" element={<TaskVerification />} />
+        <Route path="/rider/delivery/:id" element={<DeliveryNavigation />} />
+        <Route path="/rider/pod/:id" element={<ProofOfDelivery />} />
 
-        {/* Vendor Routes */}
-        <Route path="/vendor" element={<VendorDashboard />} />
+        {/* Supplier Routes */}
+        <Route path="/supplier" element={<SupplierDashboard />} />
         <Route path="/reports" element={<Reports />} />
       </Routes>
 

@@ -14,11 +14,13 @@ import {
   Plus,
   Trash2,
   X,
-  FileUp
+  FileUp,
+  Image
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../Reports';
+import FooterManager from './FooterManager';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -56,13 +58,14 @@ const AdminDashboard: React.FC = () => {
   const tabParam = searchParams.get('tab');
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>((tabParam as any) || 'dashboard');
-  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets'>('list');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links'>('list');
   const [loading, setLoading] = useState(false);
 
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [userRequests, setUserRequests] = useState<any[]>([]);
 
   // Management State
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -70,23 +73,29 @@ const AdminDashboard: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [userTab, setUserTab] = useState<'profile' | 'addresses' | 'orders'>('profile');
+  const [productTab, setProductTab] = useState<'general' | 'variants' | 'images'>('general');
+  const [userOrders, setUserOrders] = useState<any[]>([]);
 
   const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') + '/api';
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [uRes, oRes, cRes, pRes] = await Promise.all([
+      const [uRes, oRes, cRes, pRes, urRes] = await Promise.all([
         axios.get(`${API_BASE}/admin/users`),
         axios.get(`${API_BASE}/orders`),
         axios.get(`${API_BASE}/admin/categories`),
-        axios.get(`${API_BASE}/products`)
+        axios.get(`${API_BASE}/products`),
+        axios.get(`${API_BASE}/user-requests`)
       ]);
       
       if (uRes.data) setUsers(uRes.data);
       if (oRes.data) setOrders(oRes.data);
       if (cRes.data) setCategories(cRes.data);
       if (pRes.data) setProducts(pRes.data);
+      if (urRes.data) setUserRequests(urRes.data);
     } catch (err: any) {
       console.error('Fetch failed:', err);
     } finally {
@@ -119,23 +128,32 @@ const AdminDashboard: React.FC = () => {
        fetchData(); // Auto-refresh all stats and orders
     };
 
+    const onNewUserRequest = (request: any) => {
+       toast.success(`📸 New Material Request from ${request.name}!`);
+       fetchData();
+    };
+
     adminSocket.on('connect', onConnect);
     adminSocket.on('new-order', onNewOrder);
+    adminSocket.on('new-user-request', onNewUserRequest);
 
     return () => {
       adminSocket.off('connect', onConnect);
       adminSocket.off('new-order', onNewOrder);
+      adminSocket.off('new-user-request', onNewUserRequest);
       // NOTE: Removed adminSocket.disconnect() to prevent breaking the singleton connection on quick re-renders
     };
   }, []);
 
-  const handleAction = async (method: 'post' | 'put' | 'delete', endpoint: string, data?: any) => {
+  const handleAction = async (method: 'post' | 'put' | 'patch' | 'delete', endpoint: string, data?: any) => {
     try {
       const url = `${API_BASE}${endpoint}`;
       if (method === 'delete') {
          await axios.delete(url);
       } else if (method === 'post') {
          await axios.post(url, data);
+      } else if (method === 'patch') {
+         await axios.patch(url, data);
       } else {
          await axios.put(url, data);
       }
@@ -151,13 +169,44 @@ const AdminDashboard: React.FC = () => {
   const openForm = (item: any = null) => {
      setEditingItem(item);
      setFormData(item || {});
+     setUserTab('profile');
+     setProductTab('general');
+     setUserOrders([]);
      setShowModal(true);
   };
 
-  const handleStatusChange = async (orderId: string, currentStatus: string) => {
-    const statuses = ['pending', 'picking', 'dispatched', 'delivered', 'cancelled'];
-    const nextIdx = (statuses.indexOf(currentStatus) + 1) % statuses.length;
-    await handleAction('patch' as any, `/admin/orders/${orderId}/status`, { status: statuses[nextIdx] });
+  const fetchUserOrders = async (userId: string) => {
+     try {
+        const { data } = await axios.get(`${API_BASE}/admin/users/${userId}/orders`);
+        setUserOrders(data);
+     } catch (err) {
+        toast.error('Failed to load user orders');
+     }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    await handleAction('patch', `/admin/orders/${orderId}/status`, { status });
+  };
+
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.post(`${API_BASE}/admin/products/upload-image`, uploadData);
+      setFormData({
+        ...formData,
+        images: [...(formData.images || []), data.imageUrl]
+      });
+      toast.success('Image uploaded');
+    } catch (err) {
+      toast.error('Upload failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -215,21 +264,49 @@ const AdminDashboard: React.FC = () => {
     },
     { 
       id: 'categories', 
-      name: 'Category Management', 
-      sub: 'Monitor key categories and invoice metrics like MRR, retention, collections, B2B Account revenue etc', 
-      color: '#DEDEDE' 
+      name: 'Category & Sub-Category', 
+      sub: 'Manage master categories and nested hierarchical sub-categories in a tree view', 
+      color: '#DEDEDE',
+      path: '/admin/categories'
     },
     { 
       id: 'products', 
-      name: 'Product Management', 
-      sub: 'Manage construction items, pricing, SKU, variants etc', 
-      color: '#DEDEDE' 
+      name: 'SKU & Inventory', 
+      sub: 'Manage 30,000+ construction items, technical pricing, SKU generation and variants', 
+      color: '#DEDEDE',
+      path: '/admin/inventory'
     },
     { 
       id: 'tickets', 
       name: 'Review Support Tickets', 
       sub: 'Reports about revenue generated per category, per product type, per brand, order size etc', 
       color: '#DEDEDE' 
+    },
+    { 
+      id: 'brands', 
+      name: 'Brand Management', 
+      sub: 'Manage manufacturing partners, logos, and featured brands for the homepage', 
+      color: '#DEDEDE',
+      path: '/admin/brands'
+    },
+    { 
+      id: 'userRequests', 
+      name: 'User Material Requests', 
+      sub: 'View uploaded images, handwritten lists, and BOQs from Users', 
+      color: '#FFEA00' 
+    },
+    {
+      id: 'offers',
+      name: 'Offer Management',
+      sub: 'Manage promotional banners, discounts, and landing page deals',
+      color: '#DEDEDE',
+      path: '/admin/offers'
+    },
+    {
+      id: 'footer-links',
+      name: 'Footer Navigation',
+      sub: 'Manage grouped links, helpful resources, and sub-category listings in the website footer',
+      color: '#FFEA00'
     }
   ];
 
@@ -422,8 +499,20 @@ const AdminDashboard: React.FC = () => {
                <span className="row-name">Order #{order._id.slice(-6).toUpperCase()}</span>
                <span className="row-sub">₹{order.totalAmount || 0}</span>
             </div>
-            <div className="row-status-icons" onClick={() => handleStatusChange(order._id, order.status)}>
-               <span className={`status-pill ${order.status}`}>{order.status}</span>
+            <div className="row-status-select">
+               <select 
+                 className={`status-select-pill ${order.status?.replace(/\s+/g, '-').toLowerCase()}`}
+                 value={order.status}
+                 onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+               >
+                 <option value="Accepted">Accepted</option>
+                 <option value="Order Ready to Ship">Order Ready to Ship</option>
+                 <option value="Rider at hub for pickup">Rider at hub for pickup</option>
+                 <option value="Order Picked">Order Picked</option>
+                 <option value="Order on way">Order on way</option>
+                 <option value="Order Delivered">Order Delivered</option>
+                 <option value="Cancelled">Cancelled</option>
+               </select>
             </div>
           </div>
         ))}
@@ -534,6 +623,31 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const renderUserRequestsManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-card grey">
+        <div className="header-info">
+          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
+          <h2>User Material Requests</h2>
+        </div>
+      </div>
+      <div className="admin-list-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', padding: '1rem' }}>
+        {userRequests.length === 0 ? <p className="text-center py-4" style={{ gridColumn: '1 / -1' }}>No requests found.</p> : userRequests.map((req, i) => (
+          <div key={req._id || i} className="admin-list-row-item card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '1rem', border: '1px solid #eee', borderRadius: '12px', background: '#fff' }}>
+            <div className="row-left-info" style={{ marginBottom: '1rem' }}>
+              <span className="row-name" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{req.name}</span>
+              <span className="row-sub">{req.phone}</span>
+              <span className="row-sub" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+            </div>
+            <div className="row-mid-info" style={{ flex: 1, display: 'flex', justifyContent: 'center', background: '#f8fafc', borderRadius: '8px', padding: '0.5rem' }}>
+               <img src={(req.imageUrl && req.imageUrl.startsWith('/')) ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${req.imageUrl}` : req.imageUrl} alt="Request" style={{ maxWidth: '100%', maxHeight: '250px', objectFit: 'contain', cursor: 'pointer' }} onClick={() => window.open((req.imageUrl && req.imageUrl.startsWith('/')) ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${req.imageUrl}` : req.imageUrl, '_blank')} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const OrderDetailsModal = () => {
     if (!viewingOrder) return null;
     const order = viewingOrder;
@@ -606,8 +720,8 @@ const AdminDashboard: React.FC = () => {
     const type = activeActionTab;
 
     return (
-      <div className="admin-modal-overlay">
-        <div className="admin-modal-content animate-slide-up">
+      <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="admin-modal-content animate-slide-up" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <h3>{isEditing ? 'Edit' : 'Add New'} {type === 'users' ? 'User' : (type === 'categories' ? 'Category' : 'Product')}</h3>
             <button className="close-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
@@ -616,156 +730,296 @@ const AdminDashboard: React.FC = () => {
           <div className="modal-body">
             {type === 'products' && (
               <div className="modal-scroll-area">
-                <div className="input-group-admin">
-                  <label>Product Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Century Ply Sainik 710"
-                    value={formData.name || ''} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                  />
+                <div className="admin-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                  <button type="button" className={productTab === 'general' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('general')} style={productTab === 'general' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>General</button>
+                  <button type="button" className={productTab === 'variants' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('variants')} style={productTab === 'variants' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Variants</button>
+                  <button type="button" className={productTab === 'images' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('images')} style={productTab === 'images' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Images</button>
                 </div>
-                <div className="input-row-admin">
-                   <div className="input-group-admin">
-                      <label>SKU (Product Code)</label>
+
+                {productTab === 'general' && (
+                  <>
+                    <div className="input-group-admin">
+                      <label>Product Name</label>
                       <input 
                         type="text" 
-                        placeholder="FLY-CEN-710" 
-                        value={formData.sku || ''} 
-                        onChange={e => setFormData({...formData, sku: e.target.value})} 
+                        placeholder="e.g. Century Ply Sainik 710"
+                        value={formData.name || ''} 
+                        onChange={e => setFormData({...formData, name: e.target.value})} 
                       />
-                   </div>
-                   <div className="input-group-admin">
-                      <label>Brand</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Century" 
-                        value={formData.brand || ''} 
-                        onChange={e => setFormData({...formData, brand: e.target.value})} 
+                    </div>
+                    <div className="input-row-admin">
+                       <div className="input-group-admin">
+                          <label>SKU (Product Code)</label>
+                          <input 
+                            type="text" 
+                            placeholder="FLY-CEN-710" 
+                            value={formData.sku || ''} 
+                            onChange={e => setFormData({...formData, sku: e.target.value})} 
+                          />
+                       </div>
+                       <div className="input-group-admin">
+                          <label>Brand</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Century" 
+                            value={formData.brand || ''} 
+                            onChange={e => setFormData({...formData, brand: e.target.value})} 
+                          />
+                       </div>
+                    </div>
+                    <div className="input-row-admin">
+                       <div className="input-group-admin">
+                          <label>Category</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Plywood" 
+                            value={formData.category || ''} 
+                            onChange={e => setFormData({...formData, category: e.target.value})} 
+                          />
+                       </div>
+                       <div className="input-group-admin">
+                          <label>Sub Category</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Marine Grade" 
+                            value={formData.subCategory || ''} 
+                            onChange={e => setFormData({...formData, subCategory: e.target.value})} 
+                          />
+                       </div>
+                    </div>
+                    <div className="input-row-admin">
+                       <div className="input-group-admin">
+                          <label>Price (₹)</label>
+                          <input 
+                            type="number" 
+                            value={formData.price || ''} 
+                            onChange={e => setFormData({...formData, price: Number(e.target.value)})} 
+                          />
+                       </div>
+                       <div className="input-group-admin">
+                          <label>MRP (₹)</label>
+                          <input 
+                            type="number" 
+                            value={formData.mrp || ''} 
+                            onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} 
+                          />
+                       </div>
+                    </div>
+                    <div className="input-row-admin">
+                       <div className="input-group-admin">
+                          <label>Weight (kg)</label>
+                          <input 
+                            type="number" 
+                            value={formData.weightPerUnit || 0} 
+                            onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} 
+                          />
+                       </div>
+                       <div className="input-group-admin">
+                          <label>Volume (m³)</label>
+                          <input 
+                            type="number" 
+                            value={formData.volumePerUnit || 0} 
+                            onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} 
+                          />
+                       </div>
+                    </div>
+                    <div className="input-group-admin">
+                      <label>Description</label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Technical specifications, features etc"
+                        value={formData.description || ''} 
+                        onChange={e => setFormData({...formData, description: e.target.value})} 
                       />
-                   </div>
-                </div>
-                <div className="input-row-admin">
-                   <div className="input-group-admin">
-                      <label>Category</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Plywood" 
-                        value={formData.category || ''} 
-                        onChange={e => setFormData({...formData, category: e.target.value})} 
-                      />
-                   </div>
-                   <div className="input-group-admin">
-                      <label>Sub Category</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Marine Grade" 
-                        value={formData.subCategory || ''} 
-                        onChange={e => setFormData({...formData, subCategory: e.target.value})} 
-                      />
-                   </div>
-                </div>
-                <div className="input-row-admin">
-                   <div className="input-group-admin">
-                      <label>Price (₹)</label>
-                      <input 
-                        type="number" 
-                        value={formData.price || ''} 
-                        onChange={e => setFormData({...formData, price: Number(e.target.value)})} 
-                      />
-                   </div>
-                   <div className="input-group-admin">
-                      <label>MRP (₹)</label>
-                      <input 
-                        type="number" 
-                        value={formData.mrp || ''} 
-                        onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} 
-                      />
-                   </div>
-                </div>
-                <div className="input-row-admin">
-                   <div className="input-group-admin">
-                      <label>Weight (kg)</label>
-                      <input 
-                        type="number" 
-                        value={formData.weightPerUnit || 0} 
-                        onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} 
-                      />
-                   </div>
-                   <div className="input-group-admin">
-                      <label>Volume (m³)</label>
-                      <input 
-                        type="number" 
-                        value={formData.volumePerUnit || 0} 
-                        onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} 
-                      />
-                   </div>
-                </div>
-                <div className="input-group-admin">
-                  <label>Description</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Technical specifications, features etc"
-                    value={formData.description || ''} 
-                    onChange={e => setFormData({...formData, description: e.target.value})} 
-                  />
-                </div>
-                <div className="input-row-admin">
-                   <div className="input-group-admin checkbox">
-                      <input 
-                        type="checkbox" 
-                        id="prodActive"
-                        checked={formData.isActive !== false} 
-                        onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                      />
-                      <label htmlFor="prodActive">Is Active</label>
-                   </div>
-                   <div className="input-group-admin checkbox">
-                      <input 
-                        type="checkbox" 
-                        id="prodPopular"
-                        checked={!!formData.isPopular} 
-                        onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
-                      />
-                      <label htmlFor="prodPopular">Mark as Popular</label>
-                   </div>
-                </div>
+                    </div>
+                    <div className="input-row-admin">
+                       <div className="input-group-admin checkbox">
+                          <input 
+                            type="checkbox" 
+                            id="prodActive"
+                            checked={formData.isActive !== false} 
+                            onChange={e => setFormData({...formData, isActive: e.target.checked})} 
+                          />
+                          <label htmlFor="prodActive">Is Active</label>
+                       </div>
+                       <div className="input-group-admin checkbox">
+                          <input 
+                            type="checkbox" 
+                            id="prodPopular"
+                            checked={!!formData.isPopular} 
+                            onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
+                          />
+                          <label htmlFor="prodPopular">Mark as Popular</label>
+                       </div>
+                    </div>
+                  </>
+                )}
+
+                {productTab === 'variants' && (
+                  <div>
+                    <h4 style={{ marginBottom: '1rem' }}>Manage Variants</h4>
+                    {(formData.variants || []).map((v: any, idx: number) => (
+                      <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '1rem', background: '#f8fafc' }}>
+                        <div className="input-group-admin">
+                          <label>Variant Name (e.g. 10mm thickness, 8x4 size)</label>
+                          <input type="text" value={v.name || ''} onChange={(e) => {
+                            const newV = [...(formData.variants || [])];
+                            newV[idx].name = e.target.value;
+                            setFormData({...formData, variants: newV});
+                          }} />
+                        </div>
+                        <div className="input-row-admin">
+                          <div className="input-group-admin">
+                            <label>Price (₹)</label>
+                            <input type="number" value={v.price || 0} onChange={(e) => {
+                              const newV = [...(formData.variants || [])];
+                              newV[idx].price = Number(e.target.value);
+                              setFormData({...formData, variants: newV});
+                            }} />
+                          </div>
+                          <div className="input-group-admin">
+                            <label>SKU</label>
+                            <input type="text" value={v.sku || ''} onChange={(e) => {
+                              const newV = [...(formData.variants || [])];
+                              newV[idx].sku = e.target.value;
+                              setFormData({...formData, variants: newV});
+                            }} />
+                          </div>
+                        </div>
+                        <button type="button" className="list-icon-btn danger" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '4px', background: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }} onClick={() => {
+                          const newV = formData.variants.filter((_: any, i: number) => i !== idx);
+                          setFormData({...formData, variants: newV});
+                        }}>Remove Variant</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-action-btn secondary" style={{ width: '100%', padding: '10px', border: '1px dashed #cbd5e1', background: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
+                      const newV = { name: '', price: 0, sku: '', weight: 0, volume: 0 };
+                      setFormData({...formData, variants: [...(formData.variants || []), newV]});
+                    }}>+ Add Variant</button>
+                  </div>
+                )}
+
+                {productTab === 'images' && (
+                  <div>
+                    <h4 style={{ marginBottom: '1rem' }}>Product Images</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '1.5rem' }}>
+                      {(formData.images || []).map((imgUrl: string, idx: number) => (
+                        <div key={idx} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', aspectRatio: '1/1' }}>
+                          <img src={imgUrl.startsWith('/') ? `${API_BASE.replace('/api', '')}${imgUrl}` : imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => {
+                            const newImgs = formData.images.filter((_: string, i: number) => i !== idx);
+                            setFormData({...formData, images: newImgs});
+                          }} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '0' }}><X size={14} color="#ef4444" /></button>
+                        </div>
+                      ))}
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', cursor: 'pointer', aspectRatio: '1/1' }}>
+                        <Image size={24} color="#64748b" />
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', fontWeight: '800' }}>Add Image</span>
+                        <input type="file" hidden accept="image/*" onChange={handleProductImageUpload} />
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {type === 'users' && (
-              <>
-                <div className="input-group-admin">
-                  <label>Full Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Rahul Arora"
-                    value={formData.fullName || ''} 
-                    onChange={e => setFormData({...formData, fullName: e.target.value})} 
-                  />
-                </div>
-                <div className="input-group-admin">
-                  <label>Phone Number</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 9988776655" 
-                    value={formData.phoneNumber || ''} 
-                    onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
-                  />
-                </div>
-                <div className="input-group-admin">
-                  <label>Role</label>
-                  <select 
-                    value={formData.role || 'Buyer'} 
-                    onChange={e => setFormData({...formData, role: e.target.value})}
-                  >
-                    <option value="Buyer">Buyer</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Vendor">Vendor</option>
-                    <option value="Driver">Driver</option>
-                  </select>
-                </div>
-              </>
+              <div className="modal-scroll-area">
+                {isEditing && (
+                  <div className="admin-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                    <button type="button" className={userTab === 'profile' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setUserTab('profile')} style={userTab === 'profile' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Profile</button>
+                    <button type="button" className={userTab === 'addresses' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setUserTab('addresses')} style={userTab === 'addresses' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Addresses</button>
+                    <button type="button" className={userTab === 'orders' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => { setUserTab('orders'); fetchUserOrders(editingItem._id); }} style={userTab === 'orders' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Orders</button>
+                  </div>
+                )}
+                
+                {userTab === 'profile' && (
+                  <>
+                    <div className="input-group-admin">
+                      <label>Full Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Rahul Arora"
+                        value={formData.fullName || ''} 
+                        onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                      />
+                    </div>
+                    <div className="input-group-admin">
+                      <label>Phone Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 9988776655" 
+                        value={formData.phoneNumber || ''} 
+                        onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
+                      />
+                    </div>
+                    <div className="input-group-admin">
+                      <label>Role</label>
+                      <select 
+                        value={formData.role || 'End User'} 
+                        onChange={e => setFormData({...formData, role: e.target.value})}
+                      >
+                        <option value="End User">End User</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Supplier">Supplier</option>
+                        <option value="Rider">Rider</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {userTab === 'addresses' && (
+                  <div>
+                    <h4 style={{ marginBottom: '1rem' }}>Manage Jobsites / Addresses</h4>
+                    {(formData.jobsites || []).map((site: any, idx: number) => (
+                      <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '1rem', background: '#f8fafc' }}>
+                        <div className="input-group-admin">
+                          <label>Site / Address Name</label>
+                          <input type="text" placeholder="e.g. Home, Site A" value={site.name || ''} onChange={(e) => {
+                            const newSites = [...(formData.jobsites || [])];
+                            newSites[idx].name = e.target.value;
+                            setFormData({...formData, jobsites: newSites});
+                          }} />
+                        </div>
+                        <div className="input-group-admin">
+                          <label>Full Address Text</label>
+                          <input type="text" placeholder="Complete address details" value={site.addressText || ''} onChange={(e) => {
+                            const newSites = [...(formData.jobsites || [])];
+                            newSites[idx].addressText = e.target.value;
+                            setFormData({...formData, jobsites: newSites});
+                          }} />
+                        </div>
+                        <button type="button" className="list-icon-btn danger" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '4px', background: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }} onClick={() => {
+                          const newSites = formData.jobsites.filter((_: any, i: number) => i !== idx);
+                          setFormData({...formData, jobsites: newSites});
+                        }}>Remove Site</button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-action-btn secondary" style={{ width: '100%', padding: '10px', border: '1px dashed #cbd5e1', background: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
+                      const newSite = { name: '', addressText: '', location: { type: 'Point', coordinates: [77.5946, 12.9716] } };
+                      setFormData({...formData, jobsites: [...(formData.jobsites || []), newSite]});
+                    }}>+ Add Address</button>
+                  </div>
+                )}
+
+                {userTab === 'orders' && (
+                  <div>
+                    <h4 style={{ marginBottom: '1rem' }}>User Orders</h4>
+                    {userOrders.length === 0 ? <p style={{ color: '#64748b' }}>No orders found for this user.</p> : userOrders.map((o: any) => (
+                      <div key={o._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '0.5rem', background: 'white' }}>
+                        <div>
+                           <strong style={{ display: 'block' }}>Order #{o._id.slice(-6).toUpperCase()}</strong>
+                           <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{new Date(o.createdAt).toLocaleDateString()} | Items: {o.items?.length || 0}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                           <div style={{ fontWeight: '900', color: '#0f172a' }}>₹{o.totalAmount}</div>
+                           <span className={`status-pill ${o.status}`} style={{ display: 'inline-block', marginTop: '4px' }}>{o.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {type === 'categories' && (
@@ -816,6 +1070,8 @@ const AdminDashboard: React.FC = () => {
     if (activeActionTab === 'categories') return renderCategoryManagement();
     if (activeActionTab === 'products') return renderProductManagement();
     if (activeActionTab === 'tickets') return renderTicketManagement();
+    if (activeActionTab === 'userRequests') return renderUserRequestsManagement();
+    if (activeActionTab === 'footer-links') return <FooterManager />;
 
     return (
       <div className="admin-scroll-content animate-fade-in">
@@ -825,7 +1081,10 @@ const AdminDashboard: React.FC = () => {
               key={idx} 
               className="action-category-card" 
               style={{ backgroundColor: item.color }}
-              onClick={() => setActiveActionTab(item.id as any)}
+              onClick={() => {
+                if ((item as any).path) navigate((item as any).path);
+                else setActiveActionTab(item.id as any);
+              }}
             >
               <div className="card-content">
                 <h4>{item.name}</h4>

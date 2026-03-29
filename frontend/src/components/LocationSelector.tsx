@@ -5,7 +5,11 @@ import axios from 'axios';
 import LocationModal from './LocationModal';
 import './locationSelector.css';
 
-const LocationSelector: React.FC = () => {
+interface LocationSelectorProps {
+  searchNode?: React.ReactNode;
+}
+
+const LocationSelector: React.FC<LocationSelectorProps> = ({ searchNode }) => {
   const [address, setAddress] = useState<string>('Detecting location...');
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -112,10 +116,12 @@ const LocationSelector: React.FC = () => {
           </Link>
         </div>
 
-        <div className="search-bar-landing" onClick={() => navigate('/search')}>
-          <input type="text" placeholder="Search your product" readOnly />
-          <Mic size={20} className="mic-icon-landing" />
-        </div>
+        {searchNode || (
+          <div className="search-bar-landing" onClick={() => navigate('/search')}>
+            <input type="text" placeholder="Search your product" readOnly />
+            <Mic size={20} className="mic-icon-landing" />
+          </div>
+        )}
       </div>
 
       <LocationModal 

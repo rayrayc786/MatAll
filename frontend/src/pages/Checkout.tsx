@@ -5,7 +5,6 @@ import {
   Home, 
   ChevronRight, 
   Receipt, 
-  FileText, 
   ChevronDown,
   Plus,
   Clock,
@@ -450,21 +449,19 @@ const Checkout: React.FC = () => {
             <section className="checkout-section">
               <div className="section-title-row">
                 <Receipt size={18} />
-                <h3>Bill Details</h3>
+                <h3>Bill Summary</h3>
               </div>
               <div className="bill-card">
                 <div className="bill-row-checkout">
-                  <div className="bill-label">
-                    <FileText size={14} /> Items Total
-                  </div>
+                  <span>Item Total</span>
                   <span className="bill-val">₹{itemsTotal}</span>
                 </div>
                 <div className="bill-row-checkout">
-                  <span className="bill-label">Delivery Charge</span>
+                  <span>Delivery Charge</span>
                   <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge}` : <span className="free">FREE</span>}</span>
                 </div>
                 <div className="bill-row-checkout">
-                  <span className="bill-label">Handling Charge</span>
+                  <span>Handling Charge</span>
                   <span className="bill-val">₹{handlingCharge}</span>
                 </div>
                 <div className="bill-row-checkout grand-total-row">

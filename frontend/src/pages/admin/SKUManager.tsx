@@ -9,7 +9,6 @@ const SKUManager: React.FC = () => {
   const [masterSubCategories, setMasterSubCategories] = useState<any[]>([]);
   const [masterBrands, setMasterBrands] = useState<any[]>([]);
   const [masterUnits, setMasterUnits] = useState<any[]>([]);
-  const [masterVariantTitles, setMasterVariantTitles] = useState<any[]>([]);
   const [masterDeliveryTimes, setMasterDeliveryTimes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -18,6 +17,7 @@ const SKUManager: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<{ active: boolean; percentage: number }>({ active: false, percentage: 0 });
   const [uploadResult, setUploadResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [productTab, setProductTab] = useState<'general' | 'variants' | 'images'>('general');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,7 +38,9 @@ const SKUManager: React.FC = () => {
     size: '',
     subVariants: [] as any[],
     isPopular: false,
-    infoPara: ''
+    infoPara: '',
+    variants: [] as any[],
+    images: [] as any[]
   });
 
   const getFullImageUrl = (url?: string) => {
@@ -95,15 +97,6 @@ const SKUManager: React.FC = () => {
     }
   };
 
-  const fetchMasterVariantTitles = async () => {
-    try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/variant-titles`);
-      setMasterVariantTitles(data.filter((v: any) => v.isActive));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const fetchMasterDeliveryTimes = async () => {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/delivery-times`);
@@ -121,7 +114,6 @@ const SKUManager: React.FC = () => {
       fetchMasterBrands(), 
       fetchMasterUnits(),
       fetchMasterSubCategories(),
-      fetchMasterVariantTitles(),
       fetchMasterDeliveryTimes()
     ]);
     setLoading(false);
@@ -158,6 +150,26 @@ const SKUManager: React.FC = () => {
     } finally {
       setUploadProgress({ active: false, percentage: 0 });
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
+      setFormData({
+        ...formData,
+        images: [...(formData.images || []), data.imageUrl]
+      });
+    } catch (err) {
+      alert('Upload failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -239,8 +251,11 @@ const SKUManager: React.FC = () => {
       size: sku.size || sku.subVariants?.[0]?.title || '',
       subVariants: sku.subVariants || [],
       isPopular: sku.isPopular || false,
-      infoPara: sku.infoPara || ''
+      infoPara: sku.infoPara || '',
+      variants: sku.variants || [],
+      images: sku.images || [sku.imageUrl].filter(Boolean)
     });
+    setProductTab('general');
     setShowModal(true);
   };
 
@@ -265,8 +280,11 @@ const SKUManager: React.FC = () => {
       size: '',
       subVariants: [],
       isPopular: false,
-      infoPara: ''
+      infoPara: '',
+      variants: [],
+      images: []
     });
+    setProductTab('general');
     setShowModal(true);
   };
 
@@ -406,190 +424,197 @@ const SKUManager: React.FC = () => {
               <button className="icon-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="admin-form">
+              <div className="admin-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                <button type="button" className={`pill ${productTab === 'general' ? 'active font-bold' : 'text-gray-500'}`} onClick={() => setProductTab('general')}>General Info</button>
+                <button type="button" className={`pill ${productTab === 'variants' ? 'active font-bold' : 'text-gray-500'}`} onClick={() => setProductTab('variants')}>Product Variants</button>
+                <button type="button" className={`pill ${productTab === 'images' ? 'active font-bold' : 'text-gray-500'}`} onClick={() => setProductTab('images')}>Media/Images</button>
+              </div>
+
               <div className="form-grid sku-form-grid">
-                <div className="form-group sku-form-span-2">
-                  <label>Product Name</label>
-                  <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label>SKU / Product Code</label>
-                  <input type="text" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} required />
-                </div>
-                
-                <div className="form-group">
-                  <label>Brand</label>
-                  <select 
-                    value={formData.brand || ''} 
-                    onChange={e => setFormData({...formData, brand: e.target.value})}
-                  >
-                    <option value="">Select Brand...</option>
-                    {masterBrands.map(b => (
-                      <option key={b._id} value={b.name}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <select 
-                    value={formData.category || ''} 
-                    onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})}
-                  >
-                    <option value="">Select Category...</option>
-                    {masterCategories.map(mc => (
-                      <option key={mc._id} value={mc.name}>{mc.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Sub Category</label>
-                  <select 
-                    value={formData.subCategory || ''} 
-                    onChange={e => setFormData({...formData, subCategory: e.target.value})}
-                  >
-                    <option value="">Select Sub-Category...</option>
-                    {masterSubCategories
-                      .filter(sc => {
-                        const parentCat = masterCategories.find(mc => mc.name === formData.category);
-                        return !formData.category || (sc.categoryId?._id === parentCat?._id || sc.categoryId === parentCat?._id);
-                      })
-                      .map(sc => (
-                        <option key={sc._id} value={sc.name}>{sc.name}</option>
-                      ))
-                    }
-                  </select>
-                </div>
+                {productTab === 'general' && (
+                  <>
+                    <div className="form-group sku-form-span-2">
+                      <label>Product Name</label>
+                      <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                    </div>
+                    <div className="form-group">
+                      <label>SKU / Product Code</label>
+                      <input type="text" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Brand</label>
+                      <select 
+                        value={formData.brand || ''} 
+                        onChange={e => setFormData({...formData, brand: e.target.value})}
+                      >
+                        <option value="">Select Brand...</option>
+                        {masterBrands.map(b => (
+                          <option key={b._id} value={b.name}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Category</label>
+                      <select 
+                        value={formData.category || ''} 
+                        onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})}
+                      >
+                        <option value="">Select Category...</option>
+                        {masterCategories.map(mc => (
+                          <option key={mc._id} value={mc.name}>{mc.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Sub Category</label>
+                      <select 
+                        value={formData.subCategory || ''} 
+                        onChange={e => setFormData({...formData, subCategory: e.target.value})}
+                      >
+                        <option value="">Select Sub-Category...</option>
+                        {masterSubCategories
+                          .filter(sc => {
+                            const parentCat = masterCategories.find(mc => mc.name === formData.category);
+                            return !formData.category || (sc.categoryId?._id === parentCat?._id || sc.categoryId === parentCat?._id);
+                          })
+                          .map(sc => (
+                            <option key={sc._id} value={sc.name}>{sc.name}</option>
+                          ))
+                        }
+                      </select>
+                    </div>
 
-                <div className="form-group">
-                  <label>Primary Attribute (Size/Color/etc)</label>
-                  <div className="sku-attribute-group">
-                    <select 
-                      value={formData.size || ''} 
-                      onChange={e => setFormData({...formData, size: e.target.value})}
-                      className="sku-attribute-select"
-                    >
-                      <option value="">Select Title...</option>
-                      {masterVariantTitles.map(t => (
-                        <option key={t._id} value={t.name}>{t.name}</option>
-                      ))}
-                    </select>
-                    <input 
-                      type="text" 
-                      placeholder="Value" 
-                      value={formData.subVariants?.[0]?.value || ''} 
-                      onChange={e => {
-                        const newSubs = [...(formData.subVariants || [])];
-                        if (newSubs.length === 0) newSubs.push({ title: formData.size, value: e.target.value });
-                        else newSubs[0].value = e.target.value;
-                        setFormData({...formData, subVariants: newSubs});
-                      }}
-                      className="sku-attribute-input"
-                    />
-                  </div>
-                </div>
+                    <div className="form-group">
+                      <label>Delivery Time</label>
+                      <select 
+                        value={formData.deliveryTime || ''} 
+                        onChange={e => setFormData({...formData, deliveryTime: e.target.value})}
+                      >
+                        <option value="">Select Delivery Time...</option>
+                        {masterDeliveryTimes.map(dt => (
+                          <option key={dt._id} value={dt.name}>{dt.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="form-group sku-form-span-3">
-                  <label>Additional Attributes</label>
-                  <div className="sku-additional-attributes">
-                    {(formData.subVariants || []).slice(1).map((sv, idx) => (
-                      <div key={idx} className="sku-attribute-row">
-                        <select 
-                          value={sv.title} 
-                          onChange={e => {
-                            const newSubs = [...formData.subVariants];
-                            newSubs[idx + 1].title = e.target.value;
-                            setFormData({...formData, subVariants: newSubs});
-                          }}
-                        >
-                          {masterVariantTitles.map(t => (
-                            <option key={t._id} value={t.name}>{t.name}</option>
-                          ))}
-                        </select>
+                    <div className="form-group">
+                      <label>Unit Type</label>
+                      <select value={formData.unitType || 'individual'} onChange={e => setFormData({...formData, unitType: e.target.value})}>
+                        <option value="individual">Individual</option>
+                        <option value="weight-based">Weight Based</option>
+                        <option value="pack">Pack</option>
+                        <option value="bundle">Bundle</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Unit Label</label>
+                      <select 
+                        value={formData.unitLabel || ''} 
+                        onChange={e => setFormData({...formData, unitLabel: e.target.value})}
+                      >
+                        <option value="">Select Unit...</option>
+                        {masterUnits.map(u => (
+                          <option key={u._id} value={u.name}>{u.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>CSI Code</label>
+                      <input type="text" value={formData.csiMasterFormat || ''} onChange={e => setFormData({...formData, csiMasterFormat: e.target.value})} />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <label>Information Paragraph (Dynamic)</label>
+                      <textarea 
+                        placeholder="Enter product detailed information..." 
+                        value={formData.infoPara || ''} 
+                        onChange={e => setFormData({...formData, infoPara: e.target.value})}
+                        rows={3}
+                        style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
+                      />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <label className="checkbox-label">
                         <input 
-                          type="text" 
-                          value={sv.value} 
-                          onChange={e => {
-                            const newSubs = [...formData.subVariants];
-                            newSubs[idx + 1].value = e.target.value;
-                            setFormData({...formData, subVariants: newSubs});
-                          }}
+                          type="checkbox" 
+                          checked={formData.isPopular} 
+                          onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
                         />
-                        <button type="button" onClick={() => setFormData({...formData, subVariants: formData.subVariants.filter((_, i) => i !== idx + 1)})} className="icon-btn delete"><X size={14} /></button>
+                        Mark as Popular Demand
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {productTab === 'variants' && (
+                  <div className="form-group sku-form-span-3">
+                    <h4 style={{ marginBottom: '1.5rem', fontWeight: 'bold' }}>Manage Variants</h4>
+                    {(formData.variants || []).map((v: any, idx: number) => (
+                      <div key={idx} style={{ padding: '1.25rem', border: '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '1.5rem', background: '#f8fafc' }}>
+                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                          <label>Variant Name (e.g. 10mm thickness, 8x4 size)</label>
+                          <input type="text" value={v.name || ''} onChange={(e) => {
+                            const newV = [...formData.variants];
+                            newV[idx].name = e.target.value;
+                            setFormData({...formData, variants: newV});
+                          }} />
+                        </div>
+                        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                          <div className="form-group">
+                            <label>Price (₹)</label>
+                            <input type="number" value={v.price || 0} onChange={(e) => {
+                              const newV = [...formData.variants];
+                              newV[idx].price = Number(e.target.value);
+                              setFormData({...formData, variants: newV});
+                            }} />
+                          </div>
+                          <div className="form-group">
+                            <label>SKU (Product Code)</label>
+                            <input type="text" value={v.sku || ''} onChange={(e) => {
+                              const newV = [...formData.variants];
+                              newV[idx].sku = e.target.value;
+                              setFormData({...formData, variants: newV});
+                            }} />
+                          </div>
+                        </div>
+                        <button type="button" className="secondary-btn" style={{ marginTop: '1rem', background: '#fee2e2', color: '#ef4444', borderColor: '#fecaca', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setFormData({...formData, variants: formData.variants.filter((_, i) => i !== idx)})}>
+                           <Trash2 size={16} /> Remove Variant
+                        </button>
                       </div>
                     ))}
-                    <button type="button" className="secondary-btn sku-add-attribute-btn" onClick={() => setFormData({...formData, subVariants: [...(formData.subVariants || []), { title: masterVariantTitles[0]?.name || '', value: '' }]})}>
-                      <Plus size={14} /> Add Attribute
+                    <button type="button" className="secondary-btn" style={{ width: '100%', padding: '15px', borderStyle: 'dashed', background: 'transparent' }} onClick={() => setFormData({...formData, variants: [...(formData.variants || []), { name: '', price: 0, sku: '' }]})}>
+                      <Plus size={18} /> Add New Variant SKU
                     </button>
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>Delivery Time</label>
-                  <select 
-                    value={formData.deliveryTime || ''} 
-                    onChange={e => setFormData({...formData, deliveryTime: e.target.value})}
-                  >
-                    <option value="">Select Delivery Time...</option>
-                    {masterDeliveryTimes.map(dt => (
-                      <option key={dt._id} value={dt.name}>{dt.name}</option>
-                    ))}
-                  </select>
-                </div>
+                )}
 
-                <div className="form-group">
-                  <label>Unit Type</label>
-                  <select value={formData.unitType || 'individual'} onChange={e => setFormData({...formData, unitType: e.target.value})}>
-                    <option value="individual">Individual</option>
-                    <option value="weight-based">Weight Based</option>
-                    <option value="pack">Pack</option>
-                    <option value="bundle">Bundle</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Unit Label</label>
-                  <select 
-                    value={formData.unitLabel || ''} 
-                    onChange={e => setFormData({...formData, unitLabel: e.target.value})}
-                  >
-                    <option value="">Select Unit...</option>
-                    {masterUnits.map(u => (
-                      <option key={u._id} value={u.name}>{u.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>CSI Code</label>
-                  <input type="text" value={formData.csiMasterFormat || ''} onChange={e => setFormData({...formData, csiMasterFormat: e.target.value})} />
-                </div>
-
-                <div className="form-group sku-form-span-3">
-                  <label>Image URL</label>
-                  <input type="text" placeholder="/images/..." value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} />
-                </div>
-
-                <div className="form-group sku-form-span-3">
-                  <label>Information Paragraph (Dynamic)</label>
-                  <textarea 
-                    placeholder="Enter product detailed information..." 
-                    value={formData.infoPara || ''} 
-                    onChange={e => setFormData({...formData, infoPara: e.target.value})}
-                    rows={3}
-                    style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
-                  />
-                </div>
-
-                <div className="form-group sku-form-span-3">
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.isPopular} 
-                      onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
-                    />
-                    Mark as Popular Demand
-                  </label>
-                </div>
+                {productTab === 'images' && (
+                  <div className="form-group sku-form-span-3">
+                    <h4 style={{ marginBottom: '1.5rem', fontWeight: 'bold' }}>Product Media Gallery</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                      {(formData.images || []).map((imgUrl: string, idx: number) => (
+                        <div key={idx} style={{ position: 'relative', aspectRatio: '1/1', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#fff' }}>
+                          <img src={imgUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${imgUrl}` : imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== idx)})} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <X size={16} color="#ef4444" />
+                          </button>
+                        </div>
+                      ))}
+                      <label style={{ aspectRatio: '1/1', border: '3px dashed #cbd5e1', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', background: '#f1f5f9', transition: 'all 0.2s' }}>
+                        <Plus size={32} />
+                        <span style={{ fontSize: '0.9rem', marginTop: '4px', fontWeight: 'bold' }}>Upload Media</span>
+                        <input type="file" hidden onChange={handleProductImageUpload} accept="image/*" />
+                      </label>
+                    </div>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Upload high-resolution product images. Safe to upload up to 5 images.</p>
+                  </div>
+                )}
               </div>
               <div className="modal-footer sku-modal-footer">
                 <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="primary-btn">Save Product</button>
+                <button type="submit" className="primary-btn">Save {productTab === 'general' ? 'Basic Info' : (productTab === 'variants' ? 'Variants' : 'Product Media')}</button>
               </div>
             </form>
           </div>

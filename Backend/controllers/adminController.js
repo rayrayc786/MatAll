@@ -1,13 +1,15 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const Vendor = require('../models/Vendor');
+const Supplier = require('../models/Supplier');
 const Category = require('../models/Category');
 const SubCategory = require('../models/SubCategory');
 const Brand = require('../models/Brand');
 const Unit = require('../models/Unit');
 const SubVariantTitle = require('../models/SubVariantTitle');
 const DeliveryTime = require('../models/DeliveryTime');
+const FooterLink = require('../models/FooterLink');
+const Offer = require('../models/Offer');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
@@ -38,7 +40,7 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.getFleetStatus = async (req, res) => {
   try {
-    res.json(await User.find({ role: 'Driver' }));
+    res.json(await User.find({ role: 'Rider' }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -57,10 +59,6 @@ exports.bulkUploadProducts = async (req, res) => {
 
     data.forEach((item, index) => {
       const sku = String(item['Product Code'] || '').trim();
-      if (!sku || seenSkus.has(sku)) {
-        skipped.push({ row: index + 2, name: item['Product Name'], reason: !sku ? 'Missing SKU' : 'Duplicate SKU' });
-        return;
-      }
       seenSkus.add(sku);
 
       const cat = String(item['Category'] || '').trim();
@@ -90,7 +88,7 @@ exports.bulkUploadProducts = async (req, res) => {
         }
       });
 
-      const imageValue = String(item['IMAGES 5 Images left'] || item['image'] || item['Image'] || item['Images'] || '').trim();
+      const imageValue = String(item['IMAGES 24 Images left'] || item['image'] || item['Image'] || item['Images'] || '').trim();
       const rawImageNames = imageValue.split(',').map(s => s.trim()).filter(Boolean);
       
       let images = rawImageNames.map(name => {
@@ -160,8 +158,10 @@ exports.bulkUploadProducts = async (req, res) => {
       ...Array.from(masterData.deliveryTimes).map(name => DeliveryTime.updateOne({ name }, { $setOnInsert: { name, isActive: true } }, { upsert: true }))
     ]);
 
-    const result = await Product.bulkWrite(extracted.map(p => ({ updateOne: { filter: { sku: p.sku }, update: { $set: p }, upsert: true } })));
-    res.json({ message: 'Upload complete', summary: { totalRows: data.length, extracted: extracted.length, skipped: skipped.length, matched: result.matchedCount, upserted: result.upsertedCount }, skippedDetails: skipped });
+    // Always insert new products as separate entries (allow duplicates as requested)
+    const bulkOps = extracted.map(p => ({ insertOne: { document: p } }));
+    const result = await Product.bulkWrite(bulkOps);
+    res.json({ message: 'Upload complete', summary: { totalRows: data.length, extracted: extracted.length, skipped: skipped.length, matched: result.matchedCount, upserted: result.upsertedCount, inserted: result.insertedCount }, skippedDetails: skipped });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -174,21 +174,75 @@ const createHandlers = (Model, name) => ({
   delete: async (req, res) => { try { await Model.findByIdAndDelete(req.params.id); res.json({ message: `${name} deleted` }); } catch (err) { res.status(500).json({ error: err.message }); } }
 });
 
-const vh = createHandlers(Vendor, 'Vendor');
-exports.getAllVendors = vh.getAll; exports.createVendor = vh.create; exports.updateVendor = vh.update; exports.deleteVendor = vh.delete;
+const sh = createHandlers(Supplier, 'Supplier');
+exports.getAllSuppliers = sh.getAll; exports.createSupplier = sh.create; exports.updateSupplier = sh.update; exports.deleteSupplier = sh.delete;
 
 const uh = createHandlers(User, 'User');
 exports.getAllUsers = uh.getAll;
 exports.createUser = uh.create;
 exports.updateUser = uh.update;
 exports.deleteUser = uh.delete;
+exports.getUserOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.params.id }).populate('items.productId');
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 const ch = createHandlers(Category, 'Category');
 exports.getAllCategories = ch.getAll; exports.createCategory = ch.create; exports.updateCategory = ch.update; exports.deleteCategory = ch.delete;
 
 const sch = createHandlers(SubCategory, 'SubCategory');
-exports.getAllSubCategories = async (req, res) => { try { res.json(await SubCategory.find(req.query.categoryId ? { categoryId: req.query.categoryId } : {}).populate('categoryId').sort({ name: 1 })); } catch (err) { res.status(500).json({ error: err.message }); } };
-exports.createSubCategory = sch.create; exports.updateSubCategory = sch.update; exports.deleteSubCategory = sch.delete;
+exports.getAllSubCategories = async (req, res) => {
+  try {
+    let filter = {};
+    if (req.query.categoryId) {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(req.query.categoryId);
+      if (isObjectId) {
+        filter.categoryId = req.query.categoryId;
+      } else {
+        // Find category by name if it's not an ID
+        const cat = await Category.findOne({ name: req.query.categoryId });
+        if (cat) filter.categoryId = cat._id;
+        else return res.json([]); // Not found
+      }
+    }
+    res.json(await SubCategory.find(filter).populate('categoryId parentSubCategoryId').sort({ name: 1 }));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createSubCategory = async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (!data.parentSubCategoryId || data.parentSubCategoryId === "") {
+      data.parentSubCategoryId = null;
+    }
+    const d = new SubCategory(data);
+    await d.save();
+    res.status(201).json(d);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateSubCategory = async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (!data.parentSubCategoryId || data.parentSubCategoryId === "") {
+      data.parentSubCategoryId = null;
+    }
+    const d = await SubCategory.findByIdAndUpdate(req.params.id, data, { new: true });
+    res.json(d);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteSubCategory = sch.delete;
 
 const bh = createHandlers(Brand, 'Brand');
 exports.getAllBrands = bh.getAll; exports.createBrand = bh.create; exports.updateBrand = bh.update; exports.deleteBrand = bh.delete;
@@ -202,7 +256,30 @@ exports.getAllVariantTitles = vth.getAll; exports.createVariantTitle = vth.creat
 const dth = createHandlers(DeliveryTime, 'DeliveryTime');
 exports.getAllDeliveryTimes = dth.getAll; exports.createDeliveryTime = dth.create; exports.updateDeliveryTime = dth.update; exports.deleteDeliveryTime = dth.delete;
 
+const oh = createHandlers(Offer, 'Offer');
+exports.getAllOffers = oh.getAll; exports.createOffer = oh.create; exports.updateOffer = oh.update; exports.deleteOffer = oh.delete;
+
+const flh = createHandlers(FooterLink, 'FooterLink');
+exports.getAllFooterLinks = flh.getAll; exports.createFooterLink = flh.create; exports.updateFooterLink = flh.update; exports.deleteFooterLink = flh.delete;
+
 exports.createProduct = async (req, res) => { try { const p = new Product(req.body); await p.save(); res.status(201).json(p); } catch (err) { res.status(500).json({ error: err.message }); } };
 exports.updateProduct = async (req, res) => { try { res.json(await Product.findByIdAndUpdate(req.params.id, req.body, { new: true })); } catch (err) { res.status(500).json({ error: err.message }); } };
 exports.deleteProduct = async (req, res) => { try { await Product.findByIdAndDelete(req.params.id); res.json({ message: 'Product deleted' }); } catch (err) { res.status(500).json({ error: err.message }); } };
 exports.clearAllProducts = async (req, res) => { try { const r = await Product.deleteMany({}); res.json({ message: `Deleted ${r.deletedCount} products.` }); } catch (err) { res.status(500).json({ error: err.message }); } };
+
+exports.uploadProductImage = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    const filename = `${Date.now()}-${req.file.originalname}`;
+    const filepath = path.join(__dirname, '..', 'public', 'images', filename);
+    
+    // Ensure the images directory exists
+    const dir = path.join(__dirname, '..', 'public', 'images');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    
+    fs.writeFileSync(filepath, req.file.buffer);
+    res.json({ imageUrl: `/images/${filename}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

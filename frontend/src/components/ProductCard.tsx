@@ -212,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Variant Selection Modal (Bottom Sheet style) */}
       {showVariantModal && (
         <div className="variant-modal-overlay" onClick={() => setShowVariantModal(false)}>
-          <div className="variant-modal-content" onClick={e => e.stopPropagation()}>
+          <div className="variant-modal-content" ref={dropdownRef} onClick={e => e.stopPropagation()}>
             <div className="modal-header-sticky">
               <div className="modal-title-box">
                 <h3>{product.brand} {displayName}</h3>

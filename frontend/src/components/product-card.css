@@ -315,6 +315,11 @@
   transition: all 0.2s;
 }
 
+.variant-list-item:hover {
+  border-color: #16a34a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 .variant-list-item.selected {
   border-color: #16a34a;
   background: #f0fdf4;

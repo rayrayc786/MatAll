@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const fs = require('fs');
 const path = require('path');
+const Brand = require('../models/Brand');
 
 // Helper to resolve image names to actual file paths from Image Master
 const resolveProductImages = (product) => {
@@ -163,9 +164,9 @@ exports.getAllProducts = async (req, res) => {
     if (search) {
       const regex = new RegExp(search, 'i');
       const orConditions = [
-        { name: regex }, { sku: regex }, { productCode: regex },
+        { name: regex }, { productCode: regex },
         { category: regex }, { subCategory: regex }, { brand: regex },
-        { size: regex }, { deliveryTime: regex }, { unitLabel: regex }
+        { size: regex }, { 'subVariants.value': regex }, { 'variants.name': regex }
       ];
 
       // If search matches a category name, add the numeric ID too
@@ -230,7 +231,9 @@ exports.autocomplete = async (req, res) => {
     const regex = new RegExp(q, 'i');
     let products = await Product.find({
       $or: [
-        { name: regex }, { sku: regex }, { brand: regex }, { category: regex }
+        { name: regex }, { productCode: regex },
+        { category: regex }, { subCategory: regex }, { brand: regex },
+        { size: regex }, { 'subVariants.value': regex }, { 'variants.name': regex }
       ],
       isActive: true
     }).limit(40).lean();
@@ -269,6 +272,47 @@ exports.togglePopularStatus = async (req, res) => {
     await product.save();
 
     res.json({ message: `Product is now ${product.isPopular ? 'Popular' : 'Standard'}`, isPopular: product.isPopular });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getBrands = async (req, res) => {
+  try {
+    const { isFeatured } = req.query;
+    let query = { isActive: true };
+    if (isFeatured === 'true' || isFeatured === true) {
+      query.isFeatured = true;
+    }
+    
+    const brands = await Brand.find(query).sort({ name: 1 });
+    res.json(brands);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getCategories = async (req, res) => {
+  try {
+    const { isFeatured } = req.query;
+    let query = { isActive: true };
+    if (isFeatured === 'true' || isFeatured === true) {
+      query.isFeatured = true;
+    }
+    
+    // We need the Category model
+    const Category = require('../models/Category');
+    const categories = await Category.find(query).sort({ name: 1 });
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getOffers = async (req, res) => {
+  try {
+    const Offer = require('../models/Offer');
+    res.json(await Offer.find({ isActive: true }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

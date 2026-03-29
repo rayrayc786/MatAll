@@ -13,6 +13,7 @@ const BrandManager: React.FC = () => {
     name: '',
     description: '',
     logoUrl: '',
+    isFeatured: false,
     isActive: true
   });
 
@@ -63,6 +64,7 @@ const BrandManager: React.FC = () => {
       name: brand.name,
       description: brand.description || '',
       logoUrl: brand.logoUrl || '',
+      isFeatured: brand.isFeatured || false,
       isActive: brand.isActive
     });
     setShowModal(true);
@@ -74,6 +76,7 @@ const BrandManager: React.FC = () => {
       name: '',
       description: '',
       logoUrl: '',
+      isFeatured: false,
       isActive: true
     });
     setShowModal(true);
@@ -118,9 +121,11 @@ const BrandManager: React.FC = () => {
         <table className="sku-table">
           <thead>
             <tr>
+              <th>Logo</th>
               <th>Brand Name</th>
               <th>Description</th>
               <th>Status</th>
+              <th>Featured</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -131,14 +136,18 @@ const BrandManager: React.FC = () => {
               <tr><td colSpan={4} style={{ textAlign: 'center', padding: '3rem' }}>No brands defined</td></tr>
             ) : (
               filteredBrands.map(brand => (
-                <tr key={brand._id}>
+                 <tr key={brand._id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {brand.logoUrl ? (
+                      <img src={brand.logoUrl} alt={brand.name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px' }} />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', background: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Award size={18} color="#64748b" />
                       </div>
-                      <span style={{ fontWeight: 700 }}>{brand.name}</span>
-                    </div>
+                    )}
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: 700 }}>{brand.name}</span>
                   </td>
                   <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{brand.description || 'No description'}</td>
                   <td>
@@ -149,6 +158,13 @@ const BrandManager: React.FC = () => {
                     }}>
                       {brand.isActive ? 'ACTIVE' : 'INACTIVE'}
                     </span>
+                  </td>
+                  <td>
+                    {brand.isFeatured && (
+                      <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}>
+                        <Award size={14} fill="#f59e0b" /> Featured
+                      </span>
+                    )}
                   </td>
                   <td className="actions-cell">
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -201,7 +217,7 @@ const BrandManager: React.FC = () => {
                   />
                 </div>
                 <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                  <input 
+                   <input 
                     type="checkbox" 
                     id="brand-active"
                     checked={formData.isActive} 
@@ -209,6 +225,16 @@ const BrandManager: React.FC = () => {
                     style={{ width: '20px', height: '20px' }}
                   />
                   <label htmlFor="brand-active" style={{ marginBottom: 0 }}>Is Active</label>
+                </div>
+                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                  <input 
+                    type="checkbox" 
+                    id="brand-featured"
+                    checked={formData.isFeatured} 
+                    onChange={e => setFormData({...formData, isFeatured: e.target.checked})} 
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <label htmlFor="brand-featured" style={{ marginBottom: 0 }}>Featured on Home Page</label>
                 </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>

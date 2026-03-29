@@ -41,9 +41,9 @@ const Footer: React.FC = () => {
         <RotateCcw size={22} />
         <span>Repeat</span>
       </Link>
-      <Link to="/favorites" className={`footer-item ${isActive('/favorites') ? 'active' : ''}`}>
+      <Link to="/products" className={`footer-item ${isActive('/products') ? 'active' : ''}`}>
         <Heart size={22} />
-        <span>Wishlist</span>
+        <span>Shop</span>
       </Link>
       <Link to="/cart" className={`footer-item ${isActive('/cart') ? 'active' : ''}`}>
         <div className="footer-cart-icon">

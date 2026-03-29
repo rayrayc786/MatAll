@@ -5,13 +5,13 @@ const auth = require('../middleware/auth');
 
 router.post('/login', authController.login);
 router.post('/verify', authController.verifyOTP);
-router.get('/profile', auth(['Buyer', 'Admin', 'Driver', 'Vendor']), authController.getProfile);
-router.put('/profile', auth(['Buyer', 'Admin', 'Driver', 'Vendor']), authController.updateProfile);
-router.post('/favorites/toggle', auth(['Buyer', 'Admin', 'Vendor']), authController.toggleFavorite);
-router.get('/favorites', auth(['Buyer', 'Admin', 'Vendor']), authController.getFavorites);
+router.get('/profile', auth(['End User', 'Admin', 'Rider', 'Supplier']), authController.getProfile);
+router.put('/profile', auth(['End User', 'Admin', 'Rider', 'Supplier']), authController.updateProfile);
+router.post('/favorites/toggle', auth(['End User', 'Admin', 'Supplier']), authController.toggleFavorite);
+router.get('/favorites', auth(['End User', 'Admin', 'Supplier']), authController.getFavorites);
 
-// Driver endpoints
-router.post('/toggle-duty', auth(['Driver']), authController.toggleDuty);
-router.get('/driver-stats', auth(['Driver']), authController.getDriverStats);
+// Rider endpoints
+router.post('/toggle-duty', auth(['Rider']), authController.toggleDuty);
+router.get('/rider-stats', auth(['Rider']), authController.getDriverStats);
 
 module.exports = router;

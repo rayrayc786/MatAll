@@ -8,11 +8,17 @@
 
 .site-footer-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 40px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px 20px;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+@media (min-width: 851px) {
+  .site-footer-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .footer-section-title {
@@ -81,6 +87,18 @@
 
 .footer-links-list a:hover {
   color: #000;
+}
+
+.see-more-link {
+  color: #16a34a !important;
+  font-weight: 600;
+  font-size: 13px;
+  display: block;
+  margin-top: 4px;
+}
+
+.see-more-link:hover {
+  text-decoration: underline !important;
 }
 
 .footer-bottom-bar {

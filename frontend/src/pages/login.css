@@ -83,18 +83,12 @@
   text-align: center;
 }
 
-.matall-logo {
-  background-color: #000;
-  color: #FFEA00;
-  padding: 1rem 2rem;
-  font-size: 2.2rem;
-  font-weight: 900;
-  border-radius: 12px;
-  letter-spacing: -0.02em;
+.matall-logo-img {
+  height: 80px;
+  width: auto;
   margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 
@@ -236,6 +230,47 @@
 
 .otp-box:focus {
   border-color: #FFEA00;
+}
+
+.otp-actions {
+  width: 100%;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.resend-text {
+  font-size: 0.95rem;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resend-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.resend-link:hover:not(:disabled) {
+  color: #000;
+  text-decoration-color: #FFEA00;
+  text-decoration-thickness: 3px;
+}
+
+.resend-link:disabled {
+  color: #94a3b8;
+  text-decoration: none;
+  cursor: not-allowed;
 }
 
 /* RESPONSIVE: Center everything nicely for Desktop */

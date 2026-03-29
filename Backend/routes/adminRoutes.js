@@ -9,11 +9,12 @@ console.log('--- Admin Routes Initializing ---');
 router.get('/ping', (req, res) => res.json({ status: 'Admin routes active' }));
 
 router.get('/stats', adminController.getDashboardStats);
-router.get('/fleet', adminController.getFleetStatus);
+router.get('/riders', adminController.getFleetStatus);
 router.patch('/orders/:id/status', adminController.updateOrderStatus);
 
 // Product management
 router.post('/products/bulk-upload', upload.single('file'), adminController.bulkUploadProducts);
+router.post('/products/upload-image', upload.single('image'), adminController.uploadProductImage);
 router.post('/products', adminController.createProduct);
 router.put('/products/:id', adminController.updateProduct);
 router.delete('/products/clear-all', adminController.clearAllProducts);
@@ -21,15 +22,16 @@ router.delete('/products/:id', adminController.deleteProduct);
 
 // User management
 router.get('/users', adminController.getAllUsers);
+router.get('/users/:id/orders', adminController.getUserOrders);
 router.post('/users', adminController.createUser);
 router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deleteUser);
 
-// Vendor management
-router.get('/vendors', adminController.getAllVendors);
-router.post('/vendors', adminController.createVendor);
-router.put('/vendors/:id', adminController.updateVendor);
-router.delete('/vendors/:id', adminController.deleteVendor);
+// Supplier management
+router.get('/suppliers', adminController.getAllSuppliers);
+router.post('/suppliers', adminController.createSupplier);
+router.put('/suppliers/:id', adminController.updateSupplier);
+router.delete('/suppliers/:id', adminController.deleteSupplier);
 
 // Category management
 router.get('/categories', adminController.getAllCategories);
@@ -66,5 +68,17 @@ router.get('/delivery-times', adminController.getAllDeliveryTimes);
 router.post('/delivery-times', adminController.createDeliveryTime);
 router.put('/delivery-times/:id', adminController.updateDeliveryTime);
 router.delete('/delivery-times/:id', adminController.deleteDeliveryTime);
+
+// Offer management
+router.get('/offers', adminController.getAllOffers);
+router.post('/offers', adminController.createOffer);
+router.put('/offers/:id', adminController.updateOffer);
+router.delete('/offers/:id', adminController.deleteOffer);
+
+// Footer Link management
+router.get('/footer-links', adminController.getAllFooterLinks);
+router.post('/footer-links', adminController.createFooterLink);
+router.put('/footer-links/:id', adminController.updateFooterLink);
+router.delete('/footer-links/:id', adminController.deleteFooterLink);
 
 module.exports = router;

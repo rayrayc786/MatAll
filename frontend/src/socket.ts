@@ -7,7 +7,7 @@ export const customerSocket = io(`${BASE_URL}/customer`, {
   transports: ['websocket', 'polling']
 });
 
-export const vendorSocket = io(`${BASE_URL}/vendor`, {
+export const supplierSocket = io(`${BASE_URL}/supplier`, {
   autoConnect: false,
   transports: ['websocket', 'polling']
 });

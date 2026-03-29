@@ -132,21 +132,6 @@ const ProductDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* highlights row */}
-            <div className="highlights-scroll-row">
-               <div className="highlight-chip">
-                  <span className="h-label">Shelf Life</span>
-                  <span className="h-value">150 days</span>
-               </div>
-               <div className="highlight-chip">
-                  <span className="h-label">Type</span>
-                  <span className="h-value">{product.category || 'Standard'}</span>
-               </div>
-               <div className="highlight-chip">
-                  <span className="h-label">SKU</span>
-                  <span className="h-value">{product.sku || 'Mat-X'}</span>
-               </div>
-            </div>
           </section>
         </div>
 
@@ -166,6 +151,14 @@ const ProductDetail: React.FC = () => {
                 <span className="brand-bold-large">{product.brand}</span> {product.name}
              </h1>
              <div className="prd-unit-label">{currentUnit}</div>
+
+             {/* highlights row */}
+             <div className="highlights-detail-row">
+                <div className="highlight-mini-box">
+                   <span className="h-mini-label">TYPE</span>
+                   <span className="h-mini-value">{product.category || 'Standard'}</span>
+                </div>
+             </div>
 
              {/* Variant Selector */}
              {product.variants && product.variants.length > 0 && (
@@ -203,8 +196,26 @@ const ProductDetail: React.FC = () => {
                 <ChevronDown size={20} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
              </div>
              {showDetails && (
-               <div className="details-expanded-text" style={{ padding: '1rem 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  {product.infoPara || "High-quality material sourced for durability and aesthetic perfection."}
+               <div className="details-expanded-content">
+                  <div className="details-para">
+                     {product.infoPara || "High-quality material sourced for durability and aesthetic perfection."}
+                  </div>
+                  
+                  {product.subVariants && product.subVariants.length > 0 && (
+                    <div className="specifications-section">
+                       <h4>Specifications</h4>
+                       <table className="specs-table">
+                          <tbody>
+                             {product.subVariants.map((sv: any, idx: number) => (
+                               <tr key={idx}>
+                                  <td className="spec-title">{sv.title}</td>
+                                  <td className="spec-value">{sv.value}</td>
+                               </tr>
+                             ))}
+                          </tbody>
+                       </table>
+                    </div>
+                  )}
                </div>
              )}
 

@@ -1,94 +1,241 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit3, Trash2, X, Tag } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, Tag, ChevronDown, ChevronRight, Layers, Image } from 'lucide-react';
 
 const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [editingSub, setEditingSub] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   
-  const [formData, setFormData] = useState({
+  const [catFormData, setCatFormData] = useState({
     name: '',
     description: '',
+    imageUrl: '',
+    isActive: true,
+    isFeatured: false
+  });
+
+  const [subFormData, setSubFormData] = useState({
+    name: '',
+    categoryId: '',
+    parentSubCategoryId: '',
     isActive: true
   });
 
-  const fetchCategories = async () => {
+  const fetchData = async () => {
     try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`);
-      setCategories(data);
+      setLoading(true);
+      const [catsRes, subsRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`),
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories`)
+      ]);
+      setCategories(catsRes.data);
+      setSubCategories(subsRes.data);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
+      setCatFormData({ ...catFormData, imageUrl: data.imageUrl });
+    } catch (err) {
+      alert('Upload failed');
+    }
+  };
+
+  const handleCatSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingCategory) {
-        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories/${editingCategory._id}`, formData);
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories/${editingCategory._id}`, catFormData);
       } else {
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`, formData);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`, catFormData);
       }
       setShowModal(false);
       setEditingCategory(null);
-      fetchCategories();
+      fetchData();
     } catch (err) {
       console.error(err);
       alert('Failed to save category');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure? This will affect product routing!')) return;
+  const handleSubSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingSub) {
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories/${editingSub._id}`, subFormData);
+      } else {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories`, subFormData);
+      }
+      setShowSubModal(false);
+      setEditingSub(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save sub-category');
+    }
+  };
+
+  const handleCatDelete = async (id: string) => {
+    if (!window.confirm('Are you sure? This will affect product routing and linked sub-categories!')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories/${id}`);
-      fetchCategories();
+      fetchData();
     } catch (err) {
       console.error(err);
     }
   };
 
-  const openEdit = (cat: any) => {
+  const handleSubDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this sub-category?')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories/${id}`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const openCatEdit = (cat: any) => {
     setEditingCategory(cat);
-    setFormData({
+    setCatFormData({
       name: cat.name,
       description: cat.description || '',
-      isActive: cat.isActive
+      imageUrl: cat.imageUrl || '',
+      isActive: cat.isActive,
+      isFeatured: !!cat.isFeatured
     });
     setShowModal(true);
   };
 
-  const resetForm = () => {
+  const openSubEdit = (sub: any) => {
+    setEditingSub(sub);
+    setSubFormData({
+      name: sub.name,
+      categoryId: sub.categoryId?._id || sub.categoryId,
+      parentSubCategoryId: sub.parentSubCategoryId?._id || sub.parentSubCategoryId || '',
+      isActive: sub.isActive
+    });
+    setShowSubModal(true);
+  };
+
+  const openQuickAddSub = (parentId: string, type: 'category' | 'sub') => {
+    if (type === 'category') {
+      setSubFormData({
+        name: '',
+        categoryId: parentId,
+        parentSubCategoryId: '',
+        isActive: true
+      });
+    } else {
+      const parentSub = subCategories.find(s => s._id === parentId);
+      setSubFormData({
+        name: '',
+        categoryId: parentSub?.categoryId?._id || parentSub?.categoryId || '',
+        parentSubCategoryId: parentId,
+        isActive: true
+      });
+    }
+    setEditingSub(null);
+    setShowSubModal(true);
+  };
+
+  const resetCatForm = () => {
     setEditingCategory(null);
-    setFormData({
+    setCatFormData({
       name: '',
       description: '',
-      isActive: true
+      imageUrl: '',
+      isActive: true,
+      isFeatured: false
     });
     setShowModal(true);
+  };
+
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedCategories);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setExpandedCategories(newSet);
   };
 
   const filteredCategories = categories.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const getSubCategoriesFor = (id: string, type: 'category' | 'sub') => {
+    return subCategories.filter(s => {
+      if (type === 'category') return (s.categoryId?._id === id || s.categoryId === id) && !s.parentSubCategoryId;
+      return (s.parentSubCategoryId?._id === id || s.parentSubCategoryId === id);
+    });
+  };
+
+  const renderSubTree = (parentId: string, level: number = 0) => {
+    const subs = getSubCategoriesFor(parentId, level === 0 ? 'category' : 'sub');
+    if (subs.length === 0) return null;
+
+    return subs.map(sub => (
+      <React.Fragment key={sub._id}>
+        <tr className="sub-category-row" style={{ background: '#f8fafc' }}>
+          <td style={{ paddingLeft: `${(level + 1) * 2.5 + 2}rem` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '12px', height: '12px', borderLeft: '2px solid #e2e8f0', borderBottom: '2px solid #e2e8f0', marginRight: '4px', marginTop: '-8px' }}></div>
+              <Layers size={14} color="#64748b" />
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.name}</span>
+            </div>
+          </td>
+          <td><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Sub-category Level {level + 1}</span></td>
+          <td>
+            <span style={{ 
+              padding: '2px 8px', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700,
+              background: sub.isActive ? '#dcfce7' : '#fee2e2',
+              color: sub.isActive ? '#16a34a' : '#ef4444'
+            }}>
+              {sub.isActive ? 'ACTIVE' : 'INACTIVE'}
+            </span>
+          </td>
+          <td className="actions-cell">
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button className="icon-btn xs" onClick={() => openQuickAddSub(sub._id, 'sub')} title="Add Sub-Sub-Category"><Plus size={14} /></button>
+              <button className="icon-btn xs" onClick={() => openSubEdit(sub)} title="Edit"><Edit3 size={14} /></button>
+              <button className="icon-btn xs delete" onClick={() => handleSubDelete(sub._id)} title="Delete"><Trash2 size={14} /></button>
+            </div>
+          </td>
+        </tr>
+        {renderSubTree(sub._id, level + 1)}
+      </React.Fragment>
+    ));
+  };
+
   return (
     <main className="admin-content">
       <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
         <div className="title-group">
-          <h1>Master Categories</h1>
-          <p>Define product categories used for vendor matching and SKU grouping</p>
+          <h1>Category & Hierarchy Management</h1>
+          <p>Define master categories and nested sub-categories for the dynamic marketplace</p>
         </div>
-        <button className="add-sku-btn" onClick={resetForm}>
-          <Plus size={18} /> New Category
+        <button className="add-sku-btn" onClick={resetCatForm}>
+          <Plus size={18} /> New Master Category
         </button>
       </header>
 
@@ -98,15 +245,21 @@ const CategoryManager: React.FC = () => {
             <Search size={18} color="#64748b" />
             <input 
               type="text" 
-              placeholder="Search categories..." 
+              placeholder="Search master categories..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem' }} 
             />
           </div>
-          <div className="quick-stats">
-            <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, display: 'block' }}>TOTAL CATEGORIES</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{categories.length}</span>
+          <div className="quick-stats" style={{ display: 'flex', gap: '2rem' }}>
+            <div className="stat">
+              <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600, display: 'block' }}>MASTER CATEGORIES</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{categories.length}</span>
+            </div>
+            <div className="stat">
+              <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600, display: 'block' }}>SUB-CATEGORIES</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{subCategories.length}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -115,93 +268,211 @@ const CategoryManager: React.FC = () => {
         <table className="sku-table">
           <thead>
             <tr>
-              <th>Category Name</th>
-              <th>Description</th>
+              <th>Category / Sub-Category Name</th>
+              <th>Type / Description</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '3rem' }}>Loading Categories...</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '3rem' }}>Loading Hierarchy...</td></tr>
             ) : filteredCategories.length === 0 ? (
               <tr><td colSpan={4} style={{ textAlign: 'center', padding: '3rem' }}>No categories defined</td></tr>
             ) : (
-              filteredCategories.map(cat => (
-                <tr key={cat._id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Tag size={18} color="#64748b" />
-                      </div>
-                      <span style={{ fontWeight: 700 }}>{cat.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{cat.description || 'No description'}</td>
-                  <td>
-                    <span style={{ 
-                      padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
-                      background: cat.isActive ? '#dcfce7' : '#fee2e2',
-                      color: cat.isActive ? '#16a34a' : '#ef4444'
-                    }}>
-                      {cat.isActive ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-                  <td className="actions-cell">
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="icon-btn" onClick={() => openEdit(cat)} title="Edit"><Edit3 size={16} /></button>
-                      <button className="icon-btn delete" onClick={() => handleDelete(cat._id)} title="Delete"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              filteredCategories.map(cat => {
+                const isExpanded = expandedCategories.has(cat._id);
+                const subsCount = subCategories.filter(s => s.categoryId?._id === cat._id || s.categoryId === cat._id).length;
+                
+                return (
+                  <React.Fragment key={cat._id}>
+                    <tr className={isExpanded ? 'expanded-row' : ''}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button 
+                            className="icon-btn xs" 
+                            style={{ padding: 0, width: '24px', height: '24px', visibility: subsCount > 0 ? 'visible' : 'hidden' }}
+                            onClick={() => toggleExpand(cat._id)}
+                          >
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </button>
+                          <div style={{ width: '36px', height: '36px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Tag size={18} color="#64748b" />
+                          </div>
+                          <div>
+                            <span style={{ fontWeight: 700, display: 'block' }}>{cat.name}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{subsCount} sub-categories defined</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{cat.description || 'Master Level Category'}</td>
+                      <td>
+                        <span style={{ 
+                          padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
+                          background: cat.isActive ? '#dcfce7' : '#fee2e2',
+                          color: cat.isActive ? '#16a34a' : '#ef4444'
+                        }}>
+                          {cat.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </td>
+                      <td className="actions-cell">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="icon-btn" onClick={() => openQuickAddSub(cat._id, 'category')} title="Add Sub-category"><Plus size={16} /></button>
+                          <button className="icon-btn" onClick={() => openCatEdit(cat)} title="Edit"><Edit3 size={16} /></button>
+                          <button className="icon-btn delete" onClick={() => handleCatDelete(cat._id)} title="Delete"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && renderSubTree(cat._id)}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
+      {/* Master Category Modal */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content card" style={{ maxWidth: '500px' }}>
             <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0 }}>{editingCategory ? 'Edit Category' : 'Create Category'}</h2>
+              <h2 style={{ margin: 0 }}>{editingCategory ? 'Edit Master Category' : 'Create Master Category'}</h2>
               <button className="icon-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleSave} className="admin-form">
+            <form onSubmit={handleCatSave} className="admin-form">
               <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="form-group">
                   <label>Category Name</label>
                   <input 
                     type="text" 
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                    value={catFormData.name} 
+                    onChange={e => setCatFormData({...catFormData, name: e.target.value})} 
                     placeholder="e.g. Electrical Material"
                     required 
                   />
                 </div>
                 <div className="form-group">
-                  <label>Description</label>
-                  <input 
-                    type="text" 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})} 
-                    placeholder="Brief details about this category..."
-                  />
+                  <label>Blog Space / SEO Description (Multiple Paragraphs)</label>
+                  <textarea 
+                    value={catFormData.description} 
+                    onChange={e => setCatFormData({...catFormData, description: e.target.value})} 
+                    placeholder="Enter multiple paragraphs for the category blog section..."
+                    rows={6}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      borderRadius: '8px', 
+                      border: '1px solid #e2e8f0',
+                      outline: 'none',
+                      fontSize: '0.9rem',
+                      fontFamily: 'inherit'
+                    }}
+                  ></textarea>
                 </div>
-                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="cat-active"
-                    checked={formData.isActive} 
-                    onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                    style={{ width: '20px', height: '20px' }}
-                  />
-                  <label htmlFor="cat-active" style={{ marginBottom: 0 }}>Is Active</label>
+                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="cat-active"
+                      checked={catFormData.isActive} 
+                      onChange={e => setCatFormData({...catFormData, isActive: e.target.checked})} 
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <label htmlFor="cat-active" style={{ marginBottom: 0 }}>Is Active</label>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="cat-featured"
+                      checked={catFormData.isFeatured} 
+                      onChange={e => setCatFormData({...catFormData, isFeatured: e.target.checked})} 
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <label htmlFor="cat-featured" style={{ marginBottom: 0, color: '#f59e0b', fontWeight: 'bold' }}>Featured on Home</label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Category Image (for Featured section)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '12px', border: '2px dashed #e2e8f0', backgroundImage: catFormData.imageUrl ? `url(${import.meta.env.VITE_API_BASE_URL}${catFormData.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {!catFormData.imageUrl && <Image size={24} color="#64748b" opacity={0.5} />}
+                    </div>
+                    <div>
+                      <input type="file" id="cat-img-upload" hidden accept="image/*" onChange={handleCategoryImageUpload} />
+                      <label htmlFor="cat-img-upload" className="secondary-btn" style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Change Image</label>
+                      <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>Recommended: 200x200px PNG/JPG</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
                 <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="primary-btn">Save Category</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-Category Modal */}
+      {showSubModal && (
+        <div className="modal-overlay">
+          <div className="modal-content card" style={{ maxWidth: '500px' }}>
+            <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>{editingSub ? 'Edit Sub-Category' : 'Create Sub-Category'}</h2>
+              <button className="icon-btn" onClick={() => setShowSubModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubSave} className="admin-form">
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="form-group">
+                  <label>Sub-Category Name</label>
+                  <input type="text" value={subFormData.name} onChange={e => setSubFormData({...subFormData, name: e.target.value})} placeholder="e.g. Copper Wires" required />
+                </div>
+                
+                <div className="form-group">
+                  <label>Master Category</label>
+                  <select 
+                    value={subFormData.categoryId} 
+                    onChange={e => setSubFormData({...subFormData, categoryId: e.target.value, parentSubCategoryId: ''})} 
+                    required
+                  >
+                    <option value="">Select Master Category...</option>
+                    {categories.map(cat => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Parent Sub-Category (Optional for nesting)</label>
+                  <select 
+                    value={subFormData.parentSubCategoryId} 
+                    onChange={e => setSubFormData({...subFormData, parentSubCategoryId: e.target.value})}
+                    disabled={!subFormData.categoryId}
+                  >
+                    <option value="">None (Top Level Sub-Category)</option>
+                    {subCategories
+                      .filter(s => {
+                        if (editingSub && s._id === editingSub._id) return false;
+                        return (s.categoryId?._id === subFormData.categoryId || s.categoryId === subFormData.categoryId);
+                      })
+                      .map(s => (
+                        <option key={s._id} value={s._id}>{s.name}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                  <input type="checkbox" id="sub-active" checked={subFormData.isActive} onChange={e => setSubFormData({...subFormData, isActive: e.target.checked})} style={{ width: '20px', height: '20px' }} />
+                  <label htmlFor="sub-active" style={{ marginBottom: 0 }}>Is Active</label>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
+                <button type="button" className="secondary-btn" onClick={() => setShowSubModal(false)}>Cancel</button>
+                <button type="submit" className="primary-btn">Save Sub-Category</button>
               </div>
             </form>
           </div>

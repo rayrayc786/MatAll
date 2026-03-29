@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const User = require('./models/User');
-const Vendor = require('./models/Vendor');
+const Supplier = require('./models/Supplier');
 const DarkStore = require('./models/DarkStore');
 require('dotenv').config();
 
@@ -17,7 +17,7 @@ const seedDarkStore = {
   isOpen: true
 };
 
-const seedVendor = {
+const seedSupplier = {
   _id: new mongoose.Types.ObjectId('65f1a2b3c4d5e6f7a8b9c0d1'),
   name: 'Global Construction Supplies',
   location: 'Bangalore Industrial Area',
@@ -27,8 +27,8 @@ const seedVendor = {
 
 const seedUsers = [
   { fullName: 'Admin User', phoneNumber: '9999988888', role: 'Admin', isVerified: true },
-  { fullName: 'Vendor Manager', phoneNumber: '6666655555', role: 'Vendor', isVerified: true },
-  { fullName: 'Rahul Buyer', phoneNumber: '8888877777', role: 'Buyer', isVerified: true }
+  { fullName: 'Supplier Manager', phoneNumber: '6666655555', role: 'Supplier', isVerified: true },
+  { fullName: 'Rahul End User', phoneNumber: '8888877777', role: 'End User', isVerified: true }
 ];
 
 const seedProducts = [
@@ -311,12 +311,12 @@ async function seed() {
     
     await Product.deleteMany({});
     await User.deleteMany({});
-    await Vendor.deleteMany({});
+    await Supplier.deleteMany({});
     await DarkStore.deleteMany({});
     console.log('Cleared existing data...');
     
     await DarkStore.create(seedDarkStore);
-    await Vendor.create(seedVendor);
+    await Supplier.create(seedSupplier);
     await Product.insertMany(seedProducts);
     await User.insertMany(seedUsers);
     
