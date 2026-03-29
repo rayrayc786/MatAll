@@ -25,7 +25,7 @@
 .banner-track {
   display: flex;
   gap: 3rem;
-  animation: scroll 30s linear infinite;
+  animation: scroll 320s linear infinite;
   white-space: nowrap;
 }
 

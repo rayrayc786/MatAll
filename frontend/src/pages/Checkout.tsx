@@ -178,7 +178,14 @@ const Checkout: React.FC = () => {
         paymentObject.open();
 
       } catch (err: any) {
-        toast.error('Could not create payment session. Try COD.');
+        if (err.response && err.response.status === 401) {
+          toast.error('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login', { state: { from: '/cart' }, replace: true });
+        } else {
+          toast.error('Could not create payment session. Try COD.');
+        }
       } finally {
         setLoading(false);
       }
@@ -209,7 +216,14 @@ const Checkout: React.FC = () => {
       clearCart();
       navigate('/orders');
     } catch (err: any) {
-      toast.error('Failed to place order');
+      if (err.response && err.response.status === 401) {
+          toast.error('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login', { state: { from: '/cart' }, replace: true });
+      } else {
+          toast.error('Failed to place order');
+      }
     } finally {
       setLoading(false);
     }
