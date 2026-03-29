@@ -127,11 +127,20 @@ const AdminDashboard: React.FC = () => {
     const onNewOrder = (order: any) => {
        console.log('Received socket new-order payload:', order);
        const refId = String(order?._id || order?.id || 'UNKNOWN').slice(-6).toUpperCase();
+       
+       // Play notification sound
+       const audio = new Audio('/sounds/notification.mp3');
+       audio.play().catch(e => console.error('Audio play failed:', e));
+       
        toast.success(`🎉 New Order Received! (#${refId})`);
        fetchData(); // Auto-refresh all stats and orders
     };
 
     const onNewUserRequest = (request: any) => {
+       // Play notification sound
+       const audio = new Audio('/sounds/notification.mp3');
+       audio.play().catch(e => console.error('Audio play failed:', e));
+
        toast.success(`📸 New Material Request from ${request.name}!`);
        fetchData();
     };
