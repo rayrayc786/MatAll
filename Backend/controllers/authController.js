@@ -29,7 +29,7 @@ exports.verifyOTP = async (req, res) => {
     }
 
     // Upsert User
-    let user = await User.findOne({ phoneNumber }).populate('vendorId');
+    let user = await User.findOne({ phoneNumber }).populate('supplierId');
     if (!user) {
       user = new User({
         phoneNumber,
@@ -45,7 +45,7 @@ exports.verifyOTP = async (req, res) => {
         id: user._id.toString(), 
         role: user.role, 
         phoneNumber: user.phoneNumber,
-        vendorId: user.vendorId ? user.vendorId.toString() : undefined
+        supplierId: user.supplierId ? user.supplierId.toString() : undefined
       },
       process.env.JWT_SECRET || 'supersecretkey_builditquick',
       { expiresIn: '7d' }
