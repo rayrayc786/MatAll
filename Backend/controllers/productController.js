@@ -117,6 +117,11 @@ const groupProductsByVariants = (products) => {
   return Array.from(groupedMap.values());
 };
 
+// Shared Hydration utility
+const hydrateProduct = (product) => {
+  return resolveProductImages(product);
+};
+
 exports.getAllProducts = async (req, res) => {
   try {
     const { category, brand, subCategory, search, isPopular } = req.query;
@@ -124,27 +129,44 @@ exports.getAllProducts = async (req, res) => {
 
     const CATEGORY_MAP = {
       'Wooden & Boards': '03',
+      'Wooden Material': '03',
       'Electricals': '04',
+      'Electrical Material': '04',
       'Hardware': '22',
+      'Modular Hardware': '22',
       'Paint & POP': '06',
+      'Paint': '06',
       'Tiles & Flooring': 'tiles',
       'Power Tools': 'tools',
-      'Civil': '26'
+      'Tools': 'tools',
+      'Civil': '26',
+      'Bathroom': 'Bathroom',
+      'Plumbing': 'Plumbing'
     };
 
     const getCategoryIdFromName = (name) => CATEGORY_MAP[name] || null;
 
     if (category) {
-      let categoryValues = Array.isArray(category) ? category : [category];
+      const categoryValues = Array.isArray(category) ? category : [category];
       
-      // Expand query to include numeric IDs if names were provided
-      const expandedValues = [...categoryValues];
+      // Build a set of variations for each category name
+      const queryValues = [];
       categoryValues.forEach(val => {
+        // Direct match
+        queryValues.push(val);
+        
+        // Casing match
+        queryValues.push(val.toLowerCase());
+        queryValues.push(val.toUpperCase());
+        
+        // Mapped ID match
         const id = getCategoryIdFromName(val);
-        if (id) expandedValues.push(id);
+        if (id) queryValues.push(id);
       });
       
-      query.category = { $in: expandedValues };
+      const uniqueValues = Array.from(new Set(queryValues));
+      const regexPattern = uniqueValues.map(v => v.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+      query.category = { $regex: new RegExp(`^(${regexPattern})$`, 'i') };
     }
     
     if (brand) {
@@ -153,8 +175,8 @@ exports.getAllProducts = async (req, res) => {
     }
 
     if (subCategory) {
-      const subCategories = Array.isArray(subCategory) ? subCategory : [subCategory];
-      query.subCategory = { $in: subCategories };
+      const subCategoriesList = Array.isArray(subCategory) ? subCategory : [subCategory];
+      query.subCategory = { $in: subCategoriesList };
     }
 
     if (isPopular === 'true') {
@@ -164,9 +186,11 @@ exports.getAllProducts = async (req, res) => {
     if (search) {
       const regex = new RegExp(search, 'i');
       const orConditions = [
-        { name: regex }, { productCode: regex },
-        { category: regex }, { subCategory: regex }, { brand: regex },
-        { size: regex }, { 'subVariants.value': regex }, { 'variants.name': regex }
+        { name: regex },
+        { brand: regex },
+        { 'variants.name': regex },
+        { 'variants.sku': regex },
+        { 'variants.subVariants.value': regex }
       ];
 
       // If search matches a category name, add the numeric ID too
@@ -181,14 +205,14 @@ exports.getAllProducts = async (req, res) => {
 
     let products = await Product.find(query).lean();
     
-    // 1. Resolve images first
-    products = products.map(resolveProductImages);
-    
-    // 2. Group into variants
-    let groupedProducts = groupProductsByVariants(products);
+    // Hydrate
+    const hydrated = products.map(hydrateProduct);
 
-    // 3. Sort: Products with images first
-    groupedProducts.sort((a, b) => {
+    // Group dynamically
+    const grouped = groupProductsByVariants(hydrated);
+
+    // Sort: Products with images first
+    grouped.sort((a, b) => {
       const aHasImg = a.imageUrl && !a.imageUrl.includes('unsplash');
       const bHasImg = b.imageUrl && !b.imageUrl.includes('unsplash');
       if (aHasImg && !bHasImg) return -1;
@@ -196,7 +220,7 @@ exports.getAllProducts = async (req, res) => {
       return 0;
     });
 
-    res.json(groupedProducts);
+    res.json(grouped);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -207,17 +231,21 @@ exports.getProductById = async (req, res) => {
     const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ message: 'Product not found' });
     
-    const baseName = (product.name || '').toString().split('|')[0].trim();
+    // Check if this product should be shown grouped with others
+    const baseProduct = hydrateProduct(product);
     const relatedProducts = await Product.find({
       brand: product.brand,
-      name: { $regex: new RegExp('^' + baseName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i') },
+      name: product.name.split('|')[0].trim(),
       isActive: true
     }).lean();
 
-    const resolved = relatedProducts.map(resolveProductImages);
-    const grouped = groupProductsByVariants(resolved);
-    
-    res.json(grouped[0] || resolveProductImages(product));
+    if (relatedProducts.length > 1) {
+       const grouped = groupProductsByVariants(relatedProducts.map(hydrateProduct));
+       const match = grouped.find(p => p.variants && p.variants.some(v => String(v._id) === String(product._id)));
+       return res.json(match || baseProduct);
+    }
+
+    res.json(baseProduct);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -231,16 +259,17 @@ exports.autocomplete = async (req, res) => {
     const regex = new RegExp(q, 'i');
     let products = await Product.find({
       $or: [
-        { name: regex }, { productCode: regex },
-        { category: regex }, { subCategory: regex }, { brand: regex },
-        { size: regex }, { 'subVariants.value': regex }, { 'variants.name': regex }
+        { name: regex },
+        { brand: regex },
+        { 'variants.name': regex },
+        { 'variants.sku': regex },
+        { 'variants.subVariants.value': regex }
       ],
       isActive: true
-    }).limit(40).lean();
+    }).limit(100).lean();
 
-    products = products.map(resolveProductImages);
-    const grouped = groupProductsByVariants(products);
-    
+    const hydrated = products.map(hydrateProduct);
+    const grouped = groupProductsByVariants(hydrated);
     res.json(grouped.slice(0, 10));
   } catch (err) {
     res.status(500).json({ error: err.message });

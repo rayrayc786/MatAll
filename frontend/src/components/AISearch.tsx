@@ -9,6 +9,7 @@ const AISearch: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,7 +22,6 @@ const AISearch: React.FC = () => {
       const token = localStorage.getItem('token');
       if (token) {
         setShowModal(true);
-        // Clean up the URL
         navigate(location.pathname, { replace: true });
       }
     }
@@ -30,17 +30,26 @@ const AISearch: React.FC = () => {
   const requireLogin = () => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
-    if (!token || !userStr || userStr === '{}') {
+    
+    if (token && (!userStr || userStr === '{}' || userStr === 'undefined')) {
+      return { fullName: 'MatAll User', phoneNumber: 'Verified' };
+    }
+
+    if (!token) {
       toast.error('Please log in to upload material lists and images.');
       setShowModal(false);
       const currentPath = location.pathname === '/login' ? '/' : location.pathname;
       navigate('/login', { state: { from: `${currentPath}?openUpload=true` } });
       return null;
     }
-    return JSON.parse(userStr);
+    
+    try {
+      return JSON.parse(userStr || '{}');
+    } catch (e) {
+      return null;
+    }
   };
 
-  // --- Voice Search ---
   const startVoiceSearch = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -59,7 +68,6 @@ const AISearch: React.FC = () => {
     recognition.start();
   };
 
-  // --- Image Processing ---
   const handleFileUploadClick = () => {
     if (requireLogin()) {
       fileInputRef.current?.click();
@@ -70,13 +78,36 @@ const AISearch: React.FC = () => {
     if (requireLogin()) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        setShowCameraModal(true);
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        }, 100);
       } catch (err) {
-        toast.error("Camera access denied.");
+        toast.error("Camera access denied or device not found.");
       }
     }
+  };
+
+  const closeAndStopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setShowModal(false);
+    setShowCameraModal(false);
+    setIsSuccess(false);
+  };
+
+  const closeCameraOnly = () => {
+     if (videoRef.current?.srcObject) {
+       const stream = videoRef.current.srcObject as MediaStream;
+       stream.getTracks().forEach(track => track.stop());
+       videoRef.current.srcObject = null;
+     }
+     setShowCameraModal(false);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,19 +135,15 @@ const AISearch: React.FC = () => {
         imageBase64
       });
       setIsSuccess(true);
+      setShowCameraModal(false);
       setTimeout(() => {
         setIsSuccess(false);
         setShowModal(false);
       }, 3000);
     } catch (err) {
-      console.error("Upload Error:", err);
       toast.error('Failed to submit request to admin.');
     } finally {
       setIsProcessing(false);
-      if (videoRef.current?.srcObject) {
-         const stream = videoRef.current.srcObject as MediaStream;
-         stream.getTracks().forEach(track => track.stop());
-      }
     }
   };
 
@@ -127,6 +154,12 @@ const AISearch: React.FC = () => {
       canvas.height = videoRef.current.videoHeight;
       canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
       const dataUrl = canvas.toDataURL('image/jpeg');
+      
+      // Stop camera tracks immediately
+      if (videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
       
       processImage(dataUrl);
     }
@@ -150,7 +183,7 @@ const AISearch: React.FC = () => {
           <div className="ai-modal card">
             <div className="modal-header">
               <h3>Advanced Material Search</h3>
-              <button type="button" onClick={() => setShowModal(false)}><X size={20} /></button>
+              <button type="button" onClick={closeAndStopCamera}><X size={20} /></button>
             </div>
 
             <div className="modal-body">
@@ -180,15 +213,47 @@ const AISearch: React.FC = () => {
                 </div>
               )}
               
-              <video ref={videoRef} autoPlay playsInline style={{ display: videoRef.current?.srcObject && !isProcessing && !isSuccess ? 'block' : 'none', width: '100%', borderRadius: '12px', marginTop: '1rem' }} />
-              {videoRef.current?.srcObject && !isProcessing && !isSuccess && (
-                <button type="button" onClick={capturePhoto} className="capture-btn" style={{ background: '#FFEA00', color: '#000', padding: '10px 20px', border: 'none', borderRadius: '8px', width: '100%', marginTop: '10px', fontWeight: 'bold' }}>
-                  Send Capture to Admin
-                </button>
-              )}
-
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} hidden accept="image/*" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCameraModal && (
+        <div className="modal-overlay camera-modal-overlay" style={{ zIndex: 100000 }}>
+          <div className="camera-fullscreen-container animate-fade-in">
+             <div className="camera-header-premium">
+                <div className="cam-meta">
+                    <span className="live-pill">LIVE</span>
+                    <span className="cam-title">Scan Material List</span>
+                </div>
+                <button className="cam-close-btn-premium" onClick={closeCameraOnly}><X size={24} /></button>
+             </div>
+             
+             <div className="video-viewport">
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  className="live-video-feed-premium"
+                />
+             </div>
+
+             <div className="camera-controls-premium">
+                <p className="cam-instruction">Position your list within the frame</p>
+                <div className="capture-action-row">
+                    <button 
+                      className="camera-capture-ring" 
+                      onClick={capturePhoto}
+                      disabled={isProcessing}
+                    >
+                      <div className="inner-shutter">
+                         {isProcessing && <Loader2 className="spinner-white" />}
+                      </div>
+                    </button>
+                </div>
+                <span className="cam-footer-text">Powered by MatAll AI Search</span>
+             </div>
           </div>
         </div>
       )}

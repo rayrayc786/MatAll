@@ -7,6 +7,7 @@ import {
   ChevronRight, 
   RotateCcw
 } from 'lucide-react';
+import { getFullImageUrl } from '../utils/imageUrl';
 import './orders.css';
 
 const Orders: React.FC = () => {
@@ -71,7 +72,7 @@ const Orders: React.FC = () => {
                 <div className="order-thumbs-row">
                    {order.items.slice(0, 4).map((item: any, i: number) => (
                      <div key={i} className="mini-thumb">
-                        <img src={item.productId?.imageUrl || item.product?.imageUrl} alt="" />
+                        <img src={getFullImageUrl(item.productId?.imageUrl || item.product?.imageUrl)} alt="" />
                      </div>
                    ))}
                    {order.items.length > 4 && <span className="thumbs-count-more">+{order.items.length - 4}</span>}

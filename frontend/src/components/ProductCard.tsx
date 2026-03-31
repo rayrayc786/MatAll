@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Plus, Minus, Heart, Star, X, Clock } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import toast from 'react-hot-toast';
+import { getFullImageUrl } from '../utils/imageUrl';
 import './product-card.css';
 
 interface ProductCardProps {
@@ -68,15 +69,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       return;
     }
     navigate(`/products/${product._id}`);
-  };
-
-  const getFullImageUrl = (url?: string) => {
-    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
-    if (url.startsWith('http')) return url;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${cleanBase}${cleanUrl}`;
   };
 
   const toggleFavorite = async (e: React.MouseEvent) => {

@@ -5,6 +5,11 @@ const OrderItemSchema = new mongoose.Schema({
   category: { type: String }, // Store category for routing
   quantity: { type: Number, required: true },
   unitPrice: { type: Number, required: true },
+  basePrice: { type: Number }, // item price excluding GST
+  taxRate: { type: Number }, // total GST %
+  igstAmount: { type: Number },
+  cgstAmount: { type: Number },
+  sgstAmount: { type: Number },
   totalWeight: { type: Number, required: true }, // Pre-calculated weight
   totalVolume: { type: Number, required: true }  // Pre-calculated volume
 });
@@ -22,7 +27,7 @@ const OrderSchema = new mongoose.Schema({
   
   supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
   riderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  paymentMethod: { type: String, enum: ['upi', 'credit', 'bank', 'COD', 'Online Payment'], default: 'COD' },
+  paymentMethod: { type: String, enum: ['upi', 'credit', 'bank', 'COD', 'Online Payment', 'Online Payment (Full)', 'Partial Payment (50%)'], default: 'COD' },
   paymentReference: { type: String },
   proofImageUrl: { type: String },
 
@@ -30,7 +35,17 @@ const OrderSchema = new mongoose.Schema({
   // Examples: 'Bike', 'Pickup Truck', 'Flatbed', 'Heavy Trailer'
   vehicleClass: { type: String, required: true },
   
-  totalAmount: { type: Number, required: true },
+  totalAmount: { type: Number, required: true }, // Grand Total (incl all fees & taxes)
+  subTotal: { type: Number }, // Sum of items (incl GST)
+  totalBaseAmount: { type: Number }, // Sum of items base price
+  totalTaxAmount: { type: Number }, // Sum of IGST/CGST/SGST from items
+  
+  platformFee: { type: Number, default: 19 }, // incl GST
+  platformFeeGST: { type: Number, default: 2.9 }, // 18% of 16.10 approx
+  
+  deliveryCharge: { type: Number, default: 0 },
+  deliveryChargeGST: { type: Number, default: 0 },
+
   totalWeight: { type: Number, required: true },
   totalVolume: { type: Number, required: true },
   

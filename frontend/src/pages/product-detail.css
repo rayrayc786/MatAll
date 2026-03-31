@@ -529,56 +529,6 @@
   font-weight: 900;
 }
 
-/* Floating View Cart Pill */
-.floating-cart-pill {
-  position: fixed;
-  bottom: 160px; /* Above sticky footer */
-  left: 50%;
-  transform: translateX(-50%);
-  background: #16a34a;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 30px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 2100;
-  box-shadow: 0 8px 30px rgba(22, 163, 74, 0.4);
-  animation: popIn 0.3s ease-out;
-  cursor: pointer;
-  min-width: 200px;
-}
-
-@keyframes popIn {
-  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-  to { transform: translateX(-50%) translateY(0); opacity: 1; }
-}
-
-.cart-pill-icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cart-pill-text {
-  flex: 1;
-}
-
-.cart-pill-text h5 {
-  font-size: 0.85rem;
-  font-weight: 900;
-  margin: 0;
-}
-
-.cart-pill-text p {
-  font-size: 0.65rem;
-  margin: 0;
-  font-weight: 600;
-}
 
 /* Desktop Responsiveness */
 .hide-mobile {

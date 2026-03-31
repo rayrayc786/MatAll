@@ -49,6 +49,7 @@ import Reports from './pages/Reports';
 import SupplierDashboard from './pages/SupplierDashboard';
 import Navbar from './components/Navbar';
 import AdminSidebar from './components/admin/AdminSidebar';
+// import FloatingCart from './components/FloatingCart';
 import { customerSocket, supplierSocket, connectSocket } from './socket';
 import './App.css';
 import './responsive.css';
@@ -149,6 +150,7 @@ const AppContent = () => {
       <Toaster position="top-right" reverseOrder={false} />
       <SocketManager />
       {showNavbar && <Navbar />}
+      {/* <FloatingCart /> */}
       <Routes>
         {/* Prioritize specific routes */}
         <Route path="/search" element={<SearchFilter />} />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Search, Edit3, Trash2, X, Award } from 'lucide-react';
+import { getFullImageUrl } from '../../utils/imageUrl';
 
 const BrandManager: React.FC = () => {
   const [brands, setBrands] = useState<any[]>([]);
@@ -139,7 +140,7 @@ const BrandManager: React.FC = () => {
                  <tr key={brand._id}>
                   <td>
                     {brand.logoUrl ? (
-                      <img src={brand.logoUrl} alt={brand.name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px' }} />
+                      <img src={getFullImageUrl(brand.logoUrl)} alt={brand.name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px' }} />
                     ) : (
                       <div style={{ width: '40px', height: '40px', background: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Award size={18} color="#64748b" />

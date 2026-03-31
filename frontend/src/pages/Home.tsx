@@ -6,6 +6,7 @@ import {
 import './home.css';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
+import { getFullImageUrl } from '../utils/imageUrl';
 
 // Featured categories will be fetched from API
 
@@ -64,9 +65,7 @@ const Home: React.FC = () => {
           <div className="category-modern-grid">
             {featuredCategories.length > 0 ? (
               featuredCategories.map(cat => {
-                const catImg = cat.imageUrl 
-                  ? (cat.imageUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${cat.imageUrl}` : cat.imageUrl)
-                  : 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                const catImg = getFullImageUrl(cat.imageUrl);
                   
                 return (
                   <Link to={`/products?category=${encodeURIComponent(cat.name)}`} key={cat._id} className="category-modern-card">
@@ -101,7 +100,7 @@ const Home: React.FC = () => {
               featuredBrands.map(brand => (
                 <Link to={`/brand/${brand.name}`} key={brand._id} className="brand-tile">
                   <div className="brand-logo-box">
-                    <img src={brand.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(brand.name)}&background=f1f5f9&color=000&bold=true`} alt={brand.name} />
+                    <img src={getFullImageUrl(brand.logoUrl)} alt={brand.name} />
                   </div>
                   <span>{brand.name}</span>
                 </Link>
@@ -139,9 +138,7 @@ const Home: React.FC = () => {
           <div className="offers-horizontal-scroll">
             {dynamicOffers.length > 0 ? (
               dynamicOffers.map(offer => {
-                const offerImg = offer.imageUrl 
-                  ? (offer.imageUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${offer.imageUrl}` : offer.imageUrl)
-                  : 'https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=400';
+                const offerImg = getFullImageUrl(offer.imageUrl);
                   
                 return (
                   <div key={offer._id} className="offer-card" onClick={() => offer.link && navigate(offer.link)} style={{ cursor: offer.link ? 'pointer' : 'default' }}>

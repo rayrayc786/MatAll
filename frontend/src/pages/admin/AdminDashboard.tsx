@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Package, 
-  Users, 
   Layers, 
   Clock,
   Search,
@@ -58,7 +57,7 @@ const AdminDashboard: React.FC = () => {
   const tabParam = searchParams.get('tab');
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>((tabParam as any) || 'dashboard');
-  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links'>('list');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links' | 'gst'>('list');
   const [loading, setLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
@@ -67,6 +66,7 @@ const AdminDashboard: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [userRequests, setUserRequests] = useState<any[]>([]);
+  const [gstClassifications, setGstClassifications] = useState<any[]>([]);
 
   // Management State
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -99,6 +99,9 @@ const AdminDashboard: React.FC = () => {
       if (pRes.data) setProducts(pRes.data);
       if (urRes.data) setUserRequests(urRes.data);
       if (statsRes.data) setDashboardStats(statsRes.data);
+
+      const gstRes = await axios.get(`${API_BASE}/admin/gst-classifications`);
+      if (gstRes.data) setGstClassifications(gstRes.data);
     } catch (err: any) {
       console.error('Fetch failed:', err);
     } finally {
@@ -129,21 +132,23 @@ const AdminDashboard: React.FC = () => {
        const refId = String(order?._id || order?.id || 'UNKNOWN').slice(-6).toUpperCase();
        
        // Play notification sound
-       const audio = new Audio('/sounds/notification.mp3');
+       const audio = new Audio('/sounds/New Order.mpeg');
        audio.play().catch(e => console.error('Audio play failed:', e));
        
        toast.success(`🎉 New Order Received! (#${refId})`);
        fetchData(); // Auto-refresh all stats and orders
     };
 
+
     const onNewUserRequest = (request: any) => {
        // Play notification sound
-       const audio = new Audio('/sounds/notification.mp3');
+       const audio = new Audio('/sounds/New request.mpeg');
        audio.play().catch(e => console.error('Audio play failed:', e));
 
        toast.success(`📸 New Material Request from ${request.name}!`);
        fetchData();
     };
+
 
     adminSocket.on('connect', onConnect);
     adminSocket.on('new-order', onNewOrder);
@@ -255,10 +260,10 @@ const AdminDashboard: React.FC = () => {
   };
 
   const TILES = [
-    { label: 'Active Orders', val: dashboardStats?.activeOrders ?? '0', icon: <Package size={20} />, color: '#FFEA00' },
-    { label: 'Active Suppliers', val: dashboardStats?.activeSuppliers ?? '0', icon: <Users size={20} />, color: '#DEDEDE' },
-    { label: 'Active Categories', val: dashboardStats?.activeCategories ?? '0', icon: <Layers size={20} />, color: '#DEDEDE' },
-    { label: 'Avg Delivery Time', val: dashboardStats?.avgDeliveryTime ?? '0 mins', icon: <Clock size={20} />, color: '#DEDEDE' },
+    { label: 'Active Orders', val: dashboardStats?.activeOrders ?? '0', icon: <Package size={20} />, color: '#FFEA00', tab: 'orders' },
+    { label: 'Active Products', val: dashboardStats?.totalProducts ?? products.length ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'products' },
+    { label: 'Active Categories', val: dashboardStats?.activeCategories ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'categories' },
+    { label: 'Support Tickets', val: '0', icon: <Clock size={20} />, color: '#DEDEDE', tab: 'tickets' },
   ];
 
   const ACTION_ITEMS = [
@@ -319,21 +324,31 @@ const AdminDashboard: React.FC = () => {
       name: 'Footer Navigation',
       sub: 'Manage grouped links, helpful resources, and sub-category listings in the website footer',
       color: '#FFEA00'
+    },
+    {
+      id: 'gst',
+      name: 'GST & Classification',
+      sub: 'Manage HSN Codes and GST rates by Category & Sub Category',
+      color: '#DEDEDE'
     }
   ];
 
   const renderDashboard = () => (
     <div className="admin-scroll-content animate-fade-in">
       <div className="admin-tiles-grid">
-         {TILES.map((tile, idx) => (
-           <div key={idx} className="admin-metric-tile" style={{ backgroundColor: tile.color }}>
-              <div className="tile-top">
-                 <span className="tile-val">{tile.val}</span>
-                 {tile.icon}
-              </div>
-              <span className="tile-label">{tile.label}</span>
-           </div>
-         ))}
+          {TILES.map((tile, idx) => (
+            <div 
+              key={idx} 
+              className="admin-metric-tile" 
+              style={{ backgroundColor: tile.color }}
+            >
+               <div className="tile-top">
+                  <span className="tile-val">{tile.val}</span>
+                  {tile.icon}
+               </div>
+               <span className="tile-label">{tile.label}</span>
+            </div>
+          ))}
       </div>
 
       <section className="admin-section-box">
@@ -396,7 +411,7 @@ const AdminDashboard: React.FC = () => {
 
       <section className="admin-section-box">
          <div className="section-header">
-            <h3>B2B Orders</h3>
+            <h3>Latest Orders</h3>
             <div className="filter-pills-row">
                <button className="pill">Monthly</button>
                <button className="pill active">Weekly</button>
@@ -405,28 +420,29 @@ const AdminDashboard: React.FC = () => {
          </div>
          
          <div className="b2b-orders-list">
-            {(dashboardStats?.recentOrders || [
-              { name: 'Sierra Interior', date: 'Mar 22, 2025', amount: '+ 10,000', code: 'SI', status: 'New Order' },
-              { name: 'Benchmarks', date: 'Mar 26, 2025', amount: '+ 1,00,000', code: 'BM', status: 'Processing' },
-              { name: 'Sierra Interior', date: 'Mar 22, 2025', amount: '+ 2,00,000', code: 'SI', status: 'Delivered' },
-            ]).map((order: any, idx: number) => (
-              <div key={idx} className="b2b-order-row">
-                 <div className="b2b-avatar">{order.code}</div>
-                 <div className="b2b-info">
-                    <h4>{order.name}</h4>
-                    <span>{order.date}</span>
-                 </div>
-                 <div className="b2b-amount-group">
-                    <span className="amount-val">{order.amount}</span>
-                    {order.status === 'pending' || order.status === 'Order Placed' || order.status === 'New Order' ? (
-                       <button className="new-order-badge">New Order</button>
-                    ) : (
-                       <button className="new-order-badge" style={{background: '#f1f5f9', color: '#64748b'}}>{order.status || 'Active'}</button>
-                    )}
-                 </div>
-              </div>
-            ))}
-         </div>
+            {orders.length === 0 ? (
+               <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No orders yet</div>
+            ) : (
+               orders.slice(0, 10).map((order: any, idx: number) => (
+                  <div key={order._id || idx} className="b2b-order-row" onClick={() => setViewingOrder(order)} style={{ cursor: 'pointer' }}>
+                     <div className="b2b-avatar">{order.userId?.fullName?.slice(0, 2).toUpperCase() || 'GU'}</div>
+                     <div className="b2b-info">
+                        <h4>{order.userId?.fullName || 'Guest User'}</h4>
+                        <span>{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                     </div>
+                     <div className="b2b-amount-group">
+                        <span className="amount-val">₹{order.totalAmount}</span>
+                        <button className="new-order-badge" style={{
+                           background: order.status === 'Accepted' ? '#FFEA00' : '#f1f5f9',
+                           color: order.status === 'Accepted' ? '#000' : '#64748b'
+                        }}>
+                           {order.status || 'Active'}
+                        </button>
+                     </div>
+                  </div>
+               ))
+            )}
+          </div>
       </section>
     </div>
   );
@@ -513,7 +529,8 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="row-mid-info" onClick={() => setViewingOrder(order)}>
                <span className="row-name">Order #{order._id.slice(-6).toUpperCase()}</span>
-               <span className="row-sub">₹{order.totalAmount || 0}</span>
+               <span className="row-sub">₹{order.totalAmount || 0} • {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+               <span className="row-sub" style={{ fontSize: '0.65rem' }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             <div className="row-status-select">
                <select 
@@ -649,12 +666,43 @@ const AdminDashboard: React.FC = () => {
       </div>
       <div className="admin-list-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', padding: '1rem' }}>
         {userRequests.length === 0 ? <p className="text-center py-4" style={{ gridColumn: '1 / -1' }}>No requests found.</p> : userRequests.map((req, i) => (
-          <div key={req._id || i} className="admin-list-row-item card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '1rem', border: '1px solid #eee', borderRadius: '12px', background: '#fff' }}>
-            <div className="row-left-info" style={{ marginBottom: '1rem' }}>
-              <span className="row-name" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{req.name}</span>
+          <div key={req._id || i} className="admin-list-row-item card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '1rem', border: '1px solid #eee', borderRadius: '12px', background: '#fff', position: 'relative' }}>
+            <div className="row-left-info" style={{ marginBottom: '1rem', paddingRight: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <span className={`status-badge-mini ${(req.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                  {req.status || 'Pending'}
+                </span>
+                <span className="row-name" style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>{req.name}</span>
+              </div>
               <span className="row-sub">{req.phone}</span>
               <span className="row-sub" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+              
+              <div className="status-selector-container" style={{ marginTop: '12px' }}>
+                <select 
+                  className="admin-status-select"
+                  value={req.status || 'Pending'}
+                  onChange={(e) => handleAction('patch', `/user-requests/${req._id}/status`, { status: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="User Contacted">User Contacted</option>
+                  <option value="Query Resolved">Query Resolved</option>
+                  <option value="Converted to Order">Converted to Order</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+              </div>
             </div>
+            <button 
+              className="list-icon-btn danger" 
+              style={{ position: 'absolute', top: '15px', right: '15px' }}
+              onClick={() => {
+                if(window.confirm('Delete this request?')) {
+                  handleAction('delete', `/user-requests/${req._id}`);
+                }
+              }}
+            >
+              <Trash2 size={18} />
+            </button>
             <div className="row-mid-info" style={{ flex: 1, display: 'flex', justifyContent: 'center', background: '#f8fafc', borderRadius: '8px', padding: '0.5rem' }}>
                <img src={(req.imageUrl && req.imageUrl.startsWith('/')) ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${req.imageUrl}` : req.imageUrl} alt="Request" style={{ maxWidth: '100%', maxHeight: '250px', objectFit: 'contain', cursor: 'pointer' }} onClick={() => window.open((req.imageUrl && req.imageUrl.startsWith('/')) ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${req.imageUrl}` : req.imageUrl, '_blank')} />
             </div>
@@ -672,12 +720,12 @@ const AdminDashboard: React.FC = () => {
       <div className="admin-modal-overlay" onClick={() => setViewingOrder(null)}>
         <div className="admin-modal-content order-details-modal animate-slide-up" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
-            <h3>Order Details #{order._id.slice(-6).toUpperCase()}</h3>
+            <h3>Order Details #{order?._id.slice(-6).toUpperCase()}</h3>
             <button className="close-btn" onClick={() => setViewingOrder(null)}><X size={20} /></button>
           </div>
           
           <div className="modal-body">
-             <div className="order-meta-info">
+             <div className="order-meta-info" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                 <div className="meta-item">
                    <label>Customer</label>
                    <span>{order.userId?.fullName || 'Guest'}</span>
@@ -688,7 +736,15 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="meta-item">
                    <label>Payment</label>
-                   <span className="uppercase">{order.paymentMethod}</span>
+                   <span className="uppercase">{order.paymentMethod || 'COD'}</span>
+                </div>
+                <div className="meta-item">
+                   <label>Order Time</label>
+                   <span>{new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="meta-item" style={{ gridColumn: 'span 2' }}>
+                   <label>Delivery Address</label>
+                   <span style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{order.shippingAddress || order.deliveryAddress?.name || 'No address provided'}</span>
                 </div>
              </div>
 
@@ -1038,6 +1094,28 @@ const AdminDashboard: React.FC = () => {
               </div>
             )}
 
+            {type === 'gst' && (
+              <>
+                <div className="input-group-admin">
+                  <label>Category</label>
+                  <input type="text" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} />
+                </div>
+                <div className="input-group-admin">
+                  <label>Sub Category</label>
+                  <input type="text" value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} />
+                </div>
+                <div className="input-row-admin">
+                  <div className="input-group-admin">
+                    <label>GST Rate (%)</label>
+                    <input type="number" value={formData.gst || 0} onChange={e => setFormData({...formData, gst: Number(e.target.value)})} />
+                  </div>
+                  <div className="input-group-admin">
+                    <label>HSN Code</label>
+                    <input type="text" value={formData.hsnCode || ''} onChange={e => setFormData({...formData, hsnCode: e.target.value})} />
+                  </div>
+                </div>
+              </>
+            )}
             {type === 'categories' && (
               <>
                 <div className="input-group-admin">
@@ -1080,11 +1158,57 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
+  const renderGstManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-card grey">
+        <div className="header-info">
+          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
+          <h2>GST & Classification</h2>
+        </div>
+        <div className="search-bar-admin">
+          <Search size={18} />
+          <input 
+            type="text" 
+            placeholder="Search Category/Sub..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <button className="add-action-btn" onClick={() => openForm()}>
+           <Plus size={20} />
+        </button>
+      </div>
+      
+      <div className="admin-list-container">
+        {gstClassifications.filter(g => 
+          (g.category || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+          (g.subCategory || '').toLowerCase().includes(searchTerm.toLowerCase())
+        ).length === 0 ? <p className="text-center py-4">No GST mappings found.</p> : 
+        gstClassifications.filter(g => 
+          (g.category || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+          (g.subCategory || '').toLowerCase().includes(searchTerm.toLowerCase())
+        ).map((item, i) => (
+          <div key={item._id || i} className="admin-list-row-item">
+            <div className="row-left-info">
+              <span className="row-name">{item.category} → {item.subCategory}</span>
+              <span className="row-sub">GST: {item.gst}% • HSN: {item.hsnCode || 'N/A'}</span>
+            </div>
+            <div className="row-actions-btns">
+              <button className="list-icon-btn" onClick={() => openForm(item)}><Edit2 size={16} /></button>
+              <button className="list-icon-btn danger" onClick={() => handleAction('delete', `/admin/gst-classifications/${item._id}`)}><Trash2 size={16} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderActions = () => {
     if (activeActionTab === 'users') return renderUserManagement();
     if (activeActionTab === 'orders') return renderOrderManagement();
     if (activeActionTab === 'categories') return renderCategoryManagement();
     if (activeActionTab === 'products') return renderProductManagement();
+    if (activeActionTab === 'gst') return renderGstManagement();
     if (activeActionTab === 'tickets') return renderTicketManagement();
     if (activeActionTab === 'userRequests') return renderUserRequestsManagement();
     if (activeActionTab === 'footer-links') return <FooterManager />;
@@ -1122,25 +1246,38 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="matall-admin-dashboard">
-      <header className="admin-dash-header">
-        <div className="header-left">
-          <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-        </div>
-        <div className="header-right-actions">
-           <button className="mobile-logout-btn" onClick={handleLogout}>
-              <LogOut size={20} />
-           </button>
-           <div className="admin-profile-dot"></div>
-        </div>
-      </header>
+      <div className="admin-main-wrapper">
+        <header className="admin-dash-header">
+          <div className="header-left">
+            <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+          </div>
+          <div className="header-right-actions">
+             <button 
+                className="admin-home-btn" 
+                onClick={() => navigate('/admin?tab=dashboard')}
+                title="Return to Admin Dashboard"
+             >
+                Home
+             </button>
+             <button className="mobile-logout-btn" onClick={handleLogout} title="Logout">
+                <LogOut size={20} />
+             </button>
+             <div className="admin-profile-logo-box">
+                <span className="logo-text">MatAll</span>
+             </div>
+          </div>
+        </header>
 
-      {activeTab === 'dashboard' && renderDashboard()}
-      {activeTab === 'reports' && (
-        <div className="admin-scroll-content animate-fade-in">
-          <Reports contentOnly={true} />
+        <div className="admin-content-pad">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'reports' && (
+            <div className="admin-scroll-content animate-fade-in">
+              <Reports contentOnly={true} />
+            </div>
+          )}
+          {activeTab === 'actions' && renderActions()}
         </div>
-      )}
-      {activeTab === 'actions' && renderActions()}
+      </div>
       <ManagementModal />
       <OrderDetailsModal />
 

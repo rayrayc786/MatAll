@@ -14,6 +14,7 @@ import {
   Paintbrush
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getFullImageUrl } from '../utils/imageUrl';
 import logoImg from '../assets/logo.jpeg';
 import './login.css';
 
@@ -62,15 +63,6 @@ const Login: React.FC = () => {
     };
     fetchBannerImages();
   }, []);
-
-  const getFullImageUrl = (url?: string) => {
-    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
-    if (url.startsWith('http')) return url;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${cleanBase}${cleanUrl}`;
-  };
 
   // const [countdown, setCountdown] = useState(5); // 5s auto-redirect per spec
   // const autoRedirectTimer = useRef<any>(null);
@@ -150,6 +142,7 @@ const Login: React.FC = () => {
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/verify`, { phoneNumber, otp: code });
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user)); // Store full user object
       const from = (location.state as any)?.from || '/';
       
       // Role-based redirection if not coming from a specific path

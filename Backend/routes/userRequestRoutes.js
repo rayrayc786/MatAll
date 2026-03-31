@@ -18,14 +18,14 @@ router.post('/', async (req, res) => {
       const ext = matches[1].split('/')[1] === 'png' ? 'png' : 'jpeg';
       const buffer = Buffer.from(matches[2], 'base64');
       const filename = `ur_${Date.now()}.${ext}`;
-      const uploadPath = path.join(__dirname, '..', 'public', 'images');
+      const uploadPath = path.join(__dirname, '..', 'public', 'images', 'user-requests');
       
       if (!fs.existsSync(uploadPath)) {
         fs.mkdirSync(uploadPath, { recursive: true });
       }
       
       fs.writeFileSync(path.join(uploadPath, filename), buffer);
-      imageUrl = `/images/${filename}`;
+      imageUrl = `/images/user-requests/${filename}`;
     } else {
       imageUrl = imageBase64;
     }
@@ -51,6 +51,46 @@ router.get('/', async (req, res) => {
     res.json(requests);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user requests' });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const request = await UserRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    // Attempt to delete physical file if it exists
+    if (request.imageUrl && request.imageUrl.startsWith('/images/user-requests/')) {
+        const filePath = path.join(__dirname, '..', 'public', request.imageUrl);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+
+    await UserRequest.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Request deleted successfully' });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ error: 'Failed to delete request' });
+  }
+});
+
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const request = await UserRequest.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json({ success: true, request });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

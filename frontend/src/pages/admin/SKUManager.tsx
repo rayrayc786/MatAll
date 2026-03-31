@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import { getFullImageUrl } from '../../utils/imageUrl';
 import './sku.css';
 
 const SKUManager: React.FC = () => {
@@ -43,18 +44,10 @@ const SKUManager: React.FC = () => {
     images: [] as any[]
   });
 
-  const getFullImageUrl = (url?: string) => {
-    if (!url) return 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=100';
-    if (url.startsWith('http')) return url;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${cleanBase}${cleanUrl}`;
-  };
-
   const fetchSKUs = async () => {
     try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`);
+      // Use the Admin-specific products endpoint to see individual entries (ungrouped)
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products`);
       setSkus(data);
     } catch (err) {
       console.error(err);
@@ -189,8 +182,11 @@ const SKUManager: React.FC = () => {
   };
 
   const filteredSkus = skus.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.sku.toLowerCase().includes(search.toLowerCase()) ||
+    (s.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (s.sku || '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.brand || '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.category || '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.subCategory || '').toLowerCase().includes(search.toLowerCase()) ||
     (s.csiMasterFormat && s.csiMasterFormat.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -374,11 +370,17 @@ const SKUManager: React.FC = () => {
                       <div>
                         <div className="sku-product-name">{sku.name}</div>
                         <div className="sku-variant-badges">
-                          {sku.subVariants?.map((v: any, i: number) => (
-                            <span key={i} className="sku-variant-badge">
-                              {v.title}: {v.value}
+                          {sku.variants && sku.variants.length > 1 ? (
+                            <span className="sku-variant-badge" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                              {sku.variants.length} Variants Available
                             </span>
-                          ))}
+                          ) : (
+                            sku.subVariants?.map((v: any, i: number) => (
+                              <span key={i} className="sku-variant-badge">
+                                {v.title}: {v.value}
+                              </span>
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>
@@ -387,10 +389,18 @@ const SKUManager: React.FC = () => {
                     <div className="sku-brand-name">{sku.brand || 'N/A'}</div>
                     <div className="sku-category-path">{sku.category} / {sku.subCategory}</div>
                   </td>
-                  <td className="sku-id sku-id-text">{sku.sku}</td>
+                  <td className="sku-id sku-id-text">
+                    {sku.variants && sku.variants.length > 1 ? 'Multiple SKUs' : sku.sku}
+                  </td>
                   <td>
-                    <div className="sku-mrp-text">MRP: ₹{sku.mrp || 0}</div>
-                    <div className="sku-sale-price">Sale: ₹{sku.salePrice || sku.price}</div>
+                    {sku.variants && sku.variants.length > 1 ? (
+                      <div className="sku-sale-price">Multiple Prices</div>
+                    ) : (
+                      <>
+                        <div className="sku-mrp-text">MRP: ₹{sku.mrp || 0}</div>
+                        <div className="sku-sale-price">Sale: ₹{sku.salePrice || sku.price}</div>
+                      </>
+                    )}
                   </td>
                   <td><span className="sku-delivery-text">{sku.deliveryTime || 'N/A'}</span></td>
                   <td>
@@ -596,7 +606,7 @@ const SKUManager: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
                       {(formData.images || []).map((imgUrl: string, idx: number) => (
                         <div key={idx} style={{ position: 'relative', aspectRatio: '1/1', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#fff' }}>
-                          <img src={imgUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${imgUrl}` : imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={getFullImageUrl(imgUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           <button type="button" onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== idx)})} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             <X size={16} color="#ef4444" />
                           </button>

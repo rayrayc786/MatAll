@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Edit3, Trash2, X, Image } from 'lucide-react';
+import { getFullImageUrl } from '../../utils/imageUrl';
 
 const OfferManager: React.FC = () => {
   const [offers, setOffers] = useState<any[]>([]);
@@ -117,7 +118,7 @@ const OfferManager: React.FC = () => {
               <div key={offer._id} className="offer-admin-card" style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                 <div className="card-img-box" style={{ height: '160px', background: '#f1f5f9', position: 'relative' }}>
                   {offer.imageUrl ? (
-                    <img src={offer.imageUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${offer.imageUrl}` : offer.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getFullImageUrl(offer.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><Image size={32} color="#94a3b8" /></div>
                   )}
@@ -191,7 +192,7 @@ const OfferManager: React.FC = () => {
               <div className="form-group">
                 <label>Offer Background Image</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '120px', height: '80px', borderRadius: '8px', background: '#f1f5f9', backgroundImage: formData.imageUrl ? `url(${formData.imageUrl.startsWith('/') ? import.meta.env.VITE_API_BASE_URL + formData.imageUrl : formData.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '120px', height: '80px', borderRadius: '8px', background: '#f1f5f9', backgroundImage: formData.imageUrl ? `url(${getFullImageUrl(formData.imageUrl)})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {!formData.imageUrl && <Image size={24} color="#94a3b8" />}
                   </div>
                   <div>

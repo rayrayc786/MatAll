@@ -13,6 +13,60 @@ const Offer = require('../models/Offer');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
+const GSTClassification = require('../models/GSTClassification');
+
+// Inline Revenue Margin mapping if sheet exists
+let globalMarginMap = new Map();
+
+// Helper to resolve image names to actual file paths from public/images
+const resolveProductImages = (product) => {
+  const imgDir = path.join(__dirname, '..', 'public', 'images');
+  let files = [];
+  try {
+    if (fs.existsSync(imgDir)) {
+      files = fs.readdirSync(imgDir);
+    }
+  } catch (err) {
+    console.error('Error reading images directory:', err);
+  }
+
+  const normalize = (str) => (str || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const findFile = (name) => {
+    if (!name) return null;
+    const target = normalize(name);
+    return files.find(f => {
+      const baseName = f.split('.')[0];
+      return normalize(baseName) === target || normalize(f) === target;
+    });
+  };
+
+  let resolved = [];
+  if (product.imageNames && product.imageNames.length > 0) {
+    resolved = product.imageNames.map(name => {
+      const found = findFile(name);
+      return found ? `/images/${found}` : null;
+    }).filter(Boolean);
+  }
+  
+  if (resolved.length === 0 && product.sku) {
+    const foundBySku = findFile(product.sku);
+    if (foundBySku) resolved.push(`/images/${foundBySku}`);
+  }
+
+  if (resolved.length > 0) {
+    product.images = resolved;
+    product.imageUrl = resolved[0];
+  } else {
+    product.images = product.images || [];
+    if (!product.imageUrl || product.imageUrl.includes('unsplash')) {
+       product.imageUrl = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+    }
+  }
+
+  return product;
+};
+
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -97,7 +151,15 @@ exports.bulkUploadProducts = async (req, res) => {
   try {
     if (!req.file) return res.status(400).send('No file uploaded.');
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    const dataSheet = workbook.Sheets['Data'] || workbook.Sheets[workbook.SheetNames[0]];
+    const data = xlsx.utils.sheet_to_json(dataSheet);
+
+    const gstSheet = workbook.Sheets['GST & Classification'] || workbook.Sheets['GST'];
+    const marginSheet = workbook.Sheets['Revenue Margin'];
+    
+    const gstMappingRaw = gstSheet ? xlsx.utils.sheet_to_json(gstSheet) : [];
+    const marginMappingRaw = marginSheet ? xlsx.utils.sheet_to_json(marginSheet) : [];
+
     const extracted = [], skipped = [], seenSkus = new Set();
     const masterData = { categories: new Set(), subCategories: new Map(), brands: new Set(), variantTitles: new Set(), deliveryTimes: new Set() };
 
@@ -111,8 +173,59 @@ exports.bulkUploadProducts = async (req, res) => {
       console.error('Error reading images directory', err);
     }
 
+    // Sync GST Classification Sheet
+    if (gstMappingRaw.length > 0) {
+      const gstOps = gstMappingRaw.map(item => ({
+        updateOne: {
+          filter: { category: String(item['Category']).trim(), subCategory: String(item['Sub Category']).trim() },
+          update: { 
+            $set: { 
+              gst: parseFloat(item['GST']) || 0, 
+              hsnCode: String(item['HSN Code'] || '').trim() 
+            }
+          },
+          upsert: true
+        }
+      }));
+      await GSTClassification.bulkWrite(gstOps);
+    }
+
+    if (marginMappingRaw.length > 0) {
+      marginMappingRaw.forEach(m => {
+          const key = `${String(m['Category']).trim()}|${String(m['Sub Category']).trim()}`;
+          globalMarginMap.set(key, parseFloat(m['Rev Margin']) || 0);
+      });
+    }
+
+    const availableGstMaps = await GSTClassification.find({});
+    const gstLookup = new Map(availableGstMaps.map(g => [`${g.category}|${g.subCategory}`, g]));
+
+    const CATEGORY_MAP = {
+      'Wooden Material': '03',
+      'Electrical Material': '04',
+      'Modular Hardware': '22',
+      'Paint': '06',
+      'Tools': 'tools',
+      'Civil': '26',
+      'Bathroom': 'Bathroom',
+      'Plumbing': 'Plumbing',
+      'Wooden & Boards': '03',
+      'Electricals': '04',
+      'Hardware': '22',
+      'Paint & POP': '06',
+      'Tiles & Flooring': 'tiles',
+      'Power Tools': 'tools'
+    };
+    const reverseMap = {};
+    Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
+      // Prioritize shorter, nicer names for display
+      if (!reverseMap[id] || name.length < reverseMap[id].length) {
+        reverseMap[id] = name;
+      }
+    });
+
     data.forEach((item, index) => {
-      const sku = String(item['Product Code'] || '').trim();
+      const sku = String(item['Product Code'] || item['SKU'] || '').trim();
       seenSkus.add(sku);
 
       const cat = String(item['Category'] || '').trim();
@@ -149,33 +262,74 @@ exports.bulkUploadProducts = async (req, res) => {
       const imageValue = imageKey && item[imageKey] ? String(item[imageKey]).trim() : '';
       const rawImageNames = imageValue.split(',').map(s => s.trim()).filter(Boolean);
       
-
       const images = rawImageNames.map(name => {
         if (name.indexOf('://') !== -1 || name.startsWith('data:')) return name;
         if (name.startsWith('/')) return name;
-        
         const matchedImage = availableImages.find(f => {
           const fileNameWithoutExt = f.substring(0, f.lastIndexOf('.'));
           return f.toLowerCase().includes(name.toLowerCase()) || (fileNameWithoutExt && fileNameWithoutExt.toLowerCase() === name.toLowerCase());
         });
-        
-        if (matchedImage) {
-          return `/images/${matchedImage}`;
-        }
-        return `/images/${name}`;
+        return matchedImage ? `/images/${matchedImage}` : `/images/${name}`;
       });
 
-      const mrpRaw = item['MRP \n(Incl GST)'] || item['MRP \r\n(Incl GST)'] || item['MRP'] || 0;
-      const mrp = typeof mrpRaw === 'string' ? parseFloat(mrpRaw.replace(/,/g, '')) : parseFloat(mrpRaw);
+      const mrp = parseFloat(String(item['MRP (Incl GST)'] || 0).replace(/,/g, ''));
+      const salePrice = parseFloat(item['Sale Price']) || 0;
+      
+      // Resolve GST and Margin from Classification Sheet primarily, fallback to Data sheet
+      const mappedGst = gstLookup.get(`${cat}|${subCat}`);
+      const gstRate = mappedGst ? mappedGst.gst : (parseFloat(item['GST']) || 0);
+      const hsnCode = mappedGst ? mappedGst.hsnCode : (item['HSN Code'] || '');
+      
+      const revMargin = globalMarginMap.get(`${cat}|${subCat}`) || parseFloat(item['Rev Margin']) || 0;
+
+      const igst = gstRate;
+      const cgst = gstRate / 2;
+      const sgst = gstRate / 2;
+      const basePrice = salePrice / (1 + (gstRate / 100));
 
       extracted.push({
-        name: item['Product Name'] || 'Unnamed Product', sku, 
-        category: cat, subCategory: subCat, brand: item['Brand'], size: item['Size'],
-        productCode: sku, mrp: mrp || 0,
-        salePrice: parseFloat(item['Sale Price']) || 0, price: parseFloat(item['Sale Price']) || 0,
-        deliveryTime: item['Delivery Time'], subVariants, images, imageNames: rawImageNames,
-        imageUrl: images.length > 0 ? images[0] : undefined, // Let default handle if truly empty, but we try harder now
-        unitType: 'individual', unitLabel: 'unit', isActive: true
+        name: item['Product Name'] || 'Unnamed Product',
+        sku,
+        category: cat,
+        subCategory: subCat,
+        brand: item['Brand'],
+        size: item['Size'],
+        productCode: sku,
+        packOf: parseInt(item['Pack of']) || 1,
+        bulkApplication: item['Bulk application'],
+        unitWeightGm: parseFloat(String(item['Unit Weight (in gm)'] || item['Unit Weight \r\n(in gm)'] || '0').replace(/,/g, '')) || 0,
+        suppliedWith: item['Supplied With'],
+        suitableFor: item['Suitable For'],
+        measure: item['Measure'],
+        images,
+        imageNames: rawImageNames,
+        hsnCode,
+        sellingMeasure: item['Selling Measure'],
+        measureTerm: item['Measure Term'],
+        measureValue: item['Measure Value'],
+        sellingMeasureRate: parseFloat(item['Selling Measure Rate']) || 0,
+        subVariants, // ATTACH SUBVARIANTS HERE
+        mrp: mrp || 0,
+        dealerDiscount: parseFloat(item['Dealer Discount']) || 0,
+        priceAfterDiscount: parseFloat(item['Price after discount']) || 0,
+        igst: igst || 0,
+        cgst: cgst || 0,
+        sgst: sgst || 0,
+        buyingPrice: parseFloat(item['Buying Price']) || 0,
+        revMargin: revMargin,
+        marginValue: parseFloat(item['Margin Value']) ||  (salePrice * revMargin),
+        salePrice: salePrice || 0,
+        price: salePrice || 0,
+        basePrice: basePrice || 0,
+        discountValue: parseFloat(item['Discount Value']) || 0,
+        discountRate: parseFloat(item['Discount Rate']) || 0,
+        deliveryTime: item['Delivery Time'],
+        returns: item['Returns'],
+        logisticsRule: item['Logistics Rule'],
+        status: item['Status'] || 'In stock',
+        productDescription: item['Product Description'],
+        imageUrl: images.length > 0 ? images[0] : undefined,
+        unitType: 'individual', unitLabel: 'unit', isActive: true,
       });
     });
 
@@ -199,7 +353,7 @@ exports.bulkUploadProducts = async (req, res) => {
     // Always insert new products as separate entries (allow duplicates as requested)
     const bulkOps = extracted.map(p => ({ insertOne: { document: p } }));
     const result = await Product.bulkWrite(bulkOps);
-    res.json({ message: 'Upload complete', summary: { totalRows: data.length, extracted: extracted.length, skipped: skipped.length, matched: result.matchedCount, upserted: result.upsertedCount, inserted: result.insertedCount }, skippedDetails: skipped });
+    res.json({ message: 'Upload complete', summary: { totalRows: data.length, extracted: extracted.length, skipped: data.length - extracted.length, matched: result.matchedCount, upserted: result.upsertedCount, modified: result.modifiedCount }, skippedDetails: skipped });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -207,8 +361,29 @@ exports.bulkUploadProducts = async (req, res) => {
 
 exports.getAllProductsAdmin = async (req, res) => {
   try {
-    const products = await Product.find({}).sort({ createdAt: -1 });
-    res.json(products);
+    const CATEGORY_MAP = {
+      'Wooden Material': '03',
+      'Electrical Material': '04',
+      'Modular Hardware': '22',
+      'Paint': '06',
+      'Tools': 'tools',
+      'Civil': '26',
+      'Bathroom': 'Bathroom',
+      'Plumbing': 'Plumbing'
+    };
+    const reverseMap = {};
+    Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
+      if (!reverseMap[id] || name.length < reverseMap[id].length) reverseMap[id] = name;
+    });
+
+    const products = await Product.find({}).sort({ createdAt: -1 }).lean();
+    const hydrated = products.map(p => {
+      const p2 = resolveProductImages(p);
+      if (reverseMap[p2.category]) p2.category = reverseMap[p2.category];
+      return p2;
+    });
+    
+    res.json(hydrated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -330,3 +505,8 @@ exports.uploadProductImage = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const gstH = createHandlers(GSTClassification, 'GST Classification');
+exports.getAllGstClassifications = gstH.getAll; 
+exports.createGstClassification = gstH.create; 
+exports.updateGstClassification = gstH.update; 
+exports.deleteGstClassification = gstH.delete;

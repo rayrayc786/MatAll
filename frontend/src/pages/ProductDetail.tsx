@@ -11,13 +11,13 @@ import {
   Clock,
   Star,
   Plus,
-  Minus,
-  ShoppingCart
+  Minus
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import ProductCard from '../components/ProductCard';
 import './product-detail.css';
 import toast from 'react-hot-toast';
+import { getFullImageUrl } from '../utils/imageUrl';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -68,13 +68,13 @@ const ProductDetail: React.FC = () => {
   const currentUnit = selectedVariant?.name || product?.unitLabel || 'Piece';
 
   const cartItem = cart.find(item => item.product._id === product?._id && item.selectedVariant === currentVariantName);
-  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartAmount = cart.reduce((acc, item) => {
-    const itemPrice = item.product.variants && item.product.variants.length > 0
-      ? (item.product.variants.find((v: any) => v.name === item.selectedVariant)?.price || item.product.price)
-      : item.product.price;
-    return acc + (itemPrice * item.quantity);
-  }, 0);
+  // const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  // const totalCartAmount = cart.reduce((acc, item) => {
+  //   const itemPrice = item.product.variants && item.product.variants.length > 0
+  //     ? (item.product.variants.find((v: any) => v.name === item.selectedVariant)?.price || item.product.price)
+  //     : item.product.price;
+  //   return acc + (itemPrice * item.quantity);
+  // }, 0);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -121,7 +121,7 @@ const ProductDetail: React.FC = () => {
               <div className="image-snap-track" ref={scrollRef} onScroll={handleScroll}>
                 {images.map((img: string, idx: number) => (
                   <div key={idx} className="snap-img-item">
-                    <img src={img} alt={product.name} />
+                    <img src={getFullImageUrl(img)} alt={product.name} />
                   </div>
                 ))}
               </div>
@@ -272,20 +272,6 @@ const ProductDetail: React.FC = () => {
             )}
          </div>
       </footer>
-
-      {/* Floating Cart Pill */}
-      {totalCartCount > 0 && (
-        <div className="floating-cart-pill" onClick={() => navigate('/cart')}>
-           <div className="cart-pill-icon">
-              <ShoppingCart size={18} />
-           </div>
-           <div className="cart-pill-text">
-              <h5>View cart</h5>
-              <p>{totalCartCount} item • ₹{totalCartAmount}</p>
-           </div>
-           <ChevronRight size={18} />
-        </div>
-      )}
     </div>
   );
 };

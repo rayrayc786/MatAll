@@ -10,6 +10,7 @@ import {
   Star, 
   Package
 } from 'lucide-react';
+import { getFullImageUrl } from '../utils/imageUrl';
 import { customerSocket } from '../socket';
 import './tracking.css';
 
@@ -55,10 +56,15 @@ const Tracking: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'Confirmed': return 'Your order is confirmed';
-      case 'Out-for-Delivery': return 'Order is out for delivery';
-      case 'Delivered': return 'Order delivered successfully';
-      default: return 'Processing your order';
+      case 'Accepted': return 'Order accepted & being processed';
+      case 'Order Ready to Ship': return 'Packed & ready to ship';
+      case 'Rider at hub for pickup': return 'Rider arriving at hub';
+      case 'Order Picked': return 'Order picked up by rider';
+      case 'Order on way':
+      case 'dispatched': return 'Order is on the way';
+      case 'Order Delivered': return 'Delivered successfully!';
+      case 'Cancelled': return 'This order was cancelled';
+      default: return status || 'Processing your order';
     }
   };
 
@@ -149,7 +155,7 @@ const Tracking: React.FC = () => {
               {order.items.map((item: any, idx: number) => (
                 <div key={idx} className="item-row-detailed">
                    <div className="item-thumb-box">
-                      <img src={item?.productId?.imageUrl || item?.product?.imageUrl} alt="" />
+                      <img src={getFullImageUrl(item?.productId?.imageUrl || item?.product?.imageUrl)} alt="" />
                    </div>
                    <div className="item-info-col">
                       <p className="item-name-bold">{item?.productId?.brand} {item?.productId?.name || item?.product?.name}</p>
@@ -196,7 +202,9 @@ const Tracking: React.FC = () => {
            <div className="order-info-grid">
               <div className="info-block">
                  <span className="info-label">Placed At</span>
-                 <p className="info-value">{new Date(order.createdAt).toLocaleString('en-GB')}</p>
+                 <p className="info-value">
+                   {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                 </p>
               </div>
               <div className="info-block">
                  <span className="info-label">Delivering to</span>

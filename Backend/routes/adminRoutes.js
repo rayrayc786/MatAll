@@ -82,4 +82,10 @@ router.post('/footer-links', adminController.createFooterLink);
 router.put('/footer-links/:id', adminController.updateFooterLink);
 router.delete('/footer-links/:id', adminController.deleteFooterLink);
 
+// GST Classification management
+router.get('/gst-classifications', adminController.getAllGstClassifications);
+router.post('/gst-classifications', adminController.createGstClassification);
+router.put('/gst-classifications/:id', adminController.updateGstClassification);
+router.delete('/gst-classifications/:id', adminController.deleteGstClassification);
+
 module.exports = router;
