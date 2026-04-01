@@ -103,7 +103,13 @@ const Cart: React.FC = () => {
                 {cart.map((item, idx) => (
                   <div key={idx} className="cart-item-row-blinkit">
                     <div className="c-item-img">
-                      <img src={item.product.imageUrl} alt={item.product.name} />
+                      <img 
+                        src={getFullImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0]))} 
+                        alt={item.product.name} 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                        }}
+                      />
                     </div>
                     <div className="c-item-info">
                       <h5>{item.product.brand} {item.product.name}</h5>

@@ -112,7 +112,7 @@ const supplierNamespace = io.of('/supplier');
 
 adminNamespace.use(socketAuth(['Admin']));
 supplierNamespace.use(socketAuth(['Supplier']));
-customerNamespace.use(socketAuth(['End User', 'Rider']));
+customerNamespace.use(socketAuth(['End User', 'Rider', 'Admin']));
 
 adminNamespace.on('connection', (socket) => {
   console.log(`Admin connected: ${socket.id}`);
@@ -126,7 +126,7 @@ supplierNamespace.on('connection', (socket) => {
 });
 
 customerNamespace.on('connection', (socket) => {
-  console.log(`Customer/Rider connected: ${socket.id} (User ID: ${socket.user.id})`);
+  console.log(`Customer connected: ${socket.id} (User ID: ${socket.user.id})`);
   if (socket.user.id) {
     socket.join(socket.user.id.toString());
   }

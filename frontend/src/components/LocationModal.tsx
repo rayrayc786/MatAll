@@ -21,6 +21,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
   const [showAddForm, setShowAddForm] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 28.6139, lng: 77.2090 });
   const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [isServiceable, setIsServiceable] = useState(true);
+
   
   // New address form states
   const [newAddrName, setNewAddrName] = useState('');
@@ -86,6 +88,33 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     }
   };
 
+  const checkPincode = async (results: any) => {
+    const addressComponents = results[0].address_components;
+    const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
+    const pincode = pincodeComp ? pincodeComp.long_name : '';
+
+    if (!pincode) {
+      toast.error("Could not detect pincode. Please try another spot.");
+      return false;
+    }
+
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
+      if (!data.serviceable) {
+        toast.error(`Sorry, we don't serve in ${pincode} yet. We currently serve in ${data.city || 'limited areas'}.`, {
+          duration: 4000,
+          icon: '📍'
+        });
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Serviceability check failed', err);
+      // If the API fails, maybe allow for now or strict? Let's be strict.
+      return true; // Or false based on preference. Let's allow if API fails but keep it logged.
+    }
+  };
+
   const selectSuggestion = async (suggestion: any) => {
     if (!geocodingLibrary) return;
     try {
@@ -93,14 +122,23 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
         const geocoder = new geocodingLibrary.Geocoder();
         const results = await geocoder.geocode({ placeId: place.placeId });
         if (results.results[0]) {
+            const isServiceableResult = await checkPincode(results.results);
             const loc = results.results[0].geometry.location;
             const lat = loc.lat();
             const lng = loc.lng();
             const address = results.results[0].formatted_address;
-            
+
+            if (!isServiceableResult) {
+                setSelectedAddress('');
+                setSearchTerm('Location Not Serviceable');
+                setIsServiceable(false);
+                return;
+            }
+
             setMapCenter({ lat, lng });
             setSelectedAddress(address);
             setSearchTerm(address);
+            setIsServiceable(true);
             setSuggestions([]);
             
             if (showAddForm) {
@@ -113,6 +151,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     }
   };
 
+
+
   const handleMapClick = async (e: any) => {
     const lat = e.detail.latLng.lat;
     const lng = e.detail.latLng.lng;
@@ -120,11 +160,21 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     
     if (geocodingLibrary) {
         const geocoder = new geocodingLibrary.Geocoder();
-        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
           if (status === "OK" && results?.[0]) {
+            const isServiceableResult = await checkPincode(results);
             const address = results[0].formatted_address;
+
+            if (!isServiceableResult) {
+              setSelectedAddress('');
+              setSearchTerm('Location Not Serviceable');
+              setIsServiceable(false);
+              return;
+            }
+
             setSelectedAddress(address);
             setSearchTerm(address);
+            setIsServiceable(true);
             if (showAddForm) {
               setNewAddrText(address);
               setNewAddrCoords([lng, lat]);
@@ -133,6 +183,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
         });
     }
   };
+
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -146,15 +197,31 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
       
       if (geocodingLibrary) {
         const geocoder = new geocodingLibrary.Geocoder();
-        geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+        geocoder.geocode({ location: { lat: latitude, lng: longitude } }, async (results, status) => {
           if (status === "OK" && results?.[0]) {
+            const isServiceableResult = await checkPincode(results);
+            if (!isServiceableResult) {
+              setIsLocating(false);
+              setIsServiceable(false);
+              setSelectedAddress('');
+              setSearchTerm('Location Not Serviceable');
+              return;
+            }
+
             const address = results[0].formatted_address;
-            onSelectAddress(address, [longitude, latitude]);
-            onClose();
+            setIsServiceable(true);
+            setSelectedAddress(address);
+            setSearchTerm(address);
+            setIsLocating(false);
+            
+            if (step === 1) {
+              onSelectAddress(address, [longitude, latitude]);
+              onClose();
+            }
           } else {
             toast.error('Failed to get address');
+            setIsLocating(false);
           }
-          setIsLocating(false);
         });
       }
     }, () => {
@@ -162,6 +229,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
       toast.error('Location access denied');
     });
   };
+
 
   const confirmLocation = () => {
     onSelectAddress(selectedAddress || searchTerm, [mapCenter.lng, mapCenter.lat]);
@@ -337,10 +405,16 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                   </div>
 
                   {(selectedAddress || searchTerm) && (
-                    <button className="confirm-loc-btn" onClick={confirmLocation}>
+                    <button 
+                      className="confirm-loc-btn" 
+                      onClick={confirmLocation} 
+                      disabled={!isServiceable || !selectedAddress}
+                      style={{ opacity: (!isServiceable || !selectedAddress) ? 0.5 : 1, cursor: (!isServiceable || !selectedAddress) ? 'not-allowed' : 'pointer' }}
+                    >
                       Confirm Location
                     </button>
                   )}
+
                 </div>
                 <button type="button" className="back-link-btn" onClick={() => setStep(1)}>Back</button>
               </div>

@@ -9,7 +9,6 @@ import {
   Plus,
   Clock,
   MapPin,
-  ArrowRight,
   Mic,
   Navigation
 } from 'lucide-react';
@@ -43,10 +42,16 @@ const Checkout: React.FC = () => {
   const [mapCenter, setMapCenter] = useState({ lat: 28.6139, lng: 77.2090 });
   const [detectedAddr, setDetectedAddr] = useState({ main: 'Detecting...', sub: 'Please wait' });
   const [fullAddress, setFullAddress] = useState('');
+  const [isServiceable, setIsServiceable] = useState(true);
+
   
   // Form States
   const [isSelf, setIsSelf] = useState(true);
   const [showPolicy, setShowPolicy] = useState(false);
+  const [showSplitPopup, setShowSplitPopup] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const [, setPendingMode] = useState<'full' | 'partial' | null>(null);
+
   const [addressData, setAddressData] = useState({
      nickname: '',
      house: '',
@@ -66,6 +71,17 @@ const Checkout: React.FC = () => {
   const deliveryCharge = itemsTotal > 5000 ? 0 : 150;
   const handlingCharge = 25;
   const grandTotal = itemsTotal + deliveryCharge + handlingCharge;
+
+  useEffect(() => {
+    let timer: any;
+    if (showSplitPopup && countdown > 0) {
+      timer = setInterval(() => setCountdown(c => c - 1), 1000);
+    } else if (showSplitPopup && countdown === 0) {
+      setShowSplitPopup(false);
+      startPaymentProcess('partial');
+    }
+    return () => clearInterval(timer);
+  }, [showSplitPopup, countdown]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -91,13 +107,23 @@ const Checkout: React.FC = () => {
     });
   };
 
-  const handlePlaceOrder = async (mode: 'full' | 'partial') => {
+  const handlePlaceOrder = (mode: 'full' | 'partial') => {
     if (!selectedAddress) {
       toast.error('Please select a delivery address');
       setStep('address-list');
       return;
     }
 
+    if (mode === 'partial') {
+      setCountdown(5);
+      setPendingMode('partial');
+      setShowSplitPopup(true);
+    } else {
+      startPaymentProcess('full');
+    }
+  };
+
+  const startPaymentProcess = async (mode: 'full' | 'partial') => {
     setLoading(true);
     const token = localStorage.getItem('token');
     
@@ -161,8 +187,6 @@ const Checkout: React.FC = () => {
     } catch (err: any) {
       if (err.response && err.response.status === 401) {
         toast.error('Session expired. Please login again.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
         navigate('/login', { state: { from: '/cart' }, replace: true });
       } else {
         toast.error('Could not create payment session.');
@@ -199,8 +223,6 @@ const Checkout: React.FC = () => {
     } catch (err: any) {
       if (err.response && err.response.status === 401) {
           toast.error('Session expired. Please login again.');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
           navigate('/login', { state: { from: '/cart' }, replace: true });
       } else {
           toast.error('Failed to place order');
@@ -209,6 +231,19 @@ const Checkout: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const renderSplitPopup = () => (
+    <div className="split-policy-popup-overlay">
+       <div className="split-policy-popup-content">
+          <div className="popup-timer-circle">{countdown}</div>
+          <h3 className="popup-title">Split Payment Terms</h3>
+          <p className="popup-text">
+            if the item is not received at delivery for any reason apart from defective/ broken product, the refund will be made after adjusting for delivery charges shown at time of placing order.
+          </p>
+          <div className="popup-footer-text">Redirecting to payment gateway...</div>
+       </div>
+    </div>
+  );
 
   const renderAddressSelection = () => (
     <div className="address-modal-overlay" onClick={() => setStep('checkout')}>
@@ -266,7 +301,34 @@ const Checkout: React.FC = () => {
     </div>
   );
 
+  const checkPincode = async (results: any) => {
+    const addressComponents = results[0].address_components;
+    const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
+    const pincode = pincodeComp ? pincodeComp.long_name : '';
+
+    if (!pincode) {
+      toast.error("Could not detect pincode. Please try another spot.");
+      return false;
+    }
+
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
+      if (!data.serviceable) {
+        toast.error(`Sorry, we don't serve in ${pincode} yet. We currently serve in ${data.city || 'limited areas'}.`, {
+          duration: 4000,
+          icon: '📍'
+        });
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Serviceability check failed', err);
+      return true; 
+    }
+  };
+
   const handleMapMoveEnd = (e: any) => {
+
     const center = e.detail.center;
     if (!center) return;
     const lat = center.lat;
@@ -275,18 +337,34 @@ const Checkout: React.FC = () => {
     
     if (geocodingLibrary) {
       const geocoder = new geocodingLibrary.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
         if (status === "OK" && results?.[0]) {
+          const isServiceable = await checkPincode(results);
           const address = results[0].formatted_address;
           const parts = address.split(',');
+          
+          if (!isServiceable) {
+            setDetectedAddr({
+              main: 'Location Not Serviceable',
+              sub: 'We currently do not serve in this area'
+            });
+            setFullAddress('');
+            setIsServiceable(false);
+            return;
+          }
+
           setDetectedAddr({
             main: parts[0] || 'Unknown',
             sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
           });
           setFullAddress(address);
+          setIsServiceable(true);
+
         }
       });
     }
+
+
   };
 
   const handleUseCurrentLocation = () => {
@@ -300,19 +378,37 @@ const Checkout: React.FC = () => {
           
           if (geocodingLibrary) {
             const geocoder = new geocodingLibrary.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
               if (status === "OK" && results?.[0]) {
+                const isServiceable = await checkPincode(results);
+                toast.dismiss('geo-toast');
+                
                 const address = results[0].formatted_address;
                 const parts = address.split(',');
+
+                if (!isServiceable) {
+                  setDetectedAddr({
+                    main: 'Location Not Serviceable',
+                    sub: 'We currently do not serve in this area'
+                  });
+                  setFullAddress('');
+                  setIsServiceable(false);
+                  return;
+                }
+
                 setDetectedAddr({
                   main: parts[0] || 'Unknown',
                   sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
                 });
                 setFullAddress(address);
+                setIsServiceable(true);
+
                 toast.success('Location found!', { id: 'geo-toast' });
               }
             });
           }
+
+
         },
         (error) => {
           toast.error('Could not get your location', { id: 'geo-toast' });
@@ -363,12 +459,18 @@ const Checkout: React.FC = () => {
             <p>{detectedAddr.sub}</p>
           </div>
         </div>
-        <button className="btn-input-complete" onClick={() => {
-           setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
-           setStep('address-form');
-        }}>
+        <button 
+           className="btn-input-complete" 
+           disabled={!isServiceable || !fullAddress}
+           style={{ opacity: (!isServiceable || !fullAddress) ? 0.5 : 1, cursor: (!isServiceable || !fullAddress) ? 'not-allowed' : 'pointer' }}
+           onClick={() => {
+              setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
+              setStep('address-form');
+           }}
+        >
           Add complete address
         </button>
+
       </div>
     </div>
   );
@@ -569,12 +671,12 @@ const Checkout: React.FC = () => {
               </div>
             )}
 
-            <div className="desktop-order-actions hide-mobile mt-4">
+            <div className="desktop-order-actions mt-4">
                <button className="final-place-btn-desktop" onClick={() => handlePlaceOrder('full')} disabled={loading}>
-                  {loading ? 'Processing...' : `Pay Online • ₹${grandTotal}`}
+                  {loading ? 'Processing...' : `Pay online - Full 100% now • ₹${grandTotal}`}
                </button>
                <button className="final-place-btn-desktop" onClick={() => handlePlaceOrder('partial')} disabled={loading} style={{marginTop: '10px', background: '#DEDEDE', color: '#000'}}>
-                  {loading ? 'Processing...' : `Pay 50% Now • ₹${Math.round(grandTotal / 2)}`}
+                  {loading ? 'Processing...' : `Split Payment – 50% now and 50% on order delivery • ₹${Math.round(grandTotal / 2)}`}
                </button>
             </div>
           </div>
@@ -582,30 +684,44 @@ const Checkout: React.FC = () => {
       </main>
 
       <footer className="checkout-footer-sticky-final">
-        <div className="checkout-pay-bar" onClick={() => navigate('/payment')}>
+        {/* <div className="checkout-pay-bar" onClick={() => navigate('/payment')}>
            <div className="pay-method-lux">
               <span className="dot-blinkit"></span>
               <span>PAY USING <strong>UPI</strong></span>
            </div>
            <ChevronDown size={16} />
+        </div> */}
+        <div className="footer-action-buttons-mobile">
+          <button className="checkout-place-btn full-pay" onClick={() => handlePlaceOrder('full')} disabled={loading}>
+             <div className="btn-p-info">
+                <span className="p-val">₹{grandTotal}</span>
+                <span className="p-lbl">100% NOW</span>
+             </div>
+             <div className="btn-p-main">
+                {loading ? 'Processing...' : 'Pay Online'}
+             </div>
+          </button>
+          
+          <button className="checkout-place-btn partial-pay" onClick={() => handlePlaceOrder('partial')} disabled={loading}>
+             <div className="btn-p-info">
+                <span className="p-val">₹{Math.round(grandTotal / 2)}</span>
+                <span className="p-lbl">50% SPLIT</span>
+             </div>
+             <div className="btn-p-main">
+                {loading ? 'Processing...' : 'Split Payment'}
+             </div>
+          </button>
         </div>
-        <button className="checkout-place-btn" onClick={() => handlePlaceOrder('partial')} disabled={loading}>
-           <div className="btn-p-info">
-              <span className="p-val">₹{Math.round(grandTotal / 2)}</span>
-              <span className="p-lbl">50% ADVANCE</span>
-           </div>
-           <div className="btn-p-main">
-              {loading ? 'Processing...' : 'Pay 50% Now'} <ArrowRight size={20} />
-           </div>
-        </button>
       </footer>
 
       {step === 'address-list' && renderAddressSelection()}
       {step === 'location-ask' && renderLocationAsk()}
       {step === 'map-confirm' && renderMapConfirm()}
       {step === 'address-form' && renderAddressForm()}
+      {showSplitPopup && renderSplitPopup()}
     </div>
   );
 };
+
 
 export default Checkout;

@@ -330,8 +330,16 @@ const AdminDashboard: React.FC = () => {
       name: 'GST & Classification',
       sub: 'Manage HSN Codes and GST rates by Category & Sub Category',
       color: '#DEDEDE'
+    },
+    {
+      id: 'locations',
+      name: 'Location Management',
+      sub: 'Manage serviceable pincodes and areas for user orders',
+      color: '#FFEA00',
+      path: '/admin/locations'
     }
   ];
+
 
   const renderDashboard = () => (
     <div className="admin-scroll-content animate-fade-in">

@@ -40,14 +40,16 @@ const Tracking: React.FC = () => {
 
     fetchOrder();
 
-    customerSocket.on('order-status-update', (data: any) => {
+    const handleStatusUpdate = (data: any) => {
       if (data.orderId === id) {
         setOrder((prev: any) => ({ ...prev, status: data.status }));
       }
-    });
+    };
+
+    customerSocket.on('order-status-update', handleStatusUpdate);
 
     return () => {
-      customerSocket.off('order-status-update');
+      customerSocket.off('order-status-update', handleStatusUpdate);
     };
   }, [id]);
 
@@ -68,26 +70,64 @@ const Tracking: React.FC = () => {
     }
   };
 
-  const renderTimeline = () => (
-    <div className="tracking-timeline-expanded animate-fade-in">
-      <div className="timeline-item active">
-          <div className="dot"></div>
-          <div className="text">Order Received at {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+  const renderTimeline = () => {
+    const statuses = [
+      'Accepted', 
+      'Order Ready to Ship', 
+      'Rider at hub for pickup', 
+      'Order Picked', 
+      'Order on way', 
+      'Order Delivered'
+    ];
+    
+    const currentIndex = statuses.indexOf(order.status);
+
+    return (
+      <div className="tracking-timeline-expanded animate-fade-in">
+        <div className="timeline-item active">
+            <div className="dot"></div>
+            <div className="text">Order Received at {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        </div>
+        
+        <div className={`timeline-item ${currentIndex >= 0 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Order Accepted & Confirmed</div>
+        </div>
+
+        <div className={`timeline-item ${currentIndex >= 1 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Order Packed & Ready</div>
+        </div>
+
+        <div className={`timeline-item ${currentIndex >= 2 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Rider reaching Hub for pickup</div>
+        </div>
+
+        <div className={`timeline-item ${currentIndex >= 3 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Order Picked up by Rider</div>
+        </div>
+
+        <div className={`timeline-item ${currentIndex >= 4 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Order is on the way</div>
+        </div>
+
+        <div className={`timeline-item ${currentIndex >= 5 ? 'active' : ''}`}>
+            <div className="dot"></div>
+            <div className="text">Order Delivered</div>
+        </div>
+
+        {order.status === 'Cancelled' && (
+          <div className="timeline-item active danger">
+              <div className="dot"></div>
+              <div className="text">Order Cancelled</div>
+          </div>
+        )}
       </div>
-      <div className={`timeline-item ${['Confirmed', 'Out-for-Delivery', 'Delivered'].includes(order.status) ? 'active' : ''}`}>
-          <div className="dot"></div>
-          <div className="text">Order Confirmed</div>
-      </div>
-      <div className={`timeline-item ${['Out-for-Delivery', 'Delivered'].includes(order.status) ? 'active' : ''}`}>
-          <div className="dot"></div>
-          <div className="text">Order Dispatched</div>
-      </div>
-      <div className={`timeline-item ${order.status === 'Delivered' ? 'active' : ''}`}>
-          <div className="dot"></div>
-          <div className="text">Order Delivered</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderFeedback = () => (
     <div className="feedback-section-prd animate-fade-in">
@@ -154,9 +194,15 @@ const Tracking: React.FC = () => {
            <div className="order-item-list-detailed">
               {order.items.map((item: any, idx: number) => (
                 <div key={idx} className="item-row-detailed">
-                   <div className="item-thumb-box">
-                      <img src={getFullImageUrl(item?.productId?.imageUrl || item?.product?.imageUrl)} alt="" />
-                   </div>
+                    <div className="item-thumb-box">
+                       <img 
+                          src={getFullImageUrl(item?.productId?.imageUrl || item?.product?.imageUrl || (item?.productId?.images && item?.productId?.images[0]))} 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                          }}
+                       />
+                    </div>
                    <div className="item-info-col">
                       <p className="item-name-bold">{item?.productId?.brand} {item?.productId?.name || item?.product?.name}</p>
                       <span className="item-variant-label">{item?.selectedVariant || 'Standard'}</span>

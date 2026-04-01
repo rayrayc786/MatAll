@@ -14,6 +14,8 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 const GSTClassification = require('../models/GSTClassification');
+const ServiceableArea = require('../models/ServiceableArea');
+
 
 // Inline Revenue Margin mapping if sheet exists
 let globalMarginMap = new Map();
@@ -133,6 +135,19 @@ exports.getDashboardStats = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    
+    // Emit socket event to the customer
+    const io = req.app.get('socketio');
+    const userId = order.userId?._id ? order.userId._id.toString() : order.userId?.toString();
+    
+    if (io && userId) {
+      console.log(`Emitting status update to customer room: ${userId}`);
+      io.of('/customer').to(userId).emit('order-status-update', {
+        orderId: order._id,
+        status: order.status
+      });
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -510,3 +525,24 @@ exports.getAllGstClassifications = gstH.getAll;
 exports.createGstClassification = gstH.create; 
 exports.updateGstClassification = gstH.update; 
 exports.deleteGstClassification = gstH.delete;
+
+const sah = createHandlers(ServiceableArea, 'ServiceableArea');
+exports.getAllServiceableAreas = sah.getAll;
+exports.createServiceableArea = sah.create;
+exports.updateServiceableArea = sah.update;
+exports.deleteServiceableArea = sah.delete;
+
+exports.checkServiceability = async (req, res) => {
+  try {
+    const { pincode } = req.params;
+    const area = await ServiceableArea.findOne({ pincode, isActive: true });
+    if (area) {
+      res.json({ serviceable: true, city: area.city });
+    } else {
+      res.json({ serviceable: false });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

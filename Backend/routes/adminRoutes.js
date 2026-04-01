@@ -88,4 +88,12 @@ router.post('/gst-classifications', adminController.createGstClassification);
 router.put('/gst-classifications/:id', adminController.updateGstClassification);
 router.delete('/gst-classifications/:id', adminController.deleteGstClassification);
 
+// Serviceable Area management
+router.get('/serviceable-areas', adminController.getAllServiceableAreas);
+router.post('/serviceable-areas', adminController.createServiceableArea);
+router.put('/serviceable-areas/:id', adminController.updateServiceableArea);
+router.delete('/serviceable-areas/:id', adminController.deleteServiceableArea);
+router.get('/check-serviceability/:pincode', adminController.checkServiceability);
+
 module.exports = router;
+
