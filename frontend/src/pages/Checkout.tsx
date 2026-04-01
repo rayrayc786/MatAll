@@ -16,29 +16,8 @@ import {
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { Map, AdvancedMarker, useApiIsLoaded, useMapsLibrary } from '@vis.gl/react-google-maps';
 import './checkout.css';
-
-// Fix for Leaflet icons
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
-
-const MapUpdater = ({ coords }: { coords: [number, number] }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (coords) map.setView(coords, map.getZoom());
-  }, [coords]);
-  return null;
-};
 
 interface Address {
   _id?: string;
@@ -50,21 +29,24 @@ interface Address {
 }
 
 const Checkout: React.FC = () => {
+  const isLoaded = useApiIsLoaded();
+  const geocodingLibrary = useMapsLibrary('geocoding');
+  
   const { cart, clearCart, totalAmount } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'checkout' | 'address-list' | 'location-ask' | 'map-confirm' | 'address-form'>('checkout');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [isSelf, setIsSelf] = useState(true);
-  const [showPolicy, setShowPolicy] = useState(false);
   
-  // Map States
-  const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]);
+  // Map/Address states
+  const [mapCenter, setMapCenter] = useState({ lat: 28.6139, lng: 77.2090 });
   const [detectedAddr, setDetectedAddr] = useState({ main: 'Detecting...', sub: 'Please wait' });
   const [fullAddress, setFullAddress] = useState('');
   
   // Form States
+  const [isSelf, setIsSelf] = useState(true);
+  const [showPolicy, setShowPolicy] = useState(false);
   const [addressData, setAddressData] = useState({
      nickname: '',
      house: '',
@@ -119,7 +101,6 @@ const Checkout: React.FC = () => {
     setLoading(true);
     const token = localStorage.getItem('token');
     
-    // Step 1: Load Razorpay
     const res = await loadRazorpayScript();
     if (!res) {
       toast.error('Razorpay SDK failed to load. Check connection.');
@@ -129,7 +110,6 @@ const Checkout: React.FC = () => {
 
     const payAmount = mode === 'partial' ? Math.round(grandTotal / 2) : grandTotal;
 
-    // Step 2: Create Order from Backend
     try {
       const { data: orderData } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/orders/razorpay/create-order`, {
         amount: payAmount
@@ -137,7 +117,6 @@ const Checkout: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Step 3: Initialize Razorpay Checkout
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock12345',
         amount: orderData.amount,
@@ -287,29 +266,27 @@ const Checkout: React.FC = () => {
     </div>
   );
 
-  const handleMapMove = async (lat: number, lon: number) => {
-    setMapCenter([lat, lon]);
-    try {
-      const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-      const parts = data.display_name.split(',');
-      setDetectedAddr({
-        main: parts[0] || 'Unknown',
-        sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
+  const handleMapMoveEnd = (e: any) => {
+    const center = e.detail.center;
+    if (!center) return;
+    const lat = center.lat;
+    const lng = center.lng;
+    setMapCenter({ lat, lng });
+    
+    if (geocodingLibrary) {
+      const geocoder = new geocodingLibrary.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results?.[0]) {
+          const address = results[0].formatted_address;
+          const parts = address.split(',');
+          setDetectedAddr({
+            main: parts[0] || 'Unknown',
+            sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
+          });
+          setFullAddress(address);
+        }
       });
-      setFullAddress(data.display_name);
-    } catch (err) {
-      console.error('Reverse Geocode failed');
     }
-  };
-
-  const MapEventsController = () => {
-    useMapEvents({
-      dragend: (e) => {
-        const center = e.target.getCenter();
-        handleMapMove(center.lat, center.lng);
-      }
-    });
-    return null;
   };
 
   const handleUseCurrentLocation = () => {
@@ -318,9 +295,24 @@ const Checkout: React.FC = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          handleMapMove(lat, lon);
-          toast.success('Location found!', { id: 'geo-toast' });
+          const lng = position.coords.longitude;
+          setMapCenter({ lat, lng });
+          
+          if (geocodingLibrary) {
+            const geocoder = new geocodingLibrary.Geocoder();
+            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+              if (status === "OK" && results?.[0]) {
+                const address = results[0].formatted_address;
+                const parts = address.split(',');
+                setDetectedAddr({
+                  main: parts[0] || 'Unknown',
+                  sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
+                });
+                setFullAddress(address);
+                toast.success('Location found!', { id: 'geo-toast' });
+              }
+            });
+          }
         },
         (error) => {
           toast.error('Could not get your location', { id: 'geo-toast' });
@@ -341,12 +333,21 @@ const Checkout: React.FC = () => {
         <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
       </header>
       <div className="map-placeholder dynamic">
-        <MapContainer center={mapCenter} zoom={16} zoomControl={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={mapCenter} />
-            <MapUpdater coords={mapCenter} />
-            <MapEventsController />
-        </MapContainer>
+        {isLoaded ? (
+          <Map
+            style={{ width: '100%', height: '100%' }}
+            defaultCenter={mapCenter}
+            defaultZoom={16}
+            onCameraChanged={handleMapMoveEnd}
+            mapId={import.meta.env.VITE_GOOGLE_MAP_ID}
+            disableDefaultUI={true}
+            gestureHandling={'greedy'}
+          >
+            <AdvancedMarker position={mapCenter} />
+          </Map>
+        ) : (
+          <div className="map-loading">Loading Maps...</div>
+        )}
         <div className="center-marker-overlay">
            <MapPin size={40} color="#ef4444" fill="#ef4444" />
         </div>
@@ -484,7 +485,6 @@ const Checkout: React.FC = () => {
       <main className="checkout-content main-content-responsive">
         <div className="checkout-grid-responsive">
           <div className="checkout-left-col">
-            {/* Order Owner Details */}
             <div className="delivery-slot-card">
                <div className="slot-header">
                   <Clock size={18} />
@@ -505,7 +505,6 @@ const Checkout: React.FC = () => {
               <button className="pod-change-btn" onClick={() => setStep('address-list')}>Change</button>
             </div>
 
-            {/* Delivery Address Pod */}
             <div className="checkout-user-pod" onClick={() => setStep('address-list')}>
                <div className="pod-icon-circle pin-yellow"><MapPin size={20} /></div>
                <div className="pod-info-stack">
@@ -515,10 +514,6 @@ const Checkout: React.FC = () => {
                <button className="pod-change-btn">Change</button>
             </div>
 
-            {/* Delivery Time & Shipment - PRD Page 34 */}
-            
-
-            {/* GSTIN Entry - PRD Page 34 */}
             <div className="gstin-entry-row">
                <div className="gst-icon-box">%</div>
                <div className="gst-text">
@@ -528,7 +523,6 @@ const Checkout: React.FC = () => {
                <ChevronRight size={20} />
             </div>
 
-            {/* Cancellation Policy - PRD Page 34 */}
             <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
               <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>
                  <span>Cancellation policy</span>
@@ -543,7 +537,6 @@ const Checkout: React.FC = () => {
           </div>
 
           <div className="checkout-right-col">
-            {/* Bill Details - PRD Page 34 */}
             <section className="checkout-section">
               <div className="section-title-row">
                 <Receipt size={18} />
@@ -569,7 +562,6 @@ const Checkout: React.FC = () => {
               </div>
             </section>
 
-            {/* Total Savings Tile - PRD Page 34 */}
             {savings > 0 && (
               <div className="savings-tile">
                 <span className="savings-text">Your total savings</span>
@@ -608,7 +600,6 @@ const Checkout: React.FC = () => {
         </button>
       </footer>
 
-      {/* Address Overlay Flow */}
       {step === 'address-list' && renderAddressSelection()}
       {step === 'location-ask' && renderLocationAsk()}
       {step === 'map-confirm' && renderMapConfirm()}

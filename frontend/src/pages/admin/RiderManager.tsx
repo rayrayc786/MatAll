@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Map, AdvancedMarker, useApiIsLoaded, InfoWindow } from '@vis.gl/react-google-maps';
 import { User } from 'lucide-react';
 import axios from 'axios';
-import L from 'leaflet';
 
-// Custom Marker Icons
-const truckIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
-  iconSize: [24, 24],
-});
-const bikeIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png',
-  iconSize: [24, 24],
-});
+const truckIcon = 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png';
+const bikeIcon = 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png';
 
 const RiderManager: React.FC = () => {
+  const isLoaded = useApiIsLoaded();
   const [riders, setRiders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRider, setSelectedRider] = useState<any>(null);
 
   const fetchRiders = async () => {
     try {
@@ -36,6 +29,8 @@ const RiderManager: React.FC = () => {
   }, []);
 
   if (loading) return <div className="content">Loading rider status...</div>;
+
+  const center = { lat: 12.9716, lng: 77.5946 };
 
   return (
     <main className="content rider-manager">
@@ -57,7 +52,7 @@ const RiderManager: React.FC = () => {
           </div>
           <div className="rider-list">
             {riders.map(rider => (
-              <div key={rider._id} className="rider-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid #eee' }}>
+              <div key={rider._id} className="rider-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid #eee', cursor: 'pointer' }} onClick={() => setSelectedRider(rider)}>
                 <div className="rider-icon"><User size={20} /></div>
                 <div className="rider-info" style={{ flex: 1 }}>
                   <strong>{rider.fullName}</strong>
@@ -75,22 +70,45 @@ const RiderManager: React.FC = () => {
         </section>
 
         <section className="rider-map card" style={{ height: '600px', overflow: 'hidden' }}>
-          <MapContainer center={[12.9716, 77.5946]} zoom={12} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {riders.filter(r => r.currentLocation).map(rider => (
-              <Marker 
-                key={rider._id} 
-                position={[rider.currentLocation.coordinates[1], rider.currentLocation.coordinates[0]]} 
-                icon={rider.vehicleType === 'Scooter' ? bikeIcon : truckIcon}
-              >
-                <Popup>
-                  <strong>{rider.fullName}</strong><br />
-                  Vehicle: {rider.vehicleType}<br />
-                  Phone: {rider.phoneNumber}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+          {isLoaded ? (
+            <Map
+              style={{ width: '100%', height: '100%' }}
+              defaultCenter={center}
+              defaultZoom={12}
+              mapId={import.meta.env.VITE_GOOGLE_MAP_ID}
+            >
+              {riders.filter(r => r.currentLocation).map(rider => (
+                <AdvancedMarker 
+                  key={rider._id} 
+                  position={{ lat: rider.currentLocation.coordinates[1], lng: rider.currentLocation.coordinates[0] }} 
+                  onClick={() => setSelectedRider(rider)}
+                >
+                    <img 
+                      src={rider.vehicleType === 'Scooter' ? bikeIcon : truckIcon} 
+                      alt="rider" 
+                      style={{ width: '32px', height: '32px' }}
+                    />
+                </AdvancedMarker>
+              ))}
+
+              {selectedRider && selectedRider.currentLocation && (
+                <InfoWindow 
+                  position={{ lat: selectedRider.currentLocation.coordinates[1], lng: selectedRider.currentLocation.coordinates[0] }}
+                  onCloseClick={() => setSelectedRider(null)}
+                >
+                  <div style={{ padding: '5px' }}>
+                    <strong>{selectedRider.fullName}</strong><br />
+                    <span>Vehicle: {selectedRider.vehicleType}</span><br />
+                    <span>Phone: {selectedRider.phoneNumber}</span>
+                  </div>
+                </InfoWindow>
+              )}
+            </Map>
+          ) : (
+            <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9' }}>
+               Loading Maps...
+            </div>
+          )}
         </section>
       </div>
     </main>

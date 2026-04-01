@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Map, AdvancedMarker, useApiIsLoaded, Pin } from '@vis.gl/react-google-maps';
 import { 
   Navigation, 
   MessageSquare, 
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const DeliveryNavigation: React.FC = () => {
+  const isLoaded = useApiIsLoaded();
   const { id } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
@@ -33,18 +33,32 @@ const DeliveryNavigation: React.FC = () => {
 
   if (loading) return <div className="content">Initializing Navigation...</div>;
 
+  const center = { lat: 12.9716, lng: 77.5946 };
+  const destination = { lat: 12.9816, lng: 77.6046 };
+
   return (
     <main className="content delivery-navigation" style={{ padding: 0, height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
       <div className="nav-map-container" style={{ flex: 1, position: 'relative' }}>
-        <MapContainer center={[12.9716, 77.5946]} zoom={14} style={{ height: '100%', width: '100%' }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Marker position={[12.9716, 77.5946]}>
-            <Popup>Current Location</Popup>
-          </Marker>
-          <Marker position={[12.9816, 77.6046]}>
-            <Popup>Jobsite: {order.deliveryAddress?.name}</Popup>
-          </Marker>
-        </MapContainer>
+        {isLoaded ? (
+          <Map
+            style={{ width: '100%', height: '100%' }}
+            defaultCenter={center}
+            defaultZoom={14}
+            mapId={import.meta.env.VITE_GOOGLE_MAP_ID}
+            disableDefaultUI={true}
+          >
+            <AdvancedMarker position={center}>
+                <Pin background={'#2563eb'} borderColor={'#fff'} glyphColor={'#fff'} />
+            </AdvancedMarker>
+            <AdvancedMarker position={destination}>
+                <Pin background={'#ef4444'} borderColor={'#fff'} glyphColor={'#fff'} />
+            </AdvancedMarker>
+          </Map>
+        ) : (
+          <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9' }}>
+            Loading Maps...
+          </div>
+        )}
 
         <div className="map-overlay-top" style={{ position: 'absolute', top: '20px', left: '20px', right: '20px', zIndex: 1000 }}>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '1rem' }}>

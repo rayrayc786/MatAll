@@ -1,42 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Navigation, X, Home, Map as MapIcon, Loader2, ChevronRight, Mic, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { Map, AdvancedMarker, useMapsLibrary } from '@vis.gl/react-google-maps';
 import './locationModal.css';
-
-// Fix for default Leaflet icon paths in Vite/Webpack
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
-
-const MapUpdater = ({ coords }: { coords: [number, number] }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (coords && coords.length === 2 && coords[0] !== 0) {
-      map.setView(coords, map.getZoom());
-    }
-  }, [coords, map]);
-  return null;
-};
-
-const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lon: number) => void }) => {
-  useMapEvents({
-    click: (e) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-};
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -52,10 +19,10 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
   const [isLocating, setIsLocating] = useState(false);
   const [step, setStep] = useState<1 | 2>(1); // 1: Decision, 2: Search/Selection
   const [showAddForm, setShowAddForm] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 28.6139, lng: 77.2090 });
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   
-  // New address form states (Slide 40)
+  // New address form states
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrType, setNewAddrType] = useState<'Home' | 'Office' | 'Site' | 'Other'>('Home');
   const [newAddrText, setNewAddrText] = useState('');
@@ -70,7 +37,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
-  const searchTimeout = useRef<any>(null);
+  const placesLibrary = useMapsLibrary('places');
+  const geocodingLibrary = useMapsLibrary('geocoding');
 
   useEffect(() => {
     if (isOpen) {
@@ -78,10 +46,9 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
       setStep(1);
       setShowAddForm(false);
       
-      // Auto-detect location for map
       if (navigator.geolocation) {
          navigator.geolocation.getCurrentPosition((pos) => {
-           setMapCenter([pos.coords.latitude, pos.coords.longitude]);
+           setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
          }, () => {}, { timeout: 10000 });
       }
     } else {
@@ -90,40 +57,80 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchTerm(val);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
     
-    if (val.length > 2) {
-      searchTimeout.current = setTimeout(async () => {
+    if (value.length > 2 && placesLibrary) {
         setIsSearching(true);
         try {
-          const { data } = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${val}&countrycodes=in`);
-          setSuggestions(data);
+            const request = {
+                input: value,
+                locationRestriction: {
+                    north: 37.0902,
+                    south: 8.4,
+                    east: 97.25,
+                    west: 68.7,
+                },
+                includedRegionCodes: ['in']
+            };
+            const { suggestions: results } = await placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+            setSuggestions(results || []);
         } catch (err) {
-          console.error(err);
+            console.error(err);
         } finally {
-          setIsSearching(false);
+            setIsSearching(false);
         }
-      }, 500);
     } else {
-      setSuggestions([]);
+        setSuggestions([]);
     }
   };
 
-  const handleMapClick = async (lat: number, lon: number) => {
-    setMapCenter([lat, lon]);
-    setIsSearching(true);
+  const selectSuggestion = async (suggestion: any) => {
+    if (!geocodingLibrary) return;
     try {
-      const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-      setSelectedAddress(data.display_name);
-      setSearchTerm(data.display_name);
+        const place = suggestion.placePrediction;
+        const geocoder = new geocodingLibrary.Geocoder();
+        const results = await geocoder.geocode({ placeId: place.placeId });
+        if (results.results[0]) {
+            const loc = results.results[0].geometry.location;
+            const lat = loc.lat();
+            const lng = loc.lng();
+            const address = results.results[0].formatted_address;
+            
+            setMapCenter({ lat, lng });
+            setSelectedAddress(address);
+            setSearchTerm(address);
+            setSuggestions([]);
+            
+            if (showAddForm) {
+                setNewAddrText(address);
+                setNewAddrCoords([lng, lat]);
+            }
+        }
     } catch (err) {
-      console.error('Reverse geocoding failed:', err);
-      setSelectedAddress(`Location at ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
-    } finally {
-      setIsSearching(false);
+        toast.error("Error fetching location details");
+    }
+  };
+
+  const handleMapClick = async (e: any) => {
+    const lat = e.detail.latLng.lat;
+    const lng = e.detail.latLng.lng;
+    setMapCenter({ lat, lng });
+    
+    if (geocodingLibrary) {
+        const geocoder = new geocodingLibrary.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === "OK" && results?.[0]) {
+            const address = results[0].formatted_address;
+            setSelectedAddress(address);
+            setSearchTerm(address);
+            if (showAddForm) {
+              setNewAddrText(address);
+              setNewAddrCoords([lng, lat]);
+            }
+          }
+        });
     }
   };
 
@@ -135,14 +142,20 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
-      try {
-        const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-        onSelectAddress(data.display_name, [longitude, latitude]);
-        onClose();
-      } catch (err) {
-        toast.error('Failed to get address');
-      } finally {
-        setIsLocating(false);
+      setMapCenter({ lat: latitude, lng: longitude });
+      
+      if (geocodingLibrary) {
+        const geocoder = new geocodingLibrary.Geocoder();
+        geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+          if (status === "OK" && results?.[0]) {
+            const address = results[0].formatted_address;
+            onSelectAddress(address, [longitude, latitude]);
+            onClose();
+          } else {
+            toast.error('Failed to get address');
+          }
+          setIsLocating(false);
+        });
       }
     }, () => {
       setIsLocating(false);
@@ -150,21 +163,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     });
   };
 
-  const selectSuggestion = (item: any) => {
-    const coords: [number, number] = [parseFloat(item.lat), parseFloat(item.lon)];
-    setMapCenter(coords);
-    setSelectedAddress(item.display_name);
-    setSearchTerm(item.display_name);
-    setSuggestions([]);
-    
-    if (showAddForm) {
-        setNewAddrText(item.display_name);
-        setNewAddrCoords([parseFloat(item.lon), parseFloat(item.lat)]);
-    }
-  };
-
   const confirmLocation = () => {
-    onSelectAddress(selectedAddress || searchTerm, [mapCenter[1], mapCenter[0]]);
+    onSelectAddress(selectedAddress || searchTerm, [mapCenter.lng, mapCenter.lat]);
     onClose();
   };
 
@@ -267,48 +267,81 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                   />
                   {isSearching && <Loader2 size={18} className="animate-spin" />}
                 </div>
-                {suggestions.length > 0 ? (
-                  <div className="search-suggestions">
+
+                {suggestions.length > 0 && (
+                  <div className="search-suggestions floating">
                     {suggestions.map((item, idx) => (
                       <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
                         <MapPin size={18} className="pin-icon" />
                         <div className="suggestion-details">
-                          <p className="main-text">{item.display_name.split(',')[0]}</p>
-                          <p className="sub-text">{item.display_name}</p>
+                          <p className="main-text">{item.placePrediction.mainText.text}</p>
+                          <p className="sub-text">{item.placePrediction.text.text}</p>
                         </div>
                         <ChevronRight size={18} />
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="empty-search-state-wrapper">
-                    <div className="empty-search-state" onClick={handleUseCurrentLocation}>
-                       <Navigation size={20} />
-                       <span>Use current location</span>
-                    </div>
-                    
-                    <div className="map-display-container">
-                      <MapContainer center={mapCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
-                          <TileLayer
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          />
-                          <Marker position={mapCenter} />
-                          <MapUpdater coords={mapCenter} />
-                          <MapClickHandler onMapClick={handleMapClick} />
-                      </MapContainer>
-                      <div className="map-overlay-hint">
-                        <MapPin size={14} /> Tap map to move pin
-                      </div>
-                    </div>
-
-                    {(selectedAddress || searchTerm) && (
-                      <button className="confirm-loc-btn" onClick={confirmLocation}>
-                        Confirm Location
-                      </button>
-                    )}
-                  </div>
                 )}
+                
+                <div className="empty-search-state-wrapper">
+                  <div className="empty-search-state" onClick={handleUseCurrentLocation}>
+                      <Navigation size={20} />
+                      <span>Use current location</span>
+                  </div>
+                  
+                    <div className="map-display-container">
+                      <Map
+                        style={{ width: '100%', height: '100%' }}
+                        defaultCenter={mapCenter}
+                        defaultZoom={15}
+                        onClick={handleMapClick}
+                        mapId={import.meta.env.VITE_GOOGLE_MAP_ID}
+                        disableDefaultUI={true}
+                        gestureHandling={'greedy'}
+                        onCameraChanged={(e: any) => {
+                           const c = e.detail.center;
+                           if (c) setMapCenter({ lat: c.lat, lng: c.lng });
+                        }}
+                      >
+                        <AdvancedMarker position={mapCenter} />
+                      </Map>
+                      
+                      <button className="locate-me-btn-overlay" onClick={() => {
+                        if (navigator.geolocation) {
+                          toast.loading("Detecting your location...", { id: 'geo-loc' });
+                          navigator.geolocation.getCurrentPosition((pos) => {
+                            const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                            setMapCenter(newLoc);
+                            toast.success("Location found!", { id: 'geo-loc' });
+                            
+                            if (geocodingLibrary) {
+                              const geocoder = new geocodingLibrary.Geocoder();
+                              geocoder.geocode({ location: newLoc }, (res: any, status: string) => {
+                                if (status === 'OK' && res?.[0]) {
+                                  setSearchTerm(res[0].formatted_address);
+                                  setSelectedAddress(res[0].formatted_address);
+                                }
+                              });
+                            }
+                          }, () => {
+                             toast.error("Could not find location", { id: 'geo-loc' });
+                          });
+                        }
+                      }}>
+                        <Navigation size={20} />
+                      </button>
+
+                    <div className="map-overlay-hint">
+                      <MapPin size={14} /> Tap map to move pin
+                    </div>
+                  </div>
+
+                  {(selectedAddress || searchTerm) && (
+                    <button className="confirm-loc-btn" onClick={confirmLocation}>
+                      Confirm Location
+                    </button>
+                  )}
+                </div>
                 <button type="button" className="back-link-btn" onClick={() => setStep(1)}>Back</button>
               </div>
             )
@@ -337,8 +370,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                     {suggestions.map((item, idx) => (
                       <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
                         <div className="suggestion-details">
-                          <p className="main-text">{item.display_name.split(',')[0]}</p>
-                          <p className="sub-text">{item.display_name}</p>
+                          <p className="main-text">{item.placePrediction.mainText.text}</p>
+                          <p className="sub-text">{item.placePrediction.text.text}</p>
                         </div>
                       </div>
                     ))}
