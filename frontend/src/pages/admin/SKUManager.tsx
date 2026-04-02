@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star, Menu } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageUrl';
 import './sku.css';
 
@@ -284,12 +284,21 @@ const SKUManager: React.FC = () => {
     setShowModal(true);
   };
 
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+  };
+
   return (
     <main className="admin-content">
       <header className="admin-header space-between sku-header">
-        <div className="title-group">
-          <h1>SKU & Inventory Manager</h1>
-          <p>Master database for industrial materials & Smart Units</p>
+        <div className="title-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button className="mobile-menu-trigger" onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <div className="header-text">
+            <h1>SKU & Inventory Manager</h1>
+            <p>Master database for industrial materials & Smart Units</p>
+          </div>
         </div>
         <div className="action-group sku-action-group">
           <input 

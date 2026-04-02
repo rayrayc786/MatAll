@@ -9,12 +9,12 @@ import {
   Edit2,
   ChevronRight,
   User,
-  LogOut,
   Plus,
   Trash2,
   X,
   FileUp,
-  Image
+  Image,
+  Menu
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -53,11 +53,12 @@ const ORDERS_STATS_DATA = [
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>((tabParam as any) || 'dashboard');
-  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links' | 'gst'>('list');
+  const subParam = searchParams.get('sub');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links' | 'gst'>((subParam as any) || 'list');
   const [loading, setLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
@@ -117,7 +118,12 @@ const AdminDashboard: React.FC = () => {
     if (tabParam && ['dashboard', 'reports', 'actions'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
-  }, [tabParam]);
+    if (subParam) {
+      setActiveActionTab(subParam as any);
+    } else {
+      setActiveActionTab('list');
+    }
+  }, [tabParam, subParam]);
 
   // Real-time socket logic
   useEffect(() => {
@@ -246,24 +252,17 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
 
-  const handleTabChange = (tab: 'dashboard' | 'reports' | 'actions') => {
-    setActiveTab(tab);
-    setSearchParams({ tab });
-    setActiveActionTab('list');
-    setSearchTerm(''); // Clear search on tab change
+
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
   };
 
   const TILES = [
     { label: 'Active Orders', val: dashboardStats?.activeOrders ?? '0', icon: <Package size={20} />, color: '#FFEA00', tab: 'orders' },
     { label: 'Active Products', val: dashboardStats?.totalProducts ?? products.length ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'products' },
     { label: 'Active Categories', val: dashboardStats?.activeCategories ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'categories' },
-    { label: 'Support Tickets', val: '0', icon: <Clock size={20} />, color: '#DEDEDE', tab: 'tickets' },
+    { label: 'User Material Requests', val: userRequests.length ?? '0', icon: <Clock size={20} />, color: '#DEDEDE', tab: 'userRequests' },
   ];
 
   const ACTION_ITEMS = [
@@ -348,7 +347,12 @@ const AdminDashboard: React.FC = () => {
             <div 
               key={idx} 
               className="admin-metric-tile" 
-              style={{ backgroundColor: tile.color }}
+              style={{ backgroundColor: tile.color, cursor: 'pointer' }}
+              onClick={() => {
+                if (tile.tab === 'products') navigate('/admin/inventory');
+                else if (tile.tab === 'categories') navigate('/admin/categories');
+                else navigate(`/admin?tab=actions&sub=${tile.tab}`);
+              }}
             >
                <div className="tile-top">
                   <span className="tile-val">{tile.val}</span>
@@ -461,7 +465,6 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card yellow">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
           <h2>User Management</h2>
         </div>
         <div className="search-bar-admin">
@@ -507,7 +510,6 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
           <h2>Order Management</h2>
         </div>
         <div className="search-bar-admin">
@@ -565,7 +567,6 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
           <h2>Category Management</h2>
         </div>
         <button className="add-action-btn" onClick={() => openForm()}>
@@ -593,7 +594,6 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
           <h2>Product Management</h2>
         </div>
         <div className="management-actions-row">
@@ -652,8 +652,7 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
-          <h2>Support Tickets</h2>
+          <h2>Material Requests</h2>
         </div>
       </div>
       <div className="admin-list-container">
@@ -668,7 +667,6 @@ const AdminDashboard: React.FC = () => {
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
         <div className="header-info">
-          <button className="back-btn" onClick={() => setActiveActionTab('list')}>←</button>
           <h2>User Material Requests</h2>
         </div>
       </div>
@@ -1257,19 +1255,12 @@ const AdminDashboard: React.FC = () => {
       <div className="admin-main-wrapper">
         <header className="admin-dash-header">
           <div className="header-left">
-            <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+            <button className="mobile-menu-trigger" onClick={toggleSidebar}>
+               <Menu size={24} />
+            </button>
+            <h1>{activeActionTab !== 'list' ? activeActionTab.charAt(0).toUpperCase() + activeActionTab.slice(1) : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
           </div>
           <div className="header-right-actions">
-             <button 
-                className="admin-home-btn" 
-                onClick={() => navigate('/admin?tab=dashboard')}
-                title="Return to Admin Dashboard"
-             >
-                Home
-             </button>
-             <button className="mobile-logout-btn" onClick={handleLogout} title="Logout">
-                <LogOut size={20} />
-             </button>
              <div className="admin-profile-logo-box">
                 <span className="logo-text">MatAll</span>
              </div>
@@ -1288,27 +1279,6 @@ const AdminDashboard: React.FC = () => {
       </div>
       <ManagementModal />
       <OrderDetailsModal />
-
-      <footer className="admin-footer-nav">
-         <button 
-           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-           onClick={() => handleTabChange('dashboard')}
-         >
-           Dashboard
-         </button>
-         <button 
-           className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-           onClick={() => handleTabChange('reports')}
-         >
-           Reports
-         </button>
-         <button 
-           className={`nav-item ${activeTab === 'actions' ? 'active' : ''}`}
-           onClick={() => handleTabChange('actions')}
-         >
-           Actions
-         </button>
-      </footer>
     </div>
   );
 };

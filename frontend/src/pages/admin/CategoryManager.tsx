@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit3, Trash2, X, Tag, ChevronDown, ChevronRight, Layers, Image } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, Tag, ChevronDown, ChevronRight, Layers, Image, Menu } from 'lucide-react';
 
 const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -227,12 +227,21 @@ const CategoryManager: React.FC = () => {
     ));
   };
 
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+  };
+
   return (
     <main className="admin-content">
       <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
-        <div className="title-group">
-          <h1>Category & Hierarchy Management</h1>
-          <p>Define master categories and nested sub-categories for the dynamic marketplace</p>
+        <div className="title-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button className="mobile-menu-trigger" onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <div className="header-text">
+            <h1>Category & Hierarchy Management</h1>
+            <p>Define master categories and nested sub-categories for the dynamic marketplace</p>
+          </div>
         </div>
         <button className="add-sku-btn" onClick={resetCatForm}>
           <Plus size={18} /> New Master Category
