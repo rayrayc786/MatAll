@@ -34,6 +34,542 @@ import {
 import { adminSocket, connectSocket } from '../../socket';
 import './admin-dashboard.css';
 
+function ManagementModal({ 
+  showModal, setShowModal, editingItem, activeActionTab, formData, setFormData, 
+  handleAction, userTab, setUserTab, productTab, setProductTab, 
+  userOrders, fetchUserOrders, handleProductImageUpload, handleCategoryImageUpload, API_BASE 
+}: any) {
+  if (!showModal) return null;
+  const isEditing = !!editingItem;
+  const type = activeActionTab;
+
+  return (
+    <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
+      <div className="admin-modal-content animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{isEditing ? 'Edit' : 'Add New'} {type === 'users' ? 'User' : (type === 'categories' ? 'Category' : 'Product')}</h3>
+          <button type="button" className="close-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
+        </div>
+        
+        <div className="modal-body">
+          {type === 'products' && (
+            <div className="modal-scroll-area">
+              <div className="admin-modal-tabs">
+                <button type="button" className={productTab === 'general' ? 'active' : ''} onClick={() => setProductTab('general')}>General</button>
+                <button type="button" className={productTab === 'variants' ? 'active' : ''} onClick={() => setProductTab('variants')}>Variants</button>
+                <button type="button" className={productTab === 'images' ? 'active' : ''} onClick={() => setProductTab('images')}>Images</button>
+              </div>
+
+              {productTab === 'general' && (
+                <>
+                  <div className="input-group-admin">
+                    <label>Product Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Century Ply Sainik 710"
+                      value={formData.name || ''} 
+                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                    />
+                  </div>
+                  <div className="input-row-admin">
+                     <div className="input-group-admin">
+                        <label>SKU (Product Code)</label>
+                        <input 
+                          type="text" 
+                          placeholder="FLY-CEN-710" 
+                          value={formData.sku || ''} 
+                          onChange={e => setFormData({...formData, sku: e.target.value})} 
+                        />
+                     </div>
+                     <div className="input-group-admin">
+                        <label>Brand</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Century" 
+                          value={formData.brand || ''} 
+                          onChange={e => setFormData({...formData, brand: e.target.value})} 
+                        />
+                     </div>
+                  </div>
+                  <div className="input-row-admin">
+                     <div className="input-group-admin">
+                        <label>Category</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Plywood" 
+                          value={formData.category || ''} 
+                          onChange={e => setFormData({...formData, category: e.target.value})} 
+                        />
+                     </div>
+                     <div className="input-group-admin">
+                        <label>Sub Category</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Marine Grade" 
+                          value={formData.subCategory || ''} 
+                          onChange={e => setFormData({...formData, subCategory: e.target.value})} 
+                        />
+                     </div>
+                  </div>
+                  <div className="input-row-admin">
+                     <div className="input-group-admin">
+                        <label>Price (₹)</label>
+                        <input 
+                          type="number" 
+                          value={formData.price || ''} 
+                          onChange={e => setFormData({...formData, price: Number(e.target.value)})} 
+                        />
+                     </div>
+                     <div className="input-group-admin">
+                        <label>MRP (₹)</label>
+                        <input 
+                          type="number" 
+                          value={formData.mrp || ''} 
+                          onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} 
+                        />
+                     </div>
+                  </div>
+                  <div className="input-row-admin">
+                     <div className="input-group-admin">
+                        <label>Weight (kg)</label>
+                        <input 
+                          type="number" 
+                          value={formData.weightPerUnit || 0} 
+                          onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} 
+                        />
+                     </div>
+                     <div className="input-group-admin">
+                        <label>Volume (m³)</label>
+                        <input 
+                          type="number" 
+                          value={formData.volumePerUnit || 0} 
+                          onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} 
+                        />
+                     </div>
+                  </div>
+                  <div className="input-group-admin">
+                    <label>Short Description (Technical)</label>
+                    <textarea 
+                      rows={2}
+                      placeholder="Technical specs, brief summary..."
+                      value={formData.description || ''} 
+                      onChange={e => setFormData({...formData, description: e.target.value})} 
+                    />
+                  </div>
+                  <div className="input-group-admin">
+                    <label>Detailed Information Paragraph (SEO / Marketing)</label>
+                    <textarea 
+                      rows={3}
+                      placeholder="Enter full marketing or informational text..."
+                      value={formData.infoPara || ''} 
+                      onChange={e => setFormData({...formData, infoPara: e.target.value})} 
+                    />
+                  </div>
+                  
+                  <div className="input-group-admin bulk-pricing-section">
+                     <h5 style={{ marginTop: '1rem', marginBottom: '0.8rem', fontWeight: '800' }}>Bulk Pricing Tiers</h5>
+                     {(formData.bulkPricing || []).map((tier: any, i: number) => (
+                       <div key={i} className="input-row-admin bulk-row">
+                         <input 
+                           type="number" 
+                           placeholder="Min Qty" 
+                           value={tier.minQty} 
+                           onChange={e => {
+                             const newBulk = [...formData.bulkPricing];
+                             newBulk[i].minQty = Number(e.target.value);
+                             setFormData({...formData, bulkPricing: newBulk});
+                           }} 
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="Discount %" 
+                           value={tier.discount} 
+                           onChange={e => {
+                             const newBulk = [...formData.bulkPricing];
+                             newBulk[i].discount = Number(e.target.value);
+                             setFormData({...formData, bulkPricing: newBulk});
+                           }} 
+                         />
+                         <button type="button" className="remove-row" onClick={() => {
+                           const newBulk = formData.bulkPricing.filter((_: any, idx: number) => idx !== i);
+                           setFormData({...formData, bulkPricing: newBulk});
+                         }}><X size={16} /></button>
+                       </div>
+                     ))}
+                     <button type="button" onClick={() => {
+                       setFormData({...formData, bulkPricing: [...(formData.bulkPricing || []), { minQty: 0, discount: 0 }]});
+                     }} className="add-tier-btn">+ Add Pricing Tier</button>
+                  </div>
+                  <div className="input-row-admin">
+                     <div className="input-group-admin checkbox">
+                        <input 
+                          type="checkbox" 
+                          id="prodActive"
+                          checked={formData.isActive !== false} 
+                          onChange={e => setFormData({...formData, isActive: e.target.checked})} 
+                        />
+                        <label htmlFor="prodActive">Is Active</label>
+                     </div>
+                     <div className="input-group-admin checkbox">
+                        <input 
+                          type="checkbox" 
+                          id="prodPopular"
+                          checked={!!formData.isPopular} 
+                          onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
+                        />
+                        <label htmlFor="prodPopular">Mark as Popular</label>
+                     </div>
+                  </div>
+                </>
+              )}
+
+              {productTab === 'variants' && (
+                <div>
+                  <h4 style={{ marginBottom: '1.25rem', fontWeight: '800' }}>Product Variants</h4>
+                  {(formData.variants || []).map((v: any, idx: number) => (
+                    <div key={idx} className="variant-item-card">
+                      <div className="input-group-admin">
+                        <label>Variant Name (e.g. 10mm thickness, 8x4 size)</label>
+                        <input type="text" value={v.name || ''} onChange={(e) => {
+                          const newV = [...(formData.variants || [])];
+                          newV[idx].name = e.target.value;
+                          setFormData({...formData, variants: newV});
+                        }} />
+                      </div>
+                      <div className="input-row-admin">
+                        <div className="input-group-admin">
+                          <label>Price (₹)</label>
+                          <input type="number" value={v.price || 0} onChange={(e) => {
+                            const newV = [...(formData.variants || [])];
+                            newV[idx].price = Number(e.target.value);
+                            setFormData({...formData, variants: newV});
+                          }} />
+                        </div>
+                        <div className="input-group-admin">
+                          <label>SKU</label>
+                          <input type="text" value={v.sku || ''} onChange={(e) => {
+                            const newV = [...(formData.variants || [])];
+                            newV[idx].sku = e.target.value;
+                            setFormData({...formData, variants: newV});
+                          }} />
+                        </div>
+                      </div>
+                      <button type="button" className="remove-variant-btn" onClick={() => {
+                        const newV = formData.variants.filter((_: any, i: number) => i !== idx);
+                        setFormData({...formData, variants: newV});
+                      }}><Trash2 size={16} /> Remove Variant</button>
+                    </div>
+                  ))}
+                  <button type="button" className="add-variant-btn" onClick={() => {
+                    const newV = { name: '', price: 0, sku: '', weight: 0, volume: 0 };
+                    setFormData({...formData, variants: [...(formData.variants || []), newV]});
+                  }}>+ Add Variant</button>
+                </div>
+              )}
+
+              {productTab === 'images' && (
+                <div>
+                  <h4 style={{ marginBottom: '1.25rem', fontWeight: '800' }}>Product Images</h4>
+                  <div className="modal-images-grid">
+                    {(formData.images || []).map((imgUrl: string, idx: number) => (
+                      <div key={idx} className="modal-image-item">
+                        <img src={imgUrl.startsWith('/') ? `${API_BASE.replace('/api', '')}${imgUrl}` : imgUrl} alt="" />
+                        <button type="button" className="remove-img" onClick={() => {
+                          const newImgs = formData.images.filter((_: string, i: number) => i !== idx);
+                          setFormData({...formData, images: newImgs});
+                        }}><X size={14} /></button>
+                      </div>
+                    ))}
+                    <label className="upload-image-label">
+                      <Image size={24} />
+                      <span>Add Image</span>
+                      <input type="file" hidden accept="image/*" onChange={handleProductImageUpload} />
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {type === 'users' && (
+            <div className="modal-scroll-area">
+              {isEditing && (
+                <div className="admin-modal-tabs">
+                  <button type="button" className={userTab === 'profile' ? 'active' : ''} onClick={() => setUserTab('profile')}>Profile</button>
+                  <button type="button" className={userTab === 'addresses' ? 'active' : ''} onClick={() => setUserTab('addresses')}>Addresses</button>
+                  <button type="button" className={userTab === 'orders' ? 'active' : ''} onClick={() => { setUserTab('orders'); fetchUserOrders(editingItem._id); }}>Orders</button>
+                </div>
+              )}
+              
+              {userTab === 'profile' && (
+                <>
+                  <div className="input-group-admin">
+                    <label>Full Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Rahul Arora"
+                      value={formData.fullName || ''} 
+                      onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="input-group-admin">
+                    <label>Phone Number</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 9988776655" 
+                      value={formData.phoneNumber || ''} 
+                      onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
+                    />
+                  </div>
+                  <div className="input-group-admin">
+                    <label>Role</label>
+                    <select 
+                      value={formData.role || 'End User'} 
+                      onChange={e => setFormData({...formData, role: e.target.value})}
+                    >
+                      <option value="End User">End User</option>
+                      <option value="Admin">Admin</option>
+                      <option value="Supplier">Supplier</option>
+                      <option value="Rider">Rider</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {userTab === 'addresses' && (
+                <div className="addresses-management">
+                  <h4 style={{ marginBottom: '1.25rem', fontWeight: '800' }}>Manage Jobsites / Addresses</h4>
+                  {(formData.jobsites || []).map((site: any, idx: number) => (
+                    <div key={`site-card-${idx}`} className="site-item-card">
+                      <div className="input-group-admin">
+                        <label>Site / Address Name</label>
+                        <input 
+                          key={`site-name-${idx}`}
+                          type="text" 
+                          placeholder="e.g. Home, Site A" 
+                          value={site.name || ''} 
+                          onChange={(e) => {
+                            const newSites = [...(formData.jobsites || [])];
+                            newSites[idx] = { ...newSites[idx], name: e.target.value };
+                            setFormData({...formData, jobsites: newSites});
+                          }} 
+                        />
+                      </div>
+                      <div className="input-group-admin">
+                        <label>Full Address Text</label>
+                        <input 
+                          key={`site-addr-${idx}`}
+                          type="text" 
+                          placeholder="Complete address details" 
+                          value={site.addressText || ''} 
+                          onChange={(e) => {
+                            const newSites = [...(formData.jobsites || [])];
+                            newSites[idx] = { ...newSites[idx], addressText: e.target.value };
+                            setFormData({...formData, jobsites: newSites});
+                          }} 
+                        />
+                      </div>
+                      <button type="button" className="remove-site-btn" onClick={() => {
+                        const newSites = formData.jobsites.filter((_: any, i: number) => i !== idx);
+                        setFormData({...formData, jobsites: newSites});
+                      }}><Trash2 size={16} /> Remove Site</button>
+                    </div>
+                  ))}
+                  <button type="button" className="add-site-btn" onClick={() => {
+                    const newSite = { name: '', addressText: '', location: { type: 'Point', coordinates: [77.5946, 12.9716] } };
+                    setFormData({...formData, jobsites: [...(formData.jobsites || []), newSite]});
+                  }}>+ Add Address</button>
+                </div>
+              )}
+
+              {userTab === 'orders' && (
+                <div className="user-orders-preview">
+                  <h4 style={{ marginBottom: '1.25rem', fontWeight: '800' }}>Order History</h4>
+                  {userOrders.length === 0 ? <p className="empty-msg">No orders found for this user.</p> : userOrders.map((o: any) => (
+                    <div key={o._id} className="user-order-item">
+                      <div className="order-main">
+                         <strong>Order #{o._id.slice(-6).toUpperCase()}</strong>
+                         <span>{new Date(o.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="order-status">
+                         <div className="order-amt">₹{o.totalAmount}</div>
+                         <span className={`status-badge ${o.status}`}>{o.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {type === 'gst' && (
+            <div className="modal-scroll-area">
+              <div className="input-group-admin">
+                <label>Category</label>
+                <input type="text" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} />
+              </div>
+              <div className="input-group-admin">
+                <label>Sub Category</label>
+                <input type="text" value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} />
+              </div>
+              <div className="input-row-admin">
+                <div className="input-group-admin">
+                  <label>GST Rate (%)</label>
+                  <input type="number" value={formData.gst || 0} onChange={e => setFormData({...formData, gst: Number(e.target.value)})} />
+                </div>
+                <div className="input-group-admin">
+                  <label>HSN Code</label>
+                  <input type="text" value={formData.hsnCode || ''} onChange={e => setFormData({...formData, hsnCode: e.target.value})} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {type === 'categories' && (
+            <div className="modal-scroll-area">
+              <div className="input-group-admin">
+                <label>Category Name</label>
+                <input 
+                  type="text" 
+                  value={formData.name || ''} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                />
+              </div>
+              <div className="input-group-admin">
+                <label>Blog Space / Description (HTML allowed)</label>
+                <textarea 
+                  rows={4}
+                  value={formData.description || ''} 
+                  onChange={e => setFormData({...formData, description: e.target.value})} 
+                />
+              </div>
+              <div className="input-row-admin">
+                 <div className="input-group-admin checkbox">
+                    <input 
+                      type="checkbox" 
+                      id="catActive"
+                      checked={formData.isActive !== false} 
+                      onChange={e => setFormData({...formData, isActive: e.target.checked})} 
+                    />
+                    <label htmlFor="catActive">Is Active</label>
+                 </div>
+                 <div className="input-group-admin checkbox">
+                    <input 
+                      type="checkbox" 
+                      id="catFeatured"
+                      checked={!!formData.isFeatured} 
+                      onChange={e => setFormData({...formData, isFeatured: e.target.checked})} 
+                    />
+                    <label htmlFor="catFeatured" style={{ color: '#f59e0b', fontWeight: 'bold' }}>Featured</label>
+                 </div>
+              </div>
+              <div className="input-group-admin">
+                 <label>Category Image</label>
+                 <div className="image-upload-wrapper">
+                    <input type="text" value={formData.imageUrl || ''} placeholder="Image URL" onChange={e => setFormData({...formData, imageUrl: e.target.value})} />
+                    <label className="upload-mini-btn">
+                      <Image size={18} />
+                      <input type="file" hidden accept="image/*" onChange={handleCategoryImageUpload} />
+                    </label>
+                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" className="modal-btn cancel" onClick={() => setShowModal(false)}>Cancel</button>
+          <button 
+            type="button"
+            className="modal-btn save" 
+            onClick={() => handleAction(
+              isEditing ? 'put' : 'post', 
+              `/admin/${type}${isEditing ? `/${editingItem._id}` : ''}`, 
+              formData
+            )}
+          >
+            {isEditing ? 'Save Changes' : 'Create Item'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderDetailsModal({ viewingOrder, setViewingOrder, API_BASE }: any) {
+  if (!viewingOrder) return null;
+  const order = viewingOrder;
+
+  return (
+    <div className="admin-modal-overlay" onClick={() => setViewingOrder(null)}>
+      <div className="admin-modal-content order-details-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Order Details #{order?._id.slice(-6).toUpperCase()}</h3>
+          <button type="button" className="close-btn" onClick={() => setViewingOrder(null)}><X size={20} /></button>
+        </div>
+        
+        <div className="modal-body">
+           <div className="order-meta-info">
+              <div className="meta-item">
+                 <label>Customer</label>
+                 <span>{order.userId?.fullName || 'Guest'}</span>
+              </div>
+              <div className="meta-item">
+                 <label>Contact</label>
+                 <span>{order.userId?.phoneNumber || 'N/A'}</span>
+              </div>
+              <div className="meta-item">
+                 <label>Payment</label>
+                 <span className="uppercase">{order.paymentMethod || 'COD'}</span>
+              </div>
+              <div className="meta-item">
+                 <label>Order Time</label>
+                 <span>{new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="meta-item full-width">
+                 <label>Delivery Address</label>
+                 <span>{order.shippingAddress || order.deliveryAddress?.addressText || order.deliveryAddress?.name || 'No address provided'}</span>
+              </div>
+           </div>
+
+           <div className="order-items-list">
+              <h4>Items ({order.items?.length || 0})</h4>
+              {order.items?.map((item: any, idx: number) => (
+                 <div key={idx} className="order-item-row">
+                    <div className="item-img">
+                       <img src={item.productId?.images?.[0] || item.product?.images?.[0] || 'https://via.placeholder.com/50'} alt="" />
+                    </div>
+                    <div className="item-info">
+                       <span className="item-name">{item.productId?.name || item.product?.name || 'Unknown Product'}</span>
+                       <span className="item-sub">Qty: {item.quantity} × ₹{item.unitPrice}</span>
+                    </div>
+                    <div className="item-total">
+                       ₹{item.quantity * item.unitPrice}
+                    </div>
+                 </div>
+              ))}
+           </div>
+
+           <div className="order-summary-box">
+              <div className="summary-row">
+                 <span>Subtotal</span>
+                 <span>₹{order.totalAmount}</span>
+              </div>
+              <div className="summary-row total">
+                 <span>Grand Total</span>
+                 <span>₹{order.totalAmount}</span>
+              </div>
+           </div>
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" className="modal-btn save" onClick={() => setViewingOrder(null)}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const REVENUE_DATA = [
   { day: 'S', revenue: 10000 },
   { day: 'M', revenue: 11000 },
@@ -180,7 +716,8 @@ const AdminDashboard: React.FC = () => {
       } else {
          await axios.put(url, data);
       }
-      toast.success('Action successful');
+      const successMsg = method === 'delete' ? 'Item deleted successfully' : (method === 'post' ? 'New item created!' : 'Changes saved successfully!');
+      toast.success(successMsg);
       setShowModal(false);
       setEditingItem(null);
       fetchData();
@@ -718,451 +1255,7 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const OrderDetailsModal = () => {
-    if (!viewingOrder) return null;
-    const order = viewingOrder;
 
-    return (
-      <div className="admin-modal-overlay" onClick={() => setViewingOrder(null)}>
-        <div className="admin-modal-content order-details-modal animate-slide-up" onClick={e => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3>Order Details #{order?._id.slice(-6).toUpperCase()}</h3>
-            <button className="close-btn" onClick={() => setViewingOrder(null)}><X size={20} /></button>
-          </div>
-          
-          <div className="modal-body">
-             <div className="order-meta-info" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div className="meta-item">
-                   <label>Customer</label>
-                   <span>{order.userId?.fullName || 'Guest'}</span>
-                </div>
-                <div className="meta-item">
-                   <label>Contact</label>
-                   <span>{order.userId?.phoneNumber || 'N/A'}</span>
-                </div>
-                <div className="meta-item">
-                   <label>Payment</label>
-                   <span className="uppercase">{order.paymentMethod || 'COD'}</span>
-                </div>
-                <div className="meta-item">
-                   <label>Order Time</label>
-                   <span>{new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="meta-item" style={{ gridColumn: 'span 2' }}>
-                   <label>Delivery Address</label>
-                   <span style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{order.shippingAddress || order.deliveryAddress?.name || 'No address provided'}</span>
-                </div>
-             </div>
-
-             <div className="order-items-list">
-                <h4>Items ({order.items?.length || 0})</h4>
-                {order.items?.map((item: any, idx: number) => (
-                   <div key={idx} className="order-item-row">
-                      <div className="item-img">
-                         <img src={item.productId?.images?.[0] || 'https://via.placeholder.com/50'} alt="" />
-                      </div>
-                      <div className="item-info">
-                         <span className="item-name">{item.productId?.name || 'Unknown Product'}</span>
-                         <span className="item-sub">Qty: {item.quantity} × ₹{item.unitPrice}</span>
-                      </div>
-                      <div className="item-total">
-                         ₹{item.quantity * item.unitPrice}
-                      </div>
-                   </div>
-                ))}
-             </div>
-
-             <div className="order-summary-box">
-                <div className="summary-row">
-                   <span>Subtotal</span>
-                   <span>₹{order.totalAmount}</span>
-                </div>
-                <div className="summary-row total">
-                   <span>Grand Total</span>
-                   <span>₹{order.totalAmount}</span>
-                </div>
-             </div>
-          </div>
-
-          <div className="modal-footer">
-            <button className="modal-btn save" onClick={() => setViewingOrder(null)}>Close</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ManagementModal = () => {
-    if (!showModal) return null;
-    const isEditing = !!editingItem;
-    const type = activeActionTab;
-
-    return (
-      <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
-        <div className="admin-modal-content animate-slide-up" onClick={e => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3>{isEditing ? 'Edit' : 'Add New'} {type === 'users' ? 'User' : (type === 'categories' ? 'Category' : 'Product')}</h3>
-            <button className="close-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
-          </div>
-          
-          <div className="modal-body">
-            {type === 'products' && (
-              <div className="modal-scroll-area">
-                <div className="admin-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-                  <button type="button" className={productTab === 'general' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('general')} style={productTab === 'general' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>General</button>
-                  <button type="button" className={productTab === 'variants' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('variants')} style={productTab === 'variants' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Variants</button>
-                  <button type="button" className={productTab === 'images' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setProductTab('images')} style={productTab === 'images' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Images</button>
-                </div>
-
-                {productTab === 'general' && (
-                  <>
-                    <div className="input-group-admin">
-                      <label>Product Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Century Ply Sainik 710"
-                        value={formData.name || ''} 
-                        onChange={e => setFormData({...formData, name: e.target.value})} 
-                      />
-                    </div>
-                    <div className="input-row-admin">
-                       <div className="input-group-admin">
-                          <label>SKU (Product Code)</label>
-                          <input 
-                            type="text" 
-                            placeholder="FLY-CEN-710" 
-                            value={formData.sku || ''} 
-                            onChange={e => setFormData({...formData, sku: e.target.value})} 
-                          />
-                       </div>
-                       <div className="input-group-admin">
-                          <label>Brand</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Century" 
-                            value={formData.brand || ''} 
-                            onChange={e => setFormData({...formData, brand: e.target.value})} 
-                          />
-                       </div>
-                    </div>
-                    <div className="input-row-admin">
-                       <div className="input-group-admin">
-                          <label>Category</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Plywood" 
-                            value={formData.category || ''} 
-                            onChange={e => setFormData({...formData, category: e.target.value})} 
-                          />
-                       </div>
-                       <div className="input-group-admin">
-                          <label>Sub Category</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Marine Grade" 
-                            value={formData.subCategory || ''} 
-                            onChange={e => setFormData({...formData, subCategory: e.target.value})} 
-                          />
-                       </div>
-                    </div>
-                    <div className="input-row-admin">
-                       <div className="input-group-admin">
-                          <label>Price (₹)</label>
-                          <input 
-                            type="number" 
-                            value={formData.price || ''} 
-                            onChange={e => setFormData({...formData, price: Number(e.target.value)})} 
-                          />
-                       </div>
-                       <div className="input-group-admin">
-                          <label>MRP (₹)</label>
-                          <input 
-                            type="number" 
-                            value={formData.mrp || ''} 
-                            onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} 
-                          />
-                       </div>
-                    </div>
-                    <div className="input-row-admin">
-                       <div className="input-group-admin">
-                          <label>Weight (kg)</label>
-                          <input 
-                            type="number" 
-                            value={formData.weightPerUnit || 0} 
-                            onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} 
-                          />
-                       </div>
-                       <div className="input-group-admin">
-                          <label>Volume (m³)</label>
-                          <input 
-                            type="number" 
-                            value={formData.volumePerUnit || 0} 
-                            onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} 
-                          />
-                       </div>
-                    </div>
-                    <div className="input-group-admin">
-                      <label>Description</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Technical specifications, features etc"
-                        value={formData.description || ''} 
-                        onChange={e => setFormData({...formData, description: e.target.value})} 
-                      />
-                    </div>
-                    <div className="input-row-admin">
-                       <div className="input-group-admin checkbox">
-                          <input 
-                            type="checkbox" 
-                            id="prodActive"
-                            checked={formData.isActive !== false} 
-                            onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                          />
-                          <label htmlFor="prodActive">Is Active</label>
-                       </div>
-                       <div className="input-group-admin checkbox">
-                          <input 
-                            type="checkbox" 
-                            id="prodPopular"
-                            checked={!!formData.isPopular} 
-                            onChange={e => setFormData({...formData, isPopular: e.target.checked})} 
-                          />
-                          <label htmlFor="prodPopular">Mark as Popular</label>
-                       </div>
-                    </div>
-                  </>
-                )}
-
-                {productTab === 'variants' && (
-                  <div>
-                    <h4 style={{ marginBottom: '1rem' }}>Manage Variants</h4>
-                    {(formData.variants || []).map((v: any, idx: number) => (
-                      <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '1rem', background: '#f8fafc' }}>
-                        <div className="input-group-admin">
-                          <label>Variant Name (e.g. 10mm thickness, 8x4 size)</label>
-                          <input type="text" value={v.name || ''} onChange={(e) => {
-                            const newV = [...(formData.variants || [])];
-                            newV[idx].name = e.target.value;
-                            setFormData({...formData, variants: newV});
-                          }} />
-                        </div>
-                        <div className="input-row-admin">
-                          <div className="input-group-admin">
-                            <label>Price (₹)</label>
-                            <input type="number" value={v.price || 0} onChange={(e) => {
-                              const newV = [...(formData.variants || [])];
-                              newV[idx].price = Number(e.target.value);
-                              setFormData({...formData, variants: newV});
-                            }} />
-                          </div>
-                          <div className="input-group-admin">
-                            <label>SKU</label>
-                            <input type="text" value={v.sku || ''} onChange={(e) => {
-                              const newV = [...(formData.variants || [])];
-                              newV[idx].sku = e.target.value;
-                              setFormData({...formData, variants: newV});
-                            }} />
-                          </div>
-                        </div>
-                        <button type="button" className="list-icon-btn danger" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '4px', background: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }} onClick={() => {
-                          const newV = formData.variants.filter((_: any, i: number) => i !== idx);
-                          setFormData({...formData, variants: newV});
-                        }}>Remove Variant</button>
-                      </div>
-                    ))}
-                    <button type="button" className="add-action-btn secondary" style={{ width: '100%', padding: '10px', border: '1px dashed #cbd5e1', background: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
-                      const newV = { name: '', price: 0, sku: '', weight: 0, volume: 0 };
-                      setFormData({...formData, variants: [...(formData.variants || []), newV]});
-                    }}>+ Add Variant</button>
-                  </div>
-                )}
-
-                {productTab === 'images' && (
-                  <div>
-                    <h4 style={{ marginBottom: '1rem' }}>Product Images</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '1.5rem' }}>
-                      {(formData.images || []).map((imgUrl: string, idx: number) => (
-                        <div key={idx} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', aspectRatio: '1/1' }}>
-                          <img src={imgUrl.startsWith('/') ? `${API_BASE.replace('/api', '')}${imgUrl}` : imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" onClick={() => {
-                            const newImgs = formData.images.filter((_: string, i: number) => i !== idx);
-                            setFormData({...formData, images: newImgs});
-                          }} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '0' }}><X size={14} color="#ef4444" /></button>
-                        </div>
-                      ))}
-                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', cursor: 'pointer', aspectRatio: '1/1' }}>
-                        <Image size={24} color="#64748b" />
-                        <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', fontWeight: '800' }}>Add Image</span>
-                        <input type="file" hidden accept="image/*" onChange={handleProductImageUpload} />
-                      </label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {type === 'users' && (
-              <div className="modal-scroll-area">
-                {isEditing && (
-                  <div className="admin-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-                    <button type="button" className={userTab === 'profile' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setUserTab('profile')} style={userTab === 'profile' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Profile</button>
-                    <button type="button" className={userTab === 'addresses' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => setUserTab('addresses')} style={userTab === 'addresses' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Addresses</button>
-                    <button type="button" className={userTab === 'orders' ? 'active font-bold border-b-2 border-black' : 'text-gray-500'} onClick={() => { setUserTab('orders'); fetchUserOrders(editingItem._id); }} style={userTab === 'orders' ? { fontWeight: 'bold', borderBottom: '2px solid black' } : {}}>Orders</button>
-                  </div>
-                )}
-                
-                {userTab === 'profile' && (
-                  <>
-                    <div className="input-group-admin">
-                      <label>Full Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Rahul Arora"
-                        value={formData.fullName || ''} 
-                        onChange={e => setFormData({...formData, fullName: e.target.value})} 
-                      />
-                    </div>
-                    <div className="input-group-admin">
-                      <label>Phone Number</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. 9988776655" 
-                        value={formData.phoneNumber || ''} 
-                        onChange={e => setFormData({...formData, phoneNumber: e.target.value})} 
-                      />
-                    </div>
-                    <div className="input-group-admin">
-                      <label>Role</label>
-                      <select 
-                        value={formData.role || 'End User'} 
-                        onChange={e => setFormData({...formData, role: e.target.value})}
-                      >
-                        <option value="End User">End User</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Supplier">Supplier</option>
-                        <option value="Rider">Rider</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {userTab === 'addresses' && (
-                  <div>
-                    <h4 style={{ marginBottom: '1rem' }}>Manage Jobsites / Addresses</h4>
-                    {(formData.jobsites || []).map((site: any, idx: number) => (
-                      <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '1rem', background: '#f8fafc' }}>
-                        <div className="input-group-admin">
-                          <label>Site / Address Name</label>
-                          <input type="text" placeholder="e.g. Home, Site A" value={site.name || ''} onChange={(e) => {
-                            const newSites = [...(formData.jobsites || [])];
-                            newSites[idx].name = e.target.value;
-                            setFormData({...formData, jobsites: newSites});
-                          }} />
-                        </div>
-                        <div className="input-group-admin">
-                          <label>Full Address Text</label>
-                          <input type="text" placeholder="Complete address details" value={site.addressText || ''} onChange={(e) => {
-                            const newSites = [...(formData.jobsites || [])];
-                            newSites[idx].addressText = e.target.value;
-                            setFormData({...formData, jobsites: newSites});
-                          }} />
-                        </div>
-                        <button type="button" className="list-icon-btn danger" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '4px', background: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer' }} onClick={() => {
-                          const newSites = formData.jobsites.filter((_: any, i: number) => i !== idx);
-                          setFormData({...formData, jobsites: newSites});
-                        }}>Remove Site</button>
-                      </div>
-                    ))}
-                    <button type="button" className="add-action-btn secondary" style={{ width: '100%', padding: '10px', border: '1px dashed #cbd5e1', background: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
-                      const newSite = { name: '', addressText: '', location: { type: 'Point', coordinates: [77.5946, 12.9716] } };
-                      setFormData({...formData, jobsites: [...(formData.jobsites || []), newSite]});
-                    }}>+ Add Address</button>
-                  </div>
-                )}
-
-                {userTab === 'orders' && (
-                  <div>
-                    <h4 style={{ marginBottom: '1rem' }}>User Orders</h4>
-                    {userOrders.length === 0 ? <p style={{ color: '#64748b' }}>No orders found for this user.</p> : userOrders.map((o: any) => (
-                      <div key={o._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '0.5rem', background: 'white' }}>
-                        <div>
-                           <strong style={{ display: 'block' }}>Order #{o._id.slice(-6).toUpperCase()}</strong>
-                           <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{new Date(o.createdAt).toLocaleDateString()} | Items: {o.items?.length || 0}</span>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                           <div style={{ fontWeight: '900', color: '#0f172a' }}>₹{o.totalAmount}</div>
-                           <span className={`status-pill ${o.status}`} style={{ display: 'inline-block', marginTop: '4px' }}>{o.status}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {type === 'gst' && (
-              <>
-                <div className="input-group-admin">
-                  <label>Category</label>
-                  <input type="text" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} />
-                </div>
-                <div className="input-group-admin">
-                  <label>Sub Category</label>
-                  <input type="text" value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} />
-                </div>
-                <div className="input-row-admin">
-                  <div className="input-group-admin">
-                    <label>GST Rate (%)</label>
-                    <input type="number" value={formData.gst || 0} onChange={e => setFormData({...formData, gst: Number(e.target.value)})} />
-                  </div>
-                  <div className="input-group-admin">
-                    <label>HSN Code</label>
-                    <input type="text" value={formData.hsnCode || ''} onChange={e => setFormData({...formData, hsnCode: e.target.value})} />
-                  </div>
-                </div>
-              </>
-            )}
-            {type === 'categories' && (
-              <>
-                <div className="input-group-admin">
-                  <label>Category Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Sanitary Ware" 
-                    value={formData.name || ''} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                  />
-                </div>
-                <div className="input-group-admin checkbox">
-                  <input 
-                    type="checkbox" 
-                    id="catActive"
-                    checked={formData.isActive !== false} 
-                    onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                  />
-                  <label htmlFor="catActive">Is Active</label>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="modal-footer">
-            <button className="modal-btn cancel" onClick={() => setShowModal(false)}>Cancel</button>
-            <button 
-              className="modal-btn save" 
-              onClick={() => handleAction(
-                isEditing ? 'put' : 'post', 
-                `/admin/${type}${isEditing ? `/${editingItem._id}` : ''}`, 
-                formData
-              )}
-            >
-              {isEditing ? 'Save Changes' : 'Create Item'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderGstManagement = () => (
     <div className="admin-scroll-content animate-fade-in">
@@ -1244,6 +1337,24 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
+   const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.post(`${API_BASE}/admin/products/upload-image`, uploadData);
+      setFormData({ ...formData, imageUrl: data.imageUrl });
+      toast.success('Image uploaded');
+    } catch (err) {
+      toast.error('Upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center p-20" style={{ height: '70vh', fontFamily: 'monospace' }}>
       Loading Dashboard Data...
@@ -1277,8 +1388,29 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'actions' && renderActions()}
         </div>
       </div>
-      <ManagementModal />
-      <OrderDetailsModal />
+      <ManagementModal 
+        showModal={showModal}
+        setShowModal={setShowModal}
+        editingItem={editingItem}
+        activeActionTab={activeActionTab}
+        formData={formData}
+        setFormData={setFormData}
+        handleAction={handleAction}
+        userTab={userTab}
+        setUserTab={setUserTab}
+        productTab={productTab}
+        setProductTab={setProductTab}
+        userOrders={userOrders}
+        fetchUserOrders={fetchUserOrders}
+        handleProductImageUpload={handleProductImageUpload}
+        handleCategoryImageUpload={handleCategoryImageUpload}
+        API_BASE={API_BASE}
+      />
+      <OrderDetailsModal 
+        viewingOrder={viewingOrder}
+        setViewingOrder={setViewingOrder}
+        API_BASE={API_BASE}
+      />
     </div>
   );
 };

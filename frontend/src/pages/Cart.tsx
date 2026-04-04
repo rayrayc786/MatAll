@@ -13,6 +13,7 @@ import { useCart } from '../contexts/CartContext';
 import ProductCard from '../components/ProductCard';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getFullImageUrl } from '../utils/imageUrl';
 import './cart.css';
 
 const Cart: React.FC = () => {

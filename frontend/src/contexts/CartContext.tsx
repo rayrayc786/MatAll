@@ -5,6 +5,7 @@ interface Product {
   _id: string;
   name: string;
   sku: string;
+  images?: string[];
   category?: string;
   subCategory?: string;
   brand?: string;

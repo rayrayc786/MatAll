@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  ClipboardList,
   FileBarChart,
   LogOut,
   X,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star, Menu } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageUrl';
 import './sku.css';
@@ -40,6 +41,8 @@ const SKUManager: React.FC = () => {
     subVariants: [] as any[],
     isPopular: false,
     infoPara: '',
+    description: '',
+    bulkPricing: [] as any[],
     variants: [] as any[],
     images: [] as any[]
   });
@@ -201,8 +204,10 @@ const SKUManager: React.FC = () => {
       setShowModal(false);
       setEditingSku(null);
       fetchSKUs();
+      toast.success(editingSku ? 'Product updated successfully!' : 'New product created!');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to save product');
     }
   };
 
@@ -210,9 +215,10 @@ const SKUManager: React.FC = () => {
     try {
       await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}/toggle-popular`);
       fetchSKUs();
+      toast.success('Product status updated');
     } catch (err) {
       console.error(err);
-      alert('Failed to toggle popular status');
+      toast.error('Failed to update product status');
     }
   };
 
@@ -221,8 +227,10 @@ const SKUManager: React.FC = () => {
     try {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/${id}`);
       fetchSKUs();
+      toast.success('Product deleted successfully');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to delete product');
     }
   };
 
@@ -248,6 +256,8 @@ const SKUManager: React.FC = () => {
       subVariants: sku.subVariants || [],
       isPopular: sku.isPopular || false,
       infoPara: sku.infoPara || '',
+      description: sku.description || '',
+      bulkPricing: sku.bulkPricing || [],
       variants: sku.variants || [],
       images: sku.images || [sku.imageUrl].filter(Boolean)
     });
@@ -277,6 +287,8 @@ const SKUManager: React.FC = () => {
       subVariants: [],
       isPopular: false,
       infoPara: '',
+      description: '',
+      bulkPricing: [],
       variants: [],
       images: []
     });
@@ -539,19 +551,80 @@ const SKUManager: React.FC = () => {
                       </select>
                     </div>
                     <div className="form-group">
+                      <label>Weight (kg)</label>
+                      <input type="number" value={formData.weightPerUnit || 0} onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
+                      <label>Volume (m³)</label>
+                      <input type="number" value={formData.volumePerUnit || 0} onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
                       <label>CSI Code</label>
                       <input type="text" value={formData.csiMasterFormat || ''} onChange={e => setFormData({...formData, csiMasterFormat: e.target.value})} />
+                    </div>
+
+                    <div className="form-group">
+                      <label>MRP (₹)</label>
+                      <input type="number" value={formData.mrp || 0} onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
+                      <label>Sale Price (₹)</label>
+                      <input type="number" value={formData.salePrice || formData.price || 0} onChange={e => setFormData({...formData, salePrice: Number(e.target.value), price: Number(e.target.value)})} />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <label>Short Description (Technical)</label>
+                      <textarea 
+                        rows={2}
+                        placeholder="Technical specs, brief summary..."
+                        value={formData.description || ''} 
+                        onChange={e => setFormData({...formData, description: e.target.value})} 
+                        style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
+                      />
                     </div>
 
                     <div className="form-group sku-form-span-3">
                       <label>Information Paragraph (Dynamic)</label>
                       <textarea 
+                        rows={3}
                         placeholder="Enter product detailed information..." 
                         value={formData.infoPara || ''} 
                         onChange={e => setFormData({...formData, infoPara: e.target.value})}
-                        rows={3}
                         style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
                       />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <h4 style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Bulk Pricing Tiers</h4>
+                      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
+                        {(formData.bulkPricing || []).map((tier: any, i: number) => (
+                          <React.Fragment key={i}>
+                            <div className="form-group">
+                              <label>Min Qty</label>
+                              <input type="number" value={tier.minQty} onChange={e => {
+                                const newBulk = [...formData.bulkPricing];
+                                newBulk[i].minQty = Number(e.target.value);
+                                setFormData({...formData, bulkPricing: newBulk});
+                              }} />
+                            </div>
+                            <div className="form-group">
+                              <label>Discount (%)</label>
+                              <input type="number" value={tier.discount} onChange={e => {
+                                const newBulk = [...formData.bulkPricing];
+                                newBulk[i].discount = Number(e.target.value);
+                                setFormData({...formData, bulkPricing: newBulk});
+                              }} />
+                            </div>
+                            <button type="button" className="icon-btn delete" onClick={() => {
+                              const newBulk = formData.bulkPricing.filter((_: any, idx: number) => idx !== i);
+                              setFormData({...formData, bulkPricing: newBulk});
+                            }} style={{ marginBottom: '8px' }}><Trash2 size={16} /></button>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                      <button type="button" className="secondary-btn" onClick={() => {
+                        setFormData({...formData, bulkPricing: [...(formData.bulkPricing || []), { minQty: 0, discount: 0 }]});
+                      }} style={{ marginTop: '1rem' }}>+ Add Pricing Tier</button>
                     </div>
 
                     <div className="form-group sku-form-span-3">
