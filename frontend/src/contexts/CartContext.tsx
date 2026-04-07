@@ -31,6 +31,16 @@ interface Product {
     weight: number;
     volume: number;
     sku?: string;
+    pricing?: {
+      salePrice?: number;
+      gst?: number;
+      mrp?: number;
+    };
+    inventory?: {
+      unitWeight?: number;
+      stock?: number;
+    };
+    unitWeightGm?: number;
   }[];
   bulkPricing?: { minQty: number, discount: number }[];
 }

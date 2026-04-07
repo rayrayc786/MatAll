@@ -496,7 +496,7 @@ function ManagementModal({
   );
 }
 
-function OrderDetailsModal({ viewingOrder, setViewingOrder, API_BASE }: any) {
+function OrderDetailsModal({ viewingOrder, setViewingOrder }: any) {
   if (!viewingOrder) return null;
   const order = viewingOrder;
 
