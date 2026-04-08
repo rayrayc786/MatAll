@@ -1,19 +1,18 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-
-// Mock OTP service (in-memory storage for simplicity)
-const otpStore = new Map();
+const msg91Service = require('../services/msg91Service');
 
 exports.login = async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     
-    // In a real app, send actual SMS here.
-    const mockOTP = '1111';
-    otpStore.set(phoneNumber, { mockOTP });
+    // In dev mode, you might still want a bypass (optional)
+    if (process.env.NODE_ENV === 'development' && phoneNumber === '9999988888') {
+      return res.json({ message: 'Dev mode: Use 111111' });
+    }
 
-    console.log(`Sending Mock OTP ${mockOTP} to ${phoneNumber}`);
-    res.json({ message: 'OTP sent successfully (Hint: 1111)' });
+    await msg91Service.sendOTP(phoneNumber);
+    res.json({ message: 'OTP sent successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -22,9 +21,15 @@ exports.login = async (req, res) => {
 exports.verifyOTP = async (req, res) => {
   try {
     const { phoneNumber, otp } = req.body;
-    const storedData = otpStore.get(phoneNumber);
+    
+    let isValid = false;
+    if (process.env.NODE_ENV === 'development' && phoneNumber === '9999988888' && otp === '111111') {
+      isValid = true;
+    } else {
+      isValid = await msg91Service.verifyOTP(phoneNumber, otp);
+    }
 
-    if (!storedData || storedData.mockOTP !== otp) {
+    if (!isValid) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
@@ -50,8 +55,6 @@ exports.verifyOTP = async (req, res) => {
       process.env.JWT_SECRET || 'supersecretkey_matall',
       { expiresIn: '7d' }
     );
-
-    otpStore.delete(phoneNumber);
     res.json({ token, user });
   } catch (err) {
     res.status(500).json({ error: err.message });

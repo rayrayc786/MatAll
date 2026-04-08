@@ -17,18 +17,17 @@ const calculateOrderTotals = (items) => {
     const weight = (item.totalWeight || 0);
     const volume = (item.totalVolume || 0);
 
-    // GST Breakdown logic
-    // We assume the unitPrice is INCLUSIVE of GST
-    const igstRate = item.igst || 18; // Default 18 if not provided
-    const totalTaxRate = igstRate; 
+    // GST Calculation logic
+    // We now treat unitPrice as the BASE price (Excl GST)
+    const totalTaxRate = item.taxRate || item.igst || 18; // Use provided tax rate or default
     
-    // Reverse calculate base price: unitPrice = base + (base * rate/100) => base = unitPrice / (1 + rate/100)
-    const itemBasePrice = unitPrice / (1 + (totalTaxRate / 100));
-    const itemTaxAmount = unitPrice - itemBasePrice;
+    const itemBasePrice = unitPrice;
+    const itemTaxAmount = itemBasePrice * (totalTaxRate / 100);
+    const itemTotalPrice = itemBasePrice + itemTaxAmount;
     
     const rowBaseTotal = itemBasePrice * quantity;
     const rowTaxTotal = itemTaxAmount * quantity;
-    const rowTotal = unitPrice * quantity;
+    const rowTotal = itemTotalPrice * quantity;
 
     totalWeight += weight;
     totalVolume += volume;

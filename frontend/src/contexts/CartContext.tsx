@@ -5,6 +5,7 @@ interface Product {
   _id: string;
   name: string;
   sku: string;
+  images?: string[];
   category?: string;
   subCategory?: string;
   brand?: string;
@@ -30,6 +31,16 @@ interface Product {
     weight: number;
     volume: number;
     sku?: string;
+    pricing?: {
+      salePrice?: number;
+      gst?: number;
+      mrp?: number;
+    };
+    inventory?: {
+      unitWeight?: number;
+      stock?: number;
+    };
+    unitWeightGm?: number;
   }[];
   bulkPricing?: { minQty: number, discount: number }[];
 }
@@ -48,6 +59,7 @@ interface CartContextType {
   totalAmount: number;
   totalWeight: number;
   totalVolume: number;
+  totalGst: number;
   vehicleClass: string;
 }
 
@@ -89,23 +101,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => setCart([]);
 
-  const { totalAmount, totalWeight, totalVolume } = useMemo(() => {
+  const { totalAmount, totalWeight, totalVolume, totalGst } = useMemo(() => {
     let amount = 0;
     let weight = 0;
     let volume = 0;
+    let gstSum = 0;
 
     cart.forEach(item => {
       let itemPrice = item.product.price;
-      let itemWeight = item.product.weightPerUnit;
-      let itemVolume = item.product.volumePerUnit;
+      let itemWeight = (item.product.weightPerUnit || 0);
+      let itemVolume = (item.product.volumePerUnit || 0);
+      let itemGstRate = (item.product as any).gst || 0;
 
       // Use variant values if selected
       if (item.selectedVariant && item.product.variants) {
-        const variant = item.product.variants.find(v => v.name === item.selectedVariant);
+        const variant: any = item.product.variants.find(v => v.name === item.selectedVariant);
         if (variant) {
-          itemPrice = variant.price;
-          itemWeight = variant.weight;
-          itemVolume = variant.volume;
+          itemPrice = variant.pricing?.salePrice || variant.price || item.product.price;
+          itemWeight = variant.inventory?.unitWeight || (variant.unitWeightGm ? variant.unitWeightGm / 1000 : 0) || (item.product.weightPerUnit || 0);
+          itemGstRate = variant.pricing?.gst || (item.product as any).gst || 0;
         }
       }
       
@@ -120,12 +134,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      amount += itemPrice * item.quantity;
+      // Calculate totals (itemPrice is already Inclusive of GST)
+      const totalItemAmount = itemPrice * item.quantity;
+      const gstAmount = totalItemAmount - (totalItemAmount / (1 + itemGstRate / 100));
+
+      amount += totalItemAmount;
+      gstSum += gstAmount;
       weight += itemWeight * item.quantity;
       volume += itemVolume * item.quantity;
     });
 
-    return { totalAmount: amount, totalWeight: weight, totalVolume: volume };
+    return { totalAmount: amount, totalWeight: weight, totalVolume: volume, totalGst: gstSum };
   }, [cart]);
 
   const vehicleClass = useMemo(() => {
@@ -137,7 +156,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [totalWeight]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalAmount, totalWeight, totalVolume, vehicleClass }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalAmount, totalWeight, totalVolume, totalGst, vehicleClass }}>
       {children}
     </CartContext.Provider>
   );

@@ -27,76 +27,88 @@ const resolveProductImages = (product) => {
     });
   };
 
-  let resolved = [];
-  if (product.imageNames && product.imageNames.length > 0) {
-    resolved = product.imageNames.map(name => {
-      const found = findFile(name);
-      return found ? `/images/${found}` : null;
-    }).filter(Boolean);
-  }
-  
-  if (resolved.length === 0 && product.sku) {
-    const foundBySku = findFile(product.sku);
-    if (foundBySku) resolved.push(`/images/${foundBySku}`);
-  }
-
-  if (resolved.length > 0) {
-    product.images = resolved;
-    product.imageUrl = resolved[0];
-  } else {
-    product.images = product.images || [];
-    if (!product.imageUrl || product.imageUrl.includes('unsplash')) {
-       product.imageUrl = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+  const processImageField = (item) => {
+    let resolved = [];
+    if (item.imageNames && item.imageNames.length > 0) {
+      resolved = item.imageNames.map(name => {
+        const found = findFile(name);
+        return found ? `/images/${found}` : null;
+      }).filter(Boolean);
     }
+    
+    // Fallback to SKU for image matching
+    if (resolved.length === 0 && (item.sku || item.productCode)) {
+      const foundBySku = findFile(item.sku || item.productCode);
+      if (foundBySku) resolved.push(`/images/${foundBySku}`);
+    }
+
+    if (resolved.length > 0) {
+      item.images = resolved;
+      item.imageUrl = resolved[0];
+    } else {
+      item.images = item.images || [];
+      if (!item.imageUrl || item.imageUrl.includes('unsplash')) {
+         item.imageUrl = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+      }
+    }
+    return item;
+  };
+
+  product = processImageField(product);
+  if (product.variants && Array.isArray(product.variants)) {
+    product.variants = product.variants.map(v => processImageField(v));
   }
 
   return product;
 };
 
-// Helper to group products by Name + Brand to create variants dynamically
+// Helper to group products by Name + Brand (Legacy Support for flat products)
 const groupProductsByVariants = (products) => {
   const groupedMap = new Map();
   
   products.forEach(p => {
-    // Grouping Key: Brand + Base Name (strip everything after '|')
+    // If it's already a grouped product (has variants with attributes or many variants), skip dynamic grouping
+    if (p.variants && p.variants.length > 1) {
+      const key = `grouped-${p._id}`;
+      groupedMap.set(key, p);
+      return;
+    }
+
     const baseName = (p.name || '').toString().split('|')[0].trim().toLowerCase();
     const cleanBrand = (p.brand || '').toString().toLowerCase().trim();
     const key = `${cleanBrand}-${baseName}`;
     
     if (!groupedMap.has(key)) {
       const groupHeader = { ...p };
-      // Keep existing variants if any, otherwise initialize empty array
       groupHeader.variants = p.variants && p.variants.length > 0 ? [...p.variants] : [];
       groupedMap.set(key, groupHeader);
     }
     
     const group = groupedMap.get(key);
-    
-    // Variant Label: Use the specific part after '|', or the Size field, or the first SubVariant
     let variantName = '';
-
     const nameParts = (p.name || '').toString().split('|');
 
     if (nameParts.length > 1) {
       variantName = nameParts[1].trim();
     } else if (p.subVariants?.length > 0) {
-      variantName = p.subVariants.map(sv => sv.value).join(' / ');
+      variantName = p.subVariants.map((sv) => sv.value).join(' / ');
     } else if (p.size && p.size !== 'Material' && p.size !== 'Standard') {
       variantName = p.size;
     } else {
-      variantName = p.sku;
+      variantName = p.sku || p.productCode;
     }
     
-    if (!variantName) variantName = p.sku || 'Standard';
+    if (!variantName) variantName = p.sku || p.productCode || 'Standard';
 
-    // If variants were dynamically grouped (not pre-defined in DB), add current SKU if not present
-    const exists = group.variants.some(v => v.sku === p.sku || v.name === variantName);
+    const exists = group.variants && group.variants.some((v) => v.productCode === p.productCode || v.sku === p.sku || v.name === variantName);
     if (!exists) {
+      if (!group.variants) group.variants = [];
       group.variants.push({
         name: variantName,
         price: p.salePrice || p.price,
         mrp: p.mrp || 0,
-        sku: p.sku,
+        sku: p.sku || p.productCode,
+        productCode: p.productCode || p.sku,
         _id: p._id,
         image: p.imageUrl,
         unitLabel: p.unitLabel,
@@ -104,7 +116,6 @@ const groupProductsByVariants = (products) => {
       });
     }
 
-    // Image Preference: If group leader has a placeholder but this product has a real image, promote it
     const groupHasPlaceholder = !group.imageUrl || group.imageUrl.includes('unsplash');
     const pHasRealImg = p.imageUrl && !p.imageUrl.includes('unsplash');
     
@@ -148,18 +159,11 @@ exports.getAllProducts = async (req, res) => {
 
     if (category) {
       const categoryValues = Array.isArray(category) ? category : [category];
-      
-      // Build a set of variations for each category name
       const queryValues = [];
       categoryValues.forEach(val => {
-        // Direct match
         queryValues.push(val);
-        
-        // Casing match
         queryValues.push(val.toLowerCase());
         queryValues.push(val.toUpperCase());
-        
-        // Mapped ID match
         const id = getCategoryIdFromName(val);
         if (id) queryValues.push(id);
       });
@@ -186,14 +190,15 @@ exports.getAllProducts = async (req, res) => {
     if (search) {
       const regex = new RegExp(search, 'i');
       const orConditions = [
-        { name: regex },
+        { productName: regex },
         { brand: regex },
+        { subCategory: regex },
+        { category: regex },
         { 'variants.name': regex },
-        { 'variants.sku': regex },
-        { 'variants.subVariants.value': regex }
+        { 'variants.productCode': regex },
+        { 'variants.sku': regex }
       ];
 
-      // If search matches a category name, add the numeric ID too
       Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
         if (name.toLowerCase().includes(search.toLowerCase())) {
           orConditions.push({ category: id });
@@ -204,15 +209,13 @@ exports.getAllProducts = async (req, res) => {
     }
 
     let products = await Product.find(query).lean();
-    
-    // Hydrate
-    const hydrated = products.map(hydrateProduct);
+    const hydrated = products.map(p => {
+      const h = hydrateProduct(p);
+      if (p.subCategory && !h.subCategory) h.subCategory = p.subCategory;
+      return h;
+    });
 
-    // Group dynamically
-    const grouped = groupProductsByVariants(hydrated);
-
-    // Sort: Products with images first
-    grouped.sort((a, b) => {
+    hydrated.sort((a, b) => {
       const aHasImg = a.imageUrl && !a.imageUrl.includes('unsplash');
       const bHasImg = b.imageUrl && !b.imageUrl.includes('unsplash');
       if (aHasImg && !bHasImg) return -1;
@@ -220,7 +223,7 @@ exports.getAllProducts = async (req, res) => {
       return 0;
     });
 
-    res.json(grouped);
+    res.json(hydrated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -231,21 +234,8 @@ exports.getProductById = async (req, res) => {
     const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ message: 'Product not found' });
     
-    // Check if this product should be shown grouped with others
-    const baseProduct = hydrateProduct(product);
-    const relatedProducts = await Product.find({
-      brand: product.brand,
-      name: product.name.split('|')[0].trim(),
-      isActive: true
-    }).lean();
-
-    if (relatedProducts.length > 1) {
-       const grouped = groupProductsByVariants(relatedProducts.map(hydrateProduct));
-       const match = grouped.find(p => p.variants && p.variants.some(v => String(v._id) === String(product._id)));
-       return res.json(match || baseProduct);
-    }
-
-    res.json(baseProduct);
+    const hydrated = hydrateProduct(product);
+    res.json(hydrated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -259,18 +249,19 @@ exports.autocomplete = async (req, res) => {
     const regex = new RegExp(q, 'i');
     let products = await Product.find({
       $or: [
-        { name: regex },
+        { productName: regex },
         { brand: regex },
+        { subCategory: regex },
+        { category: regex },
         { 'variants.name': regex },
-        { 'variants.sku': regex },
-        { 'variants.subVariants.value': regex }
+        { 'variants.productCode': regex },
+        { 'variants.sku': regex }
       ],
       isActive: true
-    }).limit(100).lean();
+    }).limit(10).lean();
 
     const hydrated = products.map(hydrateProduct);
-    const grouped = groupProductsByVariants(hydrated);
-    res.json(grouped.slice(0, 10));
+    res.json(hydrated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -329,7 +320,6 @@ exports.getCategories = async (req, res) => {
       query.isFeatured = true;
     }
     
-    // We need the Category model
     const Category = require('../models/Category');
     const categories = await Category.find(query).sort({ name: 1 });
     res.json(categories);

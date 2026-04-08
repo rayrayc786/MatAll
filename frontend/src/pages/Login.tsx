@@ -33,7 +33,7 @@ const BANNER_ICONS = [
 
 const Login: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [step, setStep] = useState(1); // 1: Login/Sign up, 2: OTP
   const [timer, setTimer] = useState(30);
   // const [timer, setTimer] = useState(30);
@@ -43,7 +43,14 @@ const Login: React.FC = () => {
   const location = useLocation();
   // const autoRedirectTimer = useRef<any>(null);
   const resendTimer = useRef<any>(null);
-  const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const otpRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null)
+  ];
 
   // Fetch product images for banner
   useEffect(() => {
@@ -129,11 +136,11 @@ const Login: React.FC = () => {
     newOtp[index] = newVal;
     setOtp(newOtp);
 
-    if (newVal && index < 3) {
+    if (newVal && index < 5) {
       otpRefs[index + 1].current?.focus();
     }
-
-    if (newOtp.every(val => val !== '') && index === 3) {
+ 
+    if (newOtp.every(val => val !== '') && index === 5) {
       verifyOTP(newOtp.join(''));
     }
   };
@@ -230,7 +237,7 @@ const Login: React.FC = () => {
             <>
               <h2 className="login-title">OTP</h2>
               <p className="otp-subtitle">
-                Please input the 4 digit code has been sent to your mobile <strong>XXXXXX{phoneNumber.slice(-4)}</strong>
+                Please input the 6 digit code has been sent to your mobile <strong>XXXXXX{phoneNumber.slice(-4)}</strong>
               </p>
               <div className="otp-container">
                 {otp.map((val, idx) => (

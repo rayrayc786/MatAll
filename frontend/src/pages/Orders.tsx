@@ -8,6 +8,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageUrl';
+import { customerSocket } from '../socket';
 import './orders.css';
 
 const Orders: React.FC = () => {
@@ -30,6 +31,16 @@ const Orders: React.FC = () => {
       }
     };
     fetchOrders();
+
+    const handleStatusUpdate = (data: any) => {
+      setOrders(prev => prev.map(o => o._id === data.orderId ? { ...o, status: data.status } : o));
+    };
+
+    customerSocket.on('order-status-update', handleStatusUpdate);
+
+    return () => {
+      customerSocket.off('order-status-update', handleStatusUpdate);
+    };
   }, []);
 
   return (
@@ -65,18 +76,32 @@ const Orders: React.FC = () => {
                       <p className="order-sub-meta">
                         ₹{order.totalAmount}, {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}, {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
+                      <div className={`order-status-tag ${order.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {order.status || 'Processing'}
+                      </div>
                    </div>
                    <ChevronRight size={20} color="#94a3b8" />
                 </div>
 
-                <div className="order-thumbs-row">
-                   {order.items.slice(0, 4).map((item: any, i: number) => (
-                     <div key={i} className="mini-thumb">
-                        <img src={getFullImageUrl(item.productId?.imageUrl || item.product?.imageUrl)} alt="" />
-                     </div>
-                   ))}
-                   {order.items.length > 4 && <span className="thumbs-count-more">+{order.items.length - 4}</span>}
-                </div>
+                 <div className="order-thumbs-row">
+                    {order.items.slice(0, 4).map((item: any, i: number) => {
+                      const prod = item.productId || item.product;
+                      const imgSrc = getFullImageUrl(prod?.imageUrl || (prod?.images && prod?.images[0]));
+                      
+                      return (
+                        <div key={i} className="mini-thumb">
+                           <img 
+                             src={imgSrc} 
+                             alt="" 
+                             onError={(e) => {
+                               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                             }}
+                           />
+                        </div>
+                      );
+                    })}
+                    {order.items.length > 4 && <span className="thumbs-count-more">+{order.items.length - 4}</span>}
+                 </div>
 
                 <div className="tile-actions">
                    <button className="tile-btn-action">

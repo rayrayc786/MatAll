@@ -37,6 +37,8 @@ import PickingQueue from './pages/admin/PickingQueue';
 import RiderManager from './pages/admin/RiderManager';
 import InvoicingReports from './pages/admin/InvoicingReports';
 import OfferManager from './pages/admin/OfferManager';
+import LocationManager from './pages/admin/LocationManager';
+
 
 // Rider Pages
 import RiderDashboard from './pages/rider/RiderDashboard';
@@ -186,7 +188,9 @@ const AppContent = () => {
           <Route path="fleet" element={<RiderManager />} />
           <Route path="invoices" element={<InvoicingReports />} />
           <Route path="offers" element={<OfferManager />} />
+          <Route path="locations" element={<LocationManager />} />
         </Route>
+
 
         {/* Rider Routes */}
         <Route path="/rider" element={<RiderDashboard />} />

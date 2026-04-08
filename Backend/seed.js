@@ -3,7 +3,9 @@ const Product = require('./models/Product');
 const User = require('./models/User');
 const Supplier = require('./models/Supplier');
 const DarkStore = require('./models/DarkStore');
+const ServiceableArea = require('./models/ServiceableArea');
 require('dotenv').config();
+
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/matall';
 
@@ -304,6 +306,26 @@ const seedProducts = [
   }
 ];
 
+const seedServiceableAreas = [
+  { pincode: '122001', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122002', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122003', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122004', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122005', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122006', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122007', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122008', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122009', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122010', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122011', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122012', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122015', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122016', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122017', city: 'Gurugram', state: 'Haryana', isActive: true },
+  { pincode: '122018', city: 'Gurugram', state: 'Haryana', isActive: true }
+];
+
+
 async function seed() {
   try {
     await mongoose.connect(MONGO_URI);
@@ -313,12 +335,16 @@ async function seed() {
     await User.deleteMany({});
     await Supplier.deleteMany({});
     await DarkStore.deleteMany({});
+    await ServiceableArea.deleteMany({});
     console.log('Cleared existing data...');
+
     
     await DarkStore.create(seedDarkStore);
     await Supplier.create(seedSupplier);
-    await Product.insertMany(seedProducts);
+    await Product.insertMany(seedProducts.map(p => ({ ...p, productName: p.name })));
     await User.insertMany(seedUsers);
+    await ServiceableArea.insertMany(seedServiceableAreas);
+
     
     console.log(`Seeding complete! Added ${seedProducts.length} products to all construction categories.`);
     process.exit(0);

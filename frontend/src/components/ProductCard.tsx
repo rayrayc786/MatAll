@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Minus, Heart, Star, X, Clock } from 'lucide-react';
+import { Plus, Minus, Heart, Star, X, Clock, ChevronDown } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import toast from 'react-hot-toast';
 import { getFullImageUrl } from '../utils/imageUrl';
@@ -56,8 +56,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     (item) => item.product._id === product._id && item.selectedVariant === currentVariantName
   );
 
-  const currentPrice = Number(selectedVariant ? selectedVariant.price : (product.salePrice || product.price));
-  const currentMrp = Number(selectedVariant ? selectedVariant.mrp : (product.mrp || 0));
+  const currentPrice = Number(selectedVariant?.pricing?.salePrice || selectedVariant?.price || product.salePrice || product.price || 0);
+  const gstRate = Number(selectedVariant?.pricing?.gst || (product.variants?.[0]?.pricing?.gst) || 0);
+  const basePrice = Math.round(currentPrice / (1 + gstRate / 100));
+  const gstAmount = currentPrice - basePrice;
+  const currentMrp = Number(selectedVariant?.pricing?.mrp || selectedVariant?.mrp || product.mrp || 0);
   
   const discount = (currentMrp > currentPrice && currentMrp > 0)
     ? Math.round(((currentMrp - currentPrice) / currentMrp) * 100) 
@@ -100,12 +103,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // Clean product name to avoid duplicate brand
   const displayName = useMemo(() => {
     const brand = (product.brand || '').toLowerCase();
-    const name = (product.name || '');
+    const name = (product.productName || product.name || '');
     if (name.toLowerCase().startsWith(brand)) {
       return name.slice(brand.length).trim();
     }
     return name;
-  }, [product.brand, product.name]);
+  }, [product.brand, product.productName, product.name]);
 
   return (
     <div className="blinkit-list-card" onClick={handleCardClick}>
@@ -119,7 +122,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </button>
         
         <img 
-          src={getFullImageUrl(selectedVariant?.image || product.imageUrl)} 
+          src={getFullImageUrl((selectedVariant?.images && selectedVariant.images[0]) || selectedVariant?.image || product.imageUrl)} 
           alt={product.name} 
           className="list-product-img"
           onError={(e) => {
@@ -135,8 +138,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="list-card-details">
         {/* 2. Unit & Action Row */}
         <div className="list-action-row">
-          <div className="list-unit-info">
-            {selectedVariant?.name || product.unitLabel || 'Standard'}
+          <div 
+            className={`list-unit-info ${product.variants?.length > 1 ? 'is-clickable' : ''}`}
+            onClick={(e) => {
+              if (product.variants?.length > 1) {
+                e.stopPropagation();
+                setShowVariantModal(true);
+              }
+            }}
+          >
+            {selectedVariant?.attributes && Object.keys(selectedVariant.attributes).length > 0 
+              ? Object.values(selectedVariant.attributes).join(', ') 
+              : selectedVariant?.name || product.unitLabel || 'Standard'}
+            {product.variants?.length > 1 && <ChevronDown size={14} className="unit-arrow" />}
           </div>
           
           <div className="list-add-container">
@@ -161,19 +175,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 >
                   ADD
                 </button>
-                {product.variants && product.variants.length > 1 && (
-                  <span className="options-text">{product.variants.length} options</span>
-                )}
               </div>
             )}
           </div>
         </div>
+
+        {product.variants && product.variants.length > 1 && (
+          <div className="options-indicator-row" onClick={(e) => { e.stopPropagation(); setShowVariantModal(true); }}>
+             <span className="options-text">{product.variants.length} options available</span>
+          </div>
+        )}
 
         {/* 3. Pricing Section */}
         <div className="list-pricing-section">
            <div className="list-price-row">
               <span className="list-price">₹{currentPrice}</span>
               <span className="list-mrp">{currentMrp > currentPrice ? `₹${currentMrp}` : ''}</span>
+           </div>
+           <div className="list-gst-breakdown" style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', fontWeight: '500' }}>
+              (₹{basePrice} + GST ₹{gstAmount})
            </div>
            {discount > 0 && (
              <div className="list-discount-badge-blinkit">
@@ -218,24 +238,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 const vCartItem = cart.find(
                   (item) => item.product._id === product._id && item.selectedVariant === v.name
                 );
-                const vDisc = v.mrp > v.price ? Math.round(((v.mrp - v.price)/v.mrp)*100) : 0;
+                const vsPrice = v.pricing?.salePrice || v.price;
+                const vGstRate = v.pricing?.gst || (product.variants?.[0]?.pricing?.gst) || 0;
+                const vBase = Math.round(vsPrice / (1 + vGstRate / 100));
+                const vGst = vsPrice - vBase;
+                const vmrp = v.pricing?.mrp || v.mrp;
+                const vDisc = vmrp > vsPrice ? Math.round(((vmrp - vsPrice)/vmrp)*100) : 0;
                 
+                const vImg = (v.images && v.images.length > 0) ? v.images[0] : (v.image || product.imageUrl);
+
                 return (
-                  <div key={idx} className={`variant-list-item ${isSelected ? 'selected' : ''}`}>
+                  <div 
+                    key={idx} 
+                    className={`variant-list-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedVariant(v);
+                    }}
+                  >
                     <div className="v-item-left">
                        {vDisc > 0 && <div className="v-discount-badge">{vDisc}% OFF</div>}
-                       <img src={getFullImageUrl(v.image || product.imageUrl)} alt={v.name} />
+                       <img src={getFullImageUrl(vImg)} alt={v.name} />
                     </div>
                     <div className="v-item-mid">
                       <span className="v-name">{v.name}</span>
                       <div className="v-price-row">
-                        <span className="v-price">₹{v.price}</span>
-                        <span className="v-mrp">₹{v.mrp}</span>
+                        <span className="v-price">₹{vsPrice}</span>
+                        <span className="v-mrp">₹{vmrp}</span>
+                      </div>
+                      <div className="v-gst-breakdown" style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                        (₹{vBase} + GST ₹{vGst})
                       </div>
                     </div>
                     <div className="v-item-right">
                       {vCartItem ? (
-                        <div className="list-qty-control scale-sm">
+                        <div className="list-qty-control scale-sm" onClick={e => e.stopPropagation()}>
                           <button onClick={() => addToCart(product, -1, v.name)}><Minus size={10} /></button>
                           <span className="list-qty-val">{vCartItem.quantity}</span>
                           <button onClick={() => addToCart(product, 1, v.name)}><Plus size={10} /></button>
@@ -243,7 +279,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                       ) : (
                         <button 
                           className="list-add-btn"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedVariant(v);
                             addToCart(product, 1, v.name);
                           }}

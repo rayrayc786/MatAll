@@ -162,10 +162,43 @@
 }
 
 .sku-variant-badge {
-  margin-right: 8px;
   background: #f1f5f9;
-  padding: 2px 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+}
+
+.sku-grouped-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.group-count {
+  width: fit-content;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.sku-variant-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preview-tag {
+  font-size: 0.65rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
   border-radius: 4px;
+  color: #64748b;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sku-brand-name {

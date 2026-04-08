@@ -109,8 +109,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
                 <CheckCircle2 size={20} className="icon" />
                 <input 
                   type="text" 
-                  placeholder="1111" 
-                  maxLength={4}
+                  placeholder="123456" 
+                  maxLength={6}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   required

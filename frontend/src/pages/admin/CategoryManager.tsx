@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit3, Trash2, X, Tag, ChevronDown, ChevronRight, Layers, Image } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Plus, Search, Edit3, Trash2, X, Tag, ChevronDown, ChevronRight, Layers, Image, Menu } from 'lucide-react';
 
 const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -40,6 +41,7 @@ const CategoryManager: React.FC = () => {
       setLoading(false);
     } catch (err) {
       console.error(err);
+      toast.error('Failed to fetch data');
       setLoading(false);
     }
   };
@@ -57,8 +59,9 @@ const CategoryManager: React.FC = () => {
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
       setCatFormData({ ...catFormData, imageUrl: data.imageUrl });
+      toast.success('Image uploaded successfully');
     } catch (err) {
-      alert('Upload failed');
+      toast.error('Upload failed');
     }
   };
 
@@ -73,9 +76,10 @@ const CategoryManager: React.FC = () => {
       setShowModal(false);
       setEditingCategory(null);
       fetchData();
+      toast.success(editingCategory ? 'Category updated!' : 'Category created!');
     } catch (err) {
       console.error(err);
-      alert('Failed to save category');
+      toast.error('Failed to save category');
     }
   };
 
@@ -90,29 +94,34 @@ const CategoryManager: React.FC = () => {
       setShowSubModal(false);
       setEditingSub(null);
       fetchData();
+      toast.success(editingSub ? 'Sub-category updated!' : 'Sub-category created!');
     } catch (err) {
       console.error(err);
-      alert('Failed to save sub-category');
+      toast.error('Failed to save sub-category');
     }
   };
 
   const handleCatDelete = async (id: string) => {
-    if (!window.confirm('Are you sure? This will affect product routing and linked sub-categories!')) return;
+    if (!confirm('Are you sure? This will affect product routing and linked sub-categories!')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories/${id}`);
       fetchData();
+      toast.success('Category deleted');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to delete category');
     }
   };
 
   const handleSubDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this sub-category?')) return;
+    if (!confirm('Are you sure you want to delete this sub-category?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories/${id}`);
       fetchData();
+      toast.success('Sub-category deleted');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to delete sub-category');
     }
   };
 
@@ -227,12 +236,21 @@ const CategoryManager: React.FC = () => {
     ));
   };
 
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+  };
+
   return (
     <main className="admin-content">
       <header className="admin-header space-between" style={{ marginBottom: '2.5rem' }}>
-        <div className="title-group">
-          <h1>Category & Hierarchy Management</h1>
-          <p>Define master categories and nested sub-categories for the dynamic marketplace</p>
+        <div className="title-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button className="mobile-menu-trigger" onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <div className="header-text">
+            <h1>Category & Hierarchy Management</h1>
+            <p>Define master categories and nested sub-categories for the dynamic marketplace</p>
+          </div>
         </div>
         <button className="add-sku-btn" onClick={resetCatForm}>
           <Plus size={18} /> New Master Category

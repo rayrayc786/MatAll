@@ -84,6 +84,24 @@
   font-weight: 500;
   color: #666;
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.list-unit-info.is-clickable {
+  cursor: pointer;
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.list-unit-info.is-clickable:hover {
+  opacity: 0.8;
+}
+
+.unit-arrow {
+  color: #16a34a;
 }
 
 .add-btn-wrapper {
@@ -93,11 +111,26 @@
   gap: 2px;
 }
 
+.options-indicator-row {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .options-text {
-  font-size: 0.55rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 800;
   color: #16a34a;
-  text-transform: lowercase;
+  text-transform: capitalize;
+  background: #f0fdf4;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.options-indicator-row:hover .options-text {
+  background: #dcfce7;
 }
 
 .list-add-btn {

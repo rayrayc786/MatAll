@@ -66,6 +66,7 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     setIsMenuOpen(false);
     setShowSuggestions(false);
+    setSearchTerm('');
   }, [location.pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -139,9 +140,9 @@ const Navbar: React.FC = () => {
             >
               <div className="s-info">
                  <span className="s-brand">{s.brand}</span>
-                 <span className="s-name">{s.name}</span>
+                 <span className="s-name">{s.productName || s.name}</span>
               </div>
-              <span className="s-price">₹{s.price}</span>
+              <span className="s-price">₹{Number(s.pricing?.salePrice || s.price || 0)}</span>
             </div>
           ))}
         </div>

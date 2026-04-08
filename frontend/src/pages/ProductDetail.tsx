@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -29,7 +29,9 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [showSpecs, setShowSpecs] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selections, setSelections] = useState<Record<string, string>>({});
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,17 @@ const ProductDetail: React.FC = () => {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`);
         setProduct(data);
         if (data.variants && data.variants.length > 0) {
-          setSelectedVariant(data.variants[0]);
+          const firstVariant = data.variants[0];
+          setSelectedVariant(firstVariant);
+          
+          // Initialize selections from the first variant (now an object/Map)
+          const initialSelections: Record<string, string> = {};
+          if (firstVariant.attributes instanceof Object) {
+            Object.entries(firstVariant.attributes).forEach(([name, value]) => {
+              initialSelections[name] = value as string;
+            });
+          }
+          setSelections(initialSelections);
         }
         
         // Fetch similar products in same category
@@ -55,6 +67,37 @@ const ProductDetail: React.FC = () => {
     fetchProduct();
   }, [id]);
 
+  // Find variant that matches current selections
+  useEffect(() => {
+    if (!product?.variants) return;
+
+    const matchingVariant = product.variants.find((v: any) => {
+      // Check if variant has all current selection values (attributes is now an object/Map)
+      return Object.entries(selections).every(([name, value]) => {
+        return v.attributes && v.attributes[name] === value;
+      });
+    });
+
+    if (matchingVariant) {
+      setSelectedVariant(matchingVariant);
+    }
+  }, [selections, product?.variants]);
+
+  // Helper to get all available values for each attribute name
+  const attributeGroups = useMemo(() => {
+    if (!product?.variants) return {};
+    const groups: Record<string, Set<string>> = {};
+    product.variants.forEach((v: any) => {
+      if (v.attributes) {
+        Object.entries(v.attributes).forEach(([name, value]) => {
+          if (!groups[name]) groups[name] = new Set();
+          groups[name].add(value as string);
+        });
+      }
+    });
+    return groups;
+  }, [product?.variants]);
+
   const handleScroll = () => {
     if (scrollRef.current) {
       const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
@@ -62,10 +105,16 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const currentPrice = selectedVariant?.pricing?.salePrice || product?.price || 0;
+  const gstRate = selectedVariant?.pricing?.gst || (product?.variants?.[0]?.pricing?.gst) || 0;
+  const basePrice = Math.round(currentPrice / (1 + gstRate / 100));
+  const gstAmount = currentPrice - basePrice;
+  const currentMrp = selectedVariant?.pricing?.mrp || product?.mrp || 0;
+  const currentUnit = selectedVariant && selectedVariant.attributes 
+    ? Object.values(selectedVariant.attributes).join(', ') 
+    : (product?.unitLabel || 'Standard');
+
   const currentVariantName = selectedVariant?.name || 'Standard';
-  const currentPrice = selectedVariant ? selectedVariant.price : (product?.salePrice || product?.price);
-  const currentMrp = selectedVariant ? selectedVariant.mrp : (product?.mrp || 0);
-  const currentUnit = selectedVariant?.name || product?.unitLabel || 'Piece';
 
   const cartItem = cart.find(item => item.product._id === product?._id && item.selectedVariant === currentVariantName);
   // const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -94,7 +143,9 @@ const ProductDetail: React.FC = () => {
   if (loading) return <div className="loading-box">Finding best deals...</div>;
   if (!product) return <div className="no-products">Product not found</div>;
 
-  const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
+  const images = (selectedVariant?.images && selectedVariant.images.length > 0) 
+    ? selectedVariant.images 
+    : (product.images && product.images.length > 0 ? product.images : [product.imageUrl]);
 
   return (
     <div className="blinkit-detail-page">
@@ -153,16 +204,38 @@ const ProductDetail: React.FC = () => {
              <div className="prd-unit-label">{currentUnit}</div>
 
              {/* highlights row */}
-             <div className="highlights-detail-row">
+             {/* <div className="highlights-detail-row">
                 <div className="highlight-mini-box">
                    <span className="h-mini-label">TYPE</span>
                    <span className="h-mini-value">{product.category || 'Standard'}</span>
                 </div>
                 
-             </div>
+             </div> */}
 
-             {/* Variant Selector */}
-             {product.variants && product.variants.length > 0 && (
+             {/* Multi-Attribute Variant Selector */}
+             {Object.keys(attributeGroups).length > 0 && (
+               <div className="detail-variants-section">
+                  {Object.entries(attributeGroups).map(([name, values]) => (
+                    <div key={name} className="v-group-container">
+                      <p className="v-section-title">Select {name}</p>
+                      <div className="v-chips-row">
+                        {Array.from(values).map((val) => (
+                          <button 
+                            key={val}
+                            className={`v-chip-btn ${selections[name] === val ? 'active' : ''}`}
+                            onClick={() => setSelections(prev => ({ ...prev, [name]: val }))}
+                          >
+                            {val}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+               </div>
+             )}
+
+             {/* Fallback to legacy variant chips if no attributes but variants exist */}
+             {Object.keys(attributeGroups).length === 0 && product.variants && product.variants.length > 0 && (
                <div className="detail-variants-section">
                   <p className="v-section-title">Select Unit</p>
                   <div className="v-chips-row">
@@ -184,6 +257,9 @@ const ProductDetail: React.FC = () => {
                    <span className="current-p">₹{currentPrice}</span>
                    {currentMrp > currentPrice && <span className="original-mrp">MRP ₹{currentMrp}</span>}
                 </div>
+                <div className="price-gst-breakdown" style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
+                   <span>(₹{basePrice} + GST ₹{gstAmount})</span>
+                </div>
                 {currentMrp > currentPrice && (
                   <div className="list-discount-badge-blinkit" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
                     {Math.round(((currentMrp - currentPrice)/currentMrp)*100)}% OFF on MRP
@@ -191,20 +267,80 @@ const ProductDetail: React.FC = () => {
                 )}
              </div>
 
-             {/* View Details Dropdown */}
-             <div className="view-details-trigger" onClick={() => setShowDetails(!showDetails)}>
-                <span>View product details</span>
-                <ChevronDown size={20} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
-             </div>
-             {showDetails && (
-               <div className="details-expanded-content">
-                  <div className="details-para">
-                     {product.infoPara || "High-quality material sourced for durability and aesthetic perfection."}
-                  </div>
-                  
-                  {product.subVariants && product.subVariants.length > 0 && (
-                    <div className="specifications-section">
-                       <h4>Specifications</h4>
+              {/* View Details Dropdown */}
+              <div className="view-details-trigger" onClick={() => setShowDetails(!showDetails)}>
+                 <span>View product details</span>
+                 <ChevronDown size={20} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+              </div>
+              {showDetails && (
+                <div className="details-expanded-content">
+                   <div className="details-para">
+                      {product.description || product.infoPara || "High-quality material sourced for durability and aesthetic perfection."}
+                   </div>
+                </div>
+              )}
+
+              {/* Technical Specifications trigger */}
+              <div className="view-details-trigger specs-trigger" onClick={() => setShowSpecs(!showSpecs)} style={{ marginTop: '12px' }}>
+                 <span>Technical Specifications</span>
+                 <ChevronDown size={20} className={`transition-transform ${showSpecs ? 'rotate-180' : ''}`} />
+              </div>
+              {showSpecs && (
+                <div className="details-expanded-content">
+                   <div className="specifications-section">
+                      <table className="specs-table">
+                         <tbody>
+                            <tr>
+                               <td className="spec-title">Brand</td>
+                               <td className="spec-value">{product.brand}</td>
+                            </tr>
+                            <tr>
+                               <td className="spec-title">Category</td>
+                               <td className="spec-value">{product.category}</td>
+                            </tr>
+                            <tr>
+                               <td className="spec-title">Sub-Category</td>
+                               <td className="spec-value">{product.subCategory}</td>
+                            </tr>
+                            {selectedVariant && (
+                              <>
+                                <tr>
+                                   <td className="spec-title">SKU / Model</td>
+                                   <td className="spec-value">{selectedVariant.sku}</td>
+                                </tr>
+                                {Object.entries(selectedVariant.attributes || {}).map(([k, v]) => (
+                                  <tr key={k}>
+                                     <td className="spec-title">{k}</td>
+                                     <td className="spec-value">{v as string}</td>
+                                  </tr>
+                                ))}
+                                {selectedVariant.inventory?.unitWeight > 0 && (
+                                  <tr>
+                                     <td className="spec-title">Unit Weight</td>
+                                     <td className="spec-value">{selectedVariant.inventory.unitWeight} gm</td>
+                                  </tr>
+                                )}
+                              </>
+                            )}
+                            {product.hsnCode && (
+                              <tr>
+                                 <td className="spec-title">HSN Code</td>
+                                 <td className="spec-value">{product.hsnCode}</td>
+                               </tr>
+                            )}
+                            {product.deliveryTime && (
+                              <tr>
+                                 <td className="spec-title">Standard Delivery</td>
+                                 <td className="spec-value">{product.deliveryTime}</td>
+                               </tr>
+                            )}
+                         </tbody>
+                      </table>
+                   </div>
+
+                   {product.subVariants && product.subVariants.length > 0 && (
+                    <div className="specifications-section extra-specs">
+                       <h4>Additional Details</h4>
                        <table className="specs-table">
                           <tbody>
                              {product.subVariants.map((sv: any, idx: number) => (
@@ -217,8 +353,8 @@ const ProductDetail: React.FC = () => {
                        </table>
                     </div>
                   )}
-               </div>
-             )}
+                </div>
+              )}
 
              {/* Desktop Add to Cart */}
              <div className="desktop-add-container hide-mobile">

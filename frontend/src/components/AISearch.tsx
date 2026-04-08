@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Camera, Upload, Loader2, X, CheckCircle } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -190,13 +190,16 @@ const AISearch: React.FC = () => {
               {isSuccess ? (
                 <div className="processing-state" style={{ color: '#0c831f' }}>
                   <CheckCircle size={48} />
-                  <p>Request Sent Successfully!</p>
-                  <span style={{ fontSize: '0.8rem', color: '#666' }}>Admin team will review your list shortly.</span>
+                  <p style={{ fontWeight: '600', fontSize: '1.1rem', marginBottom: '8px' }}>Uploading to our experts</p>
+                  <span style={{ fontSize: '0.9rem', color: '#666', textAlign: 'center', maxWidth: '80%' }}>
+                    Your requirement is received. Our team will contact you soon. 
+                    To expedite, you can click on <Link to="/support" style={{ color: '#0c831f', textDecoration: 'underline', fontWeight: '500' }}>support</Link>.
+                  </span>
                 </div>
               ) : isProcessing ? (
                 <div className="processing-state">
                   <Loader2 className="spinner" size={48} />
-                  <p>Uploading to Admin Team...</p>
+                  <p>Uploading to our experts...</p>
                 </div>
               ) : (
                 <div className="search-options-grid">

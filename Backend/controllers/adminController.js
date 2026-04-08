@@ -14,6 +14,8 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 const GSTClassification = require('../models/GSTClassification');
+const ServiceableArea = require('../models/ServiceableArea');
+
 
 // Inline Revenue Margin mapping if sheet exists
 let globalMarginMap = new Map();
@@ -133,6 +135,19 @@ exports.getDashboardStats = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    
+    // Emit socket event to the customer
+    const io = req.app.get('socketio');
+    const userId = order.userId?._id ? order.userId._id.toString() : order.userId?.toString();
+    
+    if (io && userId) {
+      console.log(`Emitting status update to customer room: ${userId}`);
+      io.of('/customer').to(userId).emit('order-status-update', {
+        orderId: order._id,
+        status: order.status
+      });
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -147,214 +162,178 @@ exports.getFleetStatus = async (req, res) => {
   }
 };
 
+const ExcelJS = require('exceljs');
+
 exports.bulkUploadProducts = async (req, res) => {
   try {
     if (!req.file) return res.status(400).send('No file uploaded.');
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    const dataSheet = workbook.Sheets['Data'] || workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(dataSheet);
-
-    const gstSheet = workbook.Sheets['GST & Classification'] || workbook.Sheets['GST'];
-    const marginSheet = workbook.Sheets['Revenue Margin'];
     
-    const gstMappingRaw = gstSheet ? xlsx.utils.sheet_to_json(gstSheet) : [];
-    const marginMappingRaw = marginSheet ? xlsx.utils.sheet_to_json(marginSheet) : [];
+    const workbook = new ExcelJS.Workbook();
+    // Using buffer for multer setup (can move to stream if file is very large)
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.getWorksheet(1);
 
-    const extracted = [], skipped = [], seenSkus = new Set();
-    const masterData = { categories: new Set(), subCategories: new Map(), brands: new Set(), variantTitles: new Set(), deliveryTimes: new Set() };
+    const productGroups = new Map();
+    const headers = [];
+    
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+      headers[colNumber] = String(cell.value || '').trim();
+    });
 
-    let availableImages = [];
-    try {
-      const imgDir = path.join(__dirname, '..', 'public', 'images');
-      if (fs.existsSync(imgDir)) {
-        availableImages = fs.readdirSync(imgDir);
+    const skippedDetails = [];
+    let totalRows = 0;
+
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip headers
+      totalRows++;
+
+      const rowData = {};
+      row.eachCell((cell, colNumber) => {
+        let val = cell.value;
+        if (val && typeof val === 'object') {
+          if (val.richText) {
+            val = val.richText.map(rt => rt.text).join('');
+          } else if (val.result !== undefined) {
+            val = val.result;
+          }
+        }
+        rowData[headers[colNumber]] = val;
+      });
+
+      const category = String(rowData['Category'] || '').trim();
+      const subCategory = String(rowData['Sub Category'] || '').trim();
+      const brand = String(rowData['Brand'] || '').trim();
+      const productName = String(rowData['Product Name'] || '').trim();
+
+      if (!category || !subCategory || !productName) {
+        skippedDetails.push({
+          row: rowNumber,
+          name: productName || 'Unnamed',
+          reason: `Missing mandatory fields: ${!category ? 'Category ' : ''}${!subCategory ? 'SubCategory ' : ''}${!productName ? 'ProductName' : ''}`
+        });
+        return;
       }
-    } catch(err) {
-      console.error('Error reading images directory', err);
-    }
 
-    // Sync GST Classification Sheet
-    if (gstMappingRaw.length > 0) {
-      const gstOps = gstMappingRaw.map(item => ({
+      const groupKey = `${category}_${subCategory}_${brand}_${productName}`;
+
+      // Attribute Mapping
+      const attributes = [];
+      if (rowData['Variant Title'] && rowData['Variant Value'] !== undefined) {
+        attributes.push({ name: String(rowData['Variant Title']).trim(), value: String(rowData['Variant Value']).trim() });
+      }
+      if (rowData['Size']) {
+        attributes.push({ name: 'Size', value: String(rowData['Size']).trim() });
+      }
+      if (rowData['Sub Variant Title'] && rowData['Sub Variant Value'] !== undefined) {
+        attributes.push({ name: String(rowData['Sub Variant Title']).trim(), value: String(rowData['Sub Variant Value']).trim() });
+      }
+
+      const variantToken = attributes.map(a => `${a.name}:${a.value}`).sort().join('|');
+
+      const imageValue = String(rowData['Images'] || '').trim();
+      const images = imageValue.split(',').map(name => {
+        const cleanName = name.trim();
+        if (!cleanName) return null;
+        if (cleanName.startsWith('http') || cleanName.startsWith('/images/')) return cleanName;
+        return `/images/${cleanName}`;
+      }).filter(Boolean);
+
+      const variant = {
+        sku: String(rowData['Product Code (SKU)'] || rowData['SKU'] || '').trim(),
+        name: attributes.map(a => `${a.name}: ${a.value}`).join(', ') || 'Standard',
+        price: parseFloat(rowData['Sale Price']) || 0,
+        attributes,
+        pricing: {
+          mrp: parseFloat(rowData['MRP']) || 0,
+          salePrice: parseFloat(rowData['Sale Price']) || 0,
+          gst: parseFloat(rowData['GST']) || 0,
+          dealerDiscount: parseFloat(rowData['Dealer Discount']) || 0,
+          discountValue: parseFloat(rowData['Discount Value']) || 0,
+          discountRate: parseFloat(rowData['Discount Rate']) || 0,
+          buyingPrice: parseFloat(rowData['Buying Price']) || 0,
+          marginValue: parseFloat(rowData['Margin Value']) || 0
+        },
+        inventory: {
+          packOf: parseInt(rowData['Pack of']) || 1,
+          unitWeight: parseFloat(rowData['Unit Weight']) || 0,
+          bulkApplication: rowData['Bulk application']
+        },
+        meta: {
+          suppliedWith: rowData['Supplied With'],
+          suitableFor: rowData['Suitable For']
+        },
+        images
+      };
+
+      if (!productGroups.has(groupKey)) {
+        productGroups.set(groupKey, {
+          productName,
+          category,
+          subCategory,
+          brand,
+          alternateNames: (rowData['Alternate Names'] ? String(rowData['Alternate Names']).split(',').map(s => s.trim()) : []),
+          description: rowData['Product Description'],
+          hsnCode: String(rowData['HSN Code'] || '').trim(),
+          sellingMeasure: rowData['Selling Measure'],
+          measureTerm: rowData['Measure Term'],
+          measureValue: rowData['Measure Value'],
+          deliveryTime: rowData['Delivery Time'],
+          returns: rowData['Returns'],
+          logisticsRule: rowData['Logistics Rule'],
+          status: rowData['Status'] || 'In stock',
+          variants: [variant],
+          variantTokens: new Set([variantToken]),
+          price: variant.pricing.salePrice,
+          salePrice: variant.pricing.salePrice,
+          mrp: variant.pricing.mrp,
+          imageUrl: images[0] || '',
+          images: images
+        });
+      } else {
+        const product = productGroups.get(groupKey);
+        if (!product.variantTokens.has(variantToken)) {
+          product.variants.push(variant);
+          product.variantTokens.add(variantToken);
+          if (variant.pricing.salePrice < product.price) {
+            product.price = variant.pricing.salePrice;
+          }
+        } else {
+          skippedDetails.push({ 
+            row: rowNumber, 
+            name: `${productName} (${variant.name})`, 
+            reason: 'Duplicate variant for this product' 
+          });
+        }
+      }
+    });
+
+    const bulkOps = Array.from(productGroups.values()).map(p => {
+      delete p.variantTokens;
+      return {
         updateOne: {
-          filter: { category: String(item['Category']).trim(), subCategory: String(item['Sub Category']).trim() },
-          update: { 
-            $set: { 
-              gst: parseFloat(item['GST']) || 0, 
-              hsnCode: String(item['HSN Code'] || '').trim() 
-            }
-          },
+          filter: { productName: p.productName, category: p.category, subCategory: p.subCategory, brand: p.brand },
+          update: { $set: p },
           upsert: true
         }
-      }));
-      await GSTClassification.bulkWrite(gstOps);
-    }
-
-    if (marginMappingRaw.length > 0) {
-      marginMappingRaw.forEach(m => {
-          const key = `${String(m['Category']).trim()}|${String(m['Sub Category']).trim()}`;
-          globalMarginMap.set(key, parseFloat(m['Rev Margin']) || 0);
-      });
-    }
-
-    const availableGstMaps = await GSTClassification.find({});
-    const gstLookup = new Map(availableGstMaps.map(g => [`${g.category}|${g.subCategory}`, g]));
-
-    const CATEGORY_MAP = {
-      'Wooden Material': '03',
-      'Electrical Material': '04',
-      'Modular Hardware': '22',
-      'Paint': '06',
-      'Tools': 'tools',
-      'Civil': '26',
-      'Bathroom': 'Bathroom',
-      'Plumbing': 'Plumbing',
-      'Wooden & Boards': '03',
-      'Electricals': '04',
-      'Hardware': '22',
-      'Paint & POP': '06',
-      'Tiles & Flooring': 'tiles',
-      'Power Tools': 'tools'
-    };
-    const reverseMap = {};
-    Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
-      // Prioritize shorter, nicer names for display
-      if (!reverseMap[id] || name.length < reverseMap[id].length) {
-        reverseMap[id] = name;
-      }
+      };
     });
 
-    data.forEach((item, index) => {
-      const sku = String(item['Product Code'] || item['SKU'] || '').trim();
-      seenSkus.add(sku);
-
-      const cat = String(item['Category'] || '').trim();
-      const subCat = String(item['Sub Category'] || '').trim();
-      if (cat) {
-        masterData.categories.add(cat);
-        if (subCat) {
-          if (!masterData.subCategories.has(cat)) masterData.subCategories.set(cat, new Set());
-          masterData.subCategories.get(cat).add(subCat);
-        }
-      }
-      if (item['Brand']) masterData.brands.add(String(item['Brand']).trim());
-      if (item['Delivery Time']) masterData.deliveryTimes.add(String(item['Delivery Time']).trim());
-
-      const subVariants = [];
-      if (item['Size']) {
-        masterData.variantTitles.add(String(item['Size']).trim());
-        if (item['Sub Variant Value']) subVariants.push({ title: String(item['Size']), value: String(item['Sub Variant Value']) });
-      }
-      
-      const titles = Object.keys(item).filter(k => k.startsWith('Sub Variant Title')).sort();
-      const values = Object.keys(item).filter(k => k.startsWith('Sub Variant Value')).filter(k => k !== 'Sub Variant Value').sort();
-      titles.forEach((t, i) => {
-        if (item[t]) {
-          masterData.variantTitles.add(String(item[t]).trim());
-          if (values[i] && item[values[i]]) subVariants.push({ title: String(item[t]), value: String(item[values[i]]) });
-        }
-      });
-
-      const imageKey = Object.keys(item).find(k => {
-        const lk = k.trim().toLowerCase();
-        return lk === 'images' || lk === 'image' || lk === 'product images' || lk.includes('images left');
-      });
-      const imageValue = imageKey && item[imageKey] ? String(item[imageKey]).trim() : '';
-      const rawImageNames = imageValue.split(',').map(s => s.trim()).filter(Boolean);
-      
-      const images = rawImageNames.map(name => {
-        if (name.indexOf('://') !== -1 || name.startsWith('data:')) return name;
-        if (name.startsWith('/')) return name;
-        const matchedImage = availableImages.find(f => {
-          const fileNameWithoutExt = f.substring(0, f.lastIndexOf('.'));
-          return f.toLowerCase().includes(name.toLowerCase()) || (fileNameWithoutExt && fileNameWithoutExt.toLowerCase() === name.toLowerCase());
-        });
-        return matchedImage ? `/images/${matchedImage}` : `/images/${name}`;
-      });
-
-      const mrp = parseFloat(String(item['MRP (Incl GST)'] || 0).replace(/,/g, ''));
-      const salePrice = parseFloat(item['Sale Price']) || 0;
-      
-      // Resolve GST and Margin from Classification Sheet primarily, fallback to Data sheet
-      const mappedGst = gstLookup.get(`${cat}|${subCat}`);
-      const gstRate = mappedGst ? mappedGst.gst : (parseFloat(item['GST']) || 0);
-      const hsnCode = mappedGst ? mappedGst.hsnCode : (item['HSN Code'] || '');
-      
-      const revMargin = globalMarginMap.get(`${cat}|${subCat}`) || parseFloat(item['Rev Margin']) || 0;
-
-      const igst = gstRate;
-      const cgst = gstRate / 2;
-      const sgst = gstRate / 2;
-      const basePrice = salePrice / (1 + (gstRate / 100));
-
-      extracted.push({
-        name: item['Product Name'] || 'Unnamed Product',
-        sku,
-        category: cat,
-        subCategory: subCat,
-        brand: item['Brand'],
-        size: item['Size'],
-        productCode: sku,
-        packOf: parseInt(item['Pack of']) || 1,
-        bulkApplication: item['Bulk application'],
-        unitWeightGm: parseFloat(String(item['Unit Weight (in gm)'] || item['Unit Weight \r\n(in gm)'] || '0').replace(/,/g, '')) || 0,
-        suppliedWith: item['Supplied With'],
-        suitableFor: item['Suitable For'],
-        measure: item['Measure'],
-        images,
-        imageNames: rawImageNames,
-        hsnCode,
-        sellingMeasure: item['Selling Measure'],
-        measureTerm: item['Measure Term'],
-        measureValue: item['Measure Value'],
-        sellingMeasureRate: parseFloat(item['Selling Measure Rate']) || 0,
-        subVariants, // ATTACH SUBVARIANTS HERE
-        mrp: mrp || 0,
-        dealerDiscount: parseFloat(item['Dealer Discount']) || 0,
-        priceAfterDiscount: parseFloat(item['Price after discount']) || 0,
-        igst: igst || 0,
-        cgst: cgst || 0,
-        sgst: sgst || 0,
-        buyingPrice: parseFloat(item['Buying Price']) || 0,
-        revMargin: revMargin,
-        marginValue: parseFloat(item['Margin Value']) ||  (salePrice * revMargin),
-        salePrice: salePrice || 0,
-        price: salePrice || 0,
-        basePrice: basePrice || 0,
-        discountValue: parseFloat(item['Discount Value']) || 0,
-        discountRate: parseFloat(item['Discount Rate']) || 0,
-        deliveryTime: item['Delivery Time'],
-        returns: item['Returns'],
-        logisticsRule: item['Logistics Rule'],
-        status: item['Status'] || 'In stock',
-        productDescription: item['Product Description'],
-        imageUrl: images.length > 0 ? images[0] : undefined,
-        unitType: 'individual', unitLabel: 'unit', isActive: true,
-      });
-    });
-
-    // Sync Master Data
-    await Promise.all(Array.from(masterData.categories).map(name => Category.updateOne({ name }, { $setOnInsert: { name, isActive: true } }, { upsert: true })));
-    const catMap = new Map((await Category.find({ name: { $in: Array.from(masterData.categories) } })).map(c => [c.name, c._id]));
-    
-    const subCatOps = [];
-    masterData.subCategories.forEach((subs, catName) => {
-      const catId = catMap.get(catName);
-      if (catId) subs.forEach(name => subCatOps.push(SubCategory.updateOne({ name, categoryId: catId }, { $setOnInsert: { name, categoryId: catId, isActive: true } }, { upsert: true })));
-    });
-    
-    await Promise.all([
-      ...subCatOps,
-      ...Array.from(masterData.brands).map(name => Brand.updateOne({ name }, { $setOnInsert: { name, isActive: true } }, { upsert: true })),
-      ...Array.from(masterData.variantTitles).map(name => SubVariantTitle.updateOne({ name }, { $setOnInsert: { name, isActive: true } }, { upsert: true })),
-      ...Array.from(masterData.deliveryTimes).map(name => DeliveryTime.updateOne({ name }, { $setOnInsert: { name, isActive: true } }, { upsert: true }))
-    ]);
-
-    // Always insert new products as separate entries (allow duplicates as requested)
-    const bulkOps = extracted.map(p => ({ insertOne: { document: p } }));
     const result = await Product.bulkWrite(bulkOps);
-    res.json({ message: 'Upload complete', summary: { totalRows: data.length, extracted: extracted.length, skipped: data.length - extracted.length, matched: result.matchedCount, upserted: result.upsertedCount, modified: result.modifiedCount }, skippedDetails: skipped });
+
+    res.json({ 
+      message: 'Upload complete', 
+      summary: { 
+        totalRows,
+        extracted: totalRows - skippedDetails.length,
+        skipped: skippedDetails.length,
+        totalGroups: productGroups.size, 
+        upserted: result.upsertedCount, 
+        modified: result.modifiedCount 
+      },
+      skippedDetails
+    });
   } catch (err) {
+    console.error('Bulk Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -510,3 +489,24 @@ exports.getAllGstClassifications = gstH.getAll;
 exports.createGstClassification = gstH.create; 
 exports.updateGstClassification = gstH.update; 
 exports.deleteGstClassification = gstH.delete;
+
+const sah = createHandlers(ServiceableArea, 'ServiceableArea');
+exports.getAllServiceableAreas = sah.getAll;
+exports.createServiceableArea = sah.create;
+exports.updateServiceableArea = sah.update;
+exports.deleteServiceableArea = sah.delete;
+
+exports.checkServiceability = async (req, res) => {
+  try {
+    const { pincode } = req.params;
+    const area = await ServiceableArea.findOne({ pincode, isActive: true });
+    if (area) {
+      res.json({ serviceable: true, city: area.city });
+    } else {
+      res.json({ serviceable: false });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

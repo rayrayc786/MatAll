@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star, Menu } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageUrl';
 import './sku.css';
 
@@ -21,6 +22,7 @@ const SKUManager: React.FC = () => {
   const [productTab, setProductTab] = useState<'general' | 'variants' | 'images'>('general');
 
   const [formData, setFormData] = useState({
+    productName: '',
     name: '',
     sku: '',
     unitType: 'individual',
@@ -40,6 +42,8 @@ const SKUManager: React.FC = () => {
     subVariants: [] as any[],
     isPopular: false,
     infoPara: '',
+    description: '',
+    bulkPricing: [] as any[],
     variants: [] as any[],
     images: [] as any[]
   });
@@ -166,6 +170,30 @@ const SKUManager: React.FC = () => {
     }
   };
 
+  const handleVariantImageUpload = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
+      const newV = [...formData.variants];
+      newV[idx].images = [...(newV[idx].images || []), data.imageUrl];
+      // For fallback/compatibility, if variant has no primary imageUrl set, use the first one
+      if (!newV[idx].imageUrl) newV[idx].imageUrl = data.imageUrl;
+      setFormData({
+        ...formData,
+        variants: newV
+      });
+    } catch (err) {
+      alert('Upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClearAll = async () => {
     if (!window.confirm('WARNING: This will delete ALL products in the database. Are you sure?')) return;
     try {
@@ -181,14 +209,30 @@ const SKUManager: React.FC = () => {
     }
   };
 
-  const filteredSkus = skus.filter(s => 
-    (s.name || '').toLowerCase().includes(search.toLowerCase()) || 
-    (s.sku || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.brand || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.category || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.subCategory || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.csiMasterFormat && s.csiMasterFormat.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredSkus = skus.filter(s => {
+    const searchLower = search.toLowerCase();
+    const matchesMain = (s.productName || s.name || '').toLowerCase().includes(searchLower) || 
+      (s.sku || '').toLowerCase().includes(searchLower) ||
+      (s.brand || '').toLowerCase().includes(searchLower) ||
+      (s.category || '').toLowerCase().includes(searchLower) ||
+      (s.subCategory || '').toLowerCase().includes(searchLower) ||
+      (s.csiMasterFormat && s.csiMasterFormat.toLowerCase().includes(searchLower));
+
+    if (matchesMain) return true;
+
+    // Search in variants
+    if (s.variants && Array.isArray(s.variants)) {
+      return s.variants.some((v: any) => 
+        (v.name || '').toLowerCase().includes(searchLower) || 
+        (v.sku || '').toLowerCase().includes(searchLower)
+      );
+    }
+
+    return false;
+  });
+
+  const totalVariantCount = skus.reduce((sum, s) => sum + (s.variants?.length || 1), 0);
+  const filteredVariantCount = filteredSkus.reduce((sum, s) => sum + (s.variants?.length || 1), 0);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,8 +245,10 @@ const SKUManager: React.FC = () => {
       setShowModal(false);
       setEditingSku(null);
       fetchSKUs();
+      toast.success(editingSku ? 'Product updated successfully!' : 'New product created!');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to save product');
     }
   };
 
@@ -210,9 +256,10 @@ const SKUManager: React.FC = () => {
     try {
       await axios.patch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}/toggle-popular`);
       fetchSKUs();
+      toast.success('Product status updated');
     } catch (err) {
       console.error(err);
-      alert('Failed to toggle popular status');
+      toast.error('Failed to update product status');
     }
   };
 
@@ -221,14 +268,17 @@ const SKUManager: React.FC = () => {
     try {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/${id}`);
       fetchSKUs();
+      toast.success('Product deleted successfully');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to delete product');
     }
   };
 
   const openEdit = (sku: any) => {
     setEditingSku(sku);
     setFormData({
+      productName: sku.productName || sku.name || '',
       name: sku.name || '',
       sku: sku.sku || '',
       unitType: sku.unitType || 'individual',
@@ -241,13 +291,15 @@ const SKUManager: React.FC = () => {
       category: sku.category || '',
       subCategory: sku.subCategory || '',
       brand: sku.brand || '',
-      mrp: sku.mrp || 0,
-      salePrice: sku.salePrice || 0,
+      mrp: sku.mrp || sku.variants?.[0]?.pricing?.mrp || 0,
+      salePrice: sku.salePrice || sku.price || sku.variants?.[0]?.pricing?.salePrice || 0,
       deliveryTime: sku.deliveryTime || '',
       size: sku.size || sku.subVariants?.[0]?.title || '',
       subVariants: sku.subVariants || [],
       isPopular: sku.isPopular || false,
       infoPara: sku.infoPara || '',
+      description: sku.description || '',
+      bulkPricing: sku.bulkPricing || [],
       variants: sku.variants || [],
       images: sku.images || [sku.imageUrl].filter(Boolean)
     });
@@ -258,6 +310,7 @@ const SKUManager: React.FC = () => {
   const resetForm = () => {
     setEditingSku(null);
     setFormData({
+      productName: '',
       name: '',
       sku: '',
       unitType: 'individual',
@@ -277,6 +330,8 @@ const SKUManager: React.FC = () => {
       subVariants: [],
       isPopular: false,
       infoPara: '',
+      description: '',
+      bulkPricing: [],
       variants: [],
       images: []
     });
@@ -284,12 +339,21 @@ const SKUManager: React.FC = () => {
     setShowModal(true);
   };
 
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+  };
+
   return (
     <main className="admin-content">
       <header className="admin-header space-between sku-header">
-        <div className="title-group">
-          <h1>SKU & Inventory Manager</h1>
-          <p>Master database for industrial materials & Smart Units</p>
+        <div className="title-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button className="mobile-menu-trigger" onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <div className="header-text">
+            <h1>SKU & Inventory Manager</h1>
+            <p>Master database for industrial materials & Smart Units</p>
+          </div>
         </div>
         <div className="action-group sku-action-group">
           <input 
@@ -325,12 +389,16 @@ const SKUManager: React.FC = () => {
           </div>
           <div className="quick-stats sku-quick-stats">
             <div className="q-stat">
-              <span className="q-stat-label">TOTAL SKUS</span>
+              <span className="q-stat-label">TOTAL LISTINGS</span>
               <span className="q-stat-value">{skus.length}</span>
             </div>
             <div className="q-stat">
+              <span className="q-stat-label">TOTAL SKUS</span>
+              <span className="q-stat-value" style={{ color: '#0369a1' }}>{totalVariantCount}</span>
+            </div>
+            <div className="q-stat">
               <span className="q-stat-label">FILTERED</span>
-              <span className="q-stat-value">{filteredSkus.length}</span>
+              <span className="q-stat-value">{filteredSkus.length} Items ({filteredVariantCount} SKUs)</span>
             </div>
           </div>
         </div>
@@ -368,12 +436,20 @@ const SKUManager: React.FC = () => {
                         }}
                       />
                       <div>
-                        <div className="sku-product-name">{sku.name}</div>
+                        <div className="sku-product-name">{sku.productName || sku.name}</div>
                         <div className="sku-variant-badges">
-                          {sku.variants && sku.variants.length > 1 ? (
-                            <span className="sku-variant-badge" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
-                              {sku.variants.length} Variants Available
-                            </span>
+                          {sku.variants && sku.variants.length > 0 ? (
+                            <div className="sku-grouped-info">
+                              <span className="sku-variant-badge group-count">
+                                {sku.variants.length} SKU{sku.variants.length > 1 ? 's' : ''} Linked
+                              </span>
+                              <div className="sku-variant-preview">
+                                {sku.variants.slice(0, 3).map((v: any, i: number) => (
+                                  <span key={i} className="preview-tag">{v.name || v.sku}</span>
+                                ))}
+                                {sku.variants.length > 3 && <span className="preview-tag">+{sku.variants.length - 3} more</span>}
+                              </div>
+                            </div>
                           ) : (
                             sku.subVariants?.map((v: any, i: number) => (
                               <span key={i} className="sku-variant-badge">
@@ -445,7 +521,7 @@ const SKUManager: React.FC = () => {
                   <>
                     <div className="form-group sku-form-span-2">
                       <label>Product Name</label>
-                      <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                      <input type="text" value={formData.productName || formData.name || ''} onChange={e => setFormData({...formData, productName: e.target.value, name: e.target.value})} required />
                     </div>
                     <div className="form-group">
                       <label>SKU / Product Code</label>
@@ -530,19 +606,80 @@ const SKUManager: React.FC = () => {
                       </select>
                     </div>
                     <div className="form-group">
+                      <label>Weight (kg)</label>
+                      <input type="number" value={formData.weightPerUnit || 0} onChange={e => setFormData({...formData, weightPerUnit: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
+                      <label>Volume (m³)</label>
+                      <input type="number" value={formData.volumePerUnit || 0} onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
                       <label>CSI Code</label>
                       <input type="text" value={formData.csiMasterFormat || ''} onChange={e => setFormData({...formData, csiMasterFormat: e.target.value})} />
+                    </div>
+
+                    <div className="form-group">
+                      <label>MRP (₹)</label>
+                      <input type="number" value={formData.mrp || 0} onChange={e => setFormData({...formData, mrp: Number(e.target.value)})} />
+                    </div>
+                    <div className="form-group">
+                      <label>Sale Price (₹)</label>
+                      <input type="number" value={formData.salePrice || formData.price || 0} onChange={e => setFormData({...formData, salePrice: Number(e.target.value), price: Number(e.target.value)})} />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <label>Short Description (Technical)</label>
+                      <textarea 
+                        rows={2}
+                        placeholder="Technical specs, brief summary..."
+                        value={formData.description || ''} 
+                        onChange={e => setFormData({...formData, description: e.target.value})} 
+                        style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
+                      />
                     </div>
 
                     <div className="form-group sku-form-span-3">
                       <label>Information Paragraph (Dynamic)</label>
                       <textarea 
+                        rows={3}
                         placeholder="Enter product detailed information..." 
                         value={formData.infoPara || ''} 
                         onChange={e => setFormData({...formData, infoPara: e.target.value})}
-                        rows={3}
                         style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '10px' }}
                       />
+                    </div>
+
+                    <div className="form-group sku-form-span-3">
+                      <h4 style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Bulk Pricing Tiers</h4>
+                      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
+                        {(formData.bulkPricing || []).map((tier: any, i: number) => (
+                          <React.Fragment key={i}>
+                            <div className="form-group">
+                              <label>Min Qty</label>
+                              <input type="number" value={tier.minQty} onChange={e => {
+                                const newBulk = [...formData.bulkPricing];
+                                newBulk[i].minQty = Number(e.target.value);
+                                setFormData({...formData, bulkPricing: newBulk});
+                              }} />
+                            </div>
+                            <div className="form-group">
+                              <label>Discount (%)</label>
+                              <input type="number" value={tier.discount} onChange={e => {
+                                const newBulk = [...formData.bulkPricing];
+                                newBulk[i].discount = Number(e.target.value);
+                                setFormData({...formData, bulkPricing: newBulk});
+                              }} />
+                            </div>
+                            <button type="button" className="icon-btn delete" onClick={() => {
+                              const newBulk = formData.bulkPricing.filter((_: any, idx: number) => idx !== i);
+                              setFormData({...formData, bulkPricing: newBulk});
+                            }} style={{ marginBottom: '8px' }}><Trash2 size={16} /></button>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                      <button type="button" className="secondary-btn" onClick={() => {
+                        setFormData({...formData, bulkPricing: [...(formData.bulkPricing || []), { minQty: 0, discount: 0 }]});
+                      }} style={{ marginTop: '1rem' }}>+ Add Pricing Tier</button>
                     </div>
 
                     <div className="form-group sku-form-span-3">
@@ -574,9 +711,15 @@ const SKUManager: React.FC = () => {
                         <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                           <div className="form-group">
                             <label>Price (₹)</label>
-                            <input type="number" value={v.price || 0} onChange={(e) => {
+                            <input type="number" value={v.price || v.pricing?.salePrice || 0} onChange={(e) => {
                               const newV = [...formData.variants];
                               newV[idx].price = Number(e.target.value);
+                              // Sync with pricing object if it exists
+                              if (newV[idx].pricing) {
+                                newV[idx].pricing.salePrice = Number(e.target.value);
+                              } else {
+                                newV[idx].pricing = { salePrice: Number(e.target.value), mrp: v.mrp || 0 };
+                              }
                               setFormData({...formData, variants: newV});
                             }} />
                           </div>
@@ -589,12 +732,34 @@ const SKUManager: React.FC = () => {
                             }} />
                           </div>
                         </div>
+
+                        {/* Variant Image Manager */}
+                        <div style={{ marginTop: '1.5rem' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>Variant Specific Images</label>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            {(v.images || []).map((img: string, i: number) => (
+                              <div key={i} style={{ position: 'relative', width: '60px', height: '60px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                                <img src={getFullImageUrl(img)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <button type="button" onClick={() => {
+                                  const newV = [...formData.variants];
+                                  newV[idx].images = newV[idx].images.filter((_: any, idx2: number) => idx2 !== i);
+                                  setFormData({...formData, variants: newV});
+                                }} style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', color: '#fff', fontSize: '10px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                              </div>
+                            ))}
+                            <label style={{ width: '60px', height: '60px', border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#fff' }}>
+                              <Plus size={20} color="#64748b" />
+                              <input type="file" hidden onChange={(e) => handleVariantImageUpload(idx, e)} accept="image/*" />
+                            </label>
+                          </div>
+                        </div>
+
                         <button type="button" className="secondary-btn" style={{ marginTop: '1rem', background: '#fee2e2', color: '#ef4444', borderColor: '#fecaca', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setFormData({...formData, variants: formData.variants.filter((_, i) => i !== idx)})}>
                            <Trash2 size={16} /> Remove Variant
                         </button>
                       </div>
                     ))}
-                    <button type="button" className="secondary-btn" style={{ width: '100%', padding: '15px', borderStyle: 'dashed', background: 'transparent' }} onClick={() => setFormData({...formData, variants: [...(formData.variants || []), { name: '', price: 0, sku: '' }]})}>
+                    <button type="button" className="secondary-btn" style={{ width: '100%', padding: '15px', borderStyle: 'dashed', background: 'transparent' }} onClick={() => setFormData({...formData, variants: [...(formData.variants || []), { name: '', price: 0, sku: '', images: [], pricing: { salePrice: 0, mrp: 0 } }]})}>
                       <Plus size={18} /> Add New Variant SKU
                     </button>
                   </div>
