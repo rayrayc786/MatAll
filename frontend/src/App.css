@@ -2932,3 +2932,50 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Global WhatsApp Contact Button */
+.whatsapp-contact-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #25D366;
+  color: white !important;
+  padding: 12px 24px;
+  border-radius: 50px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+  text-decoration: none;
+  margin-top: 1rem;
+}
+
+.whatsapp-contact-btn:hover {
+  background: #128C7E;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+
+/* Fix Search Overlap and Readability */
+.search-bar {
+  padding-right: 0.5rem !important;
+}
+
+.search-bar input {
+  width: auto !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  margin-right: 0.5rem !important;
+  font-size: 0.95rem !important;
+  color: #000 !important;
+}
+
+.ai-search-container {
+  position: static !important;
+  transform: none !important;
+  margin-left: auto;
+}

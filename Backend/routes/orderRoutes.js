@@ -4,7 +4,8 @@ const orderController = require('../controllers/orderController');
 const auth = require('../middleware/auth');
 
 router.get('/', orderController.getAllOrders);
-router.get('/my', auth(), orderController.getMyOrders);
+router.get('/my-orders', auth(), orderController.getMyOrders);
+router.get('/my', auth(), orderController.getMyOrders); // Alias for compatibility
 router.get('/available', auth(['Rider']), orderController.getAvailableOrders);
 
 // Razorpay Payment Routes
@@ -12,7 +13,8 @@ router.post('/razorpay/create-order', auth(), orderController.createRazorpayOrde
 router.post('/razorpay/verify', auth(), orderController.verifyRazorpayPayment);
 
 router.post('/', auth(), orderController.checkout);
-router.post('/checkout', auth(), orderController.checkout); // Keep for compatibility if needed
+router.post('/checkout', auth(), orderController.checkout);
+
 router.get('/:id', orderController.getOrderById);
 
 // Rider actions

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Home, 
-  ChevronRight, 
   Receipt, 
   ChevronDown,
   Plus,
@@ -19,6 +18,7 @@ import toast from 'react-hot-toast';
 import { Map, AdvancedMarker, useApiIsLoaded, useMapsLibrary } from '@vis.gl/react-google-maps';
 import './checkout.css';
 import SEO from '../components/SEO';
+import { getFullImageUrl } from '../utils/imageUrl';
 
 interface Address {
   _id?: string;
@@ -294,6 +294,32 @@ const Checkout: React.FC = () => {
               </div>
             </div>
           ))}
+          {cart.map((item, idx) => (
+            <div 
+              key={idx} 
+              className="shipment-item" 
+              onClick={() => navigate(`/products/${item.product._id}`)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="item-thumb">
+                <img 
+                  src={getFullImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0]))} 
+                  alt="" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                  }}
+                />
+              </div>
+              <div className="item-info">
+                <h4>{item.product.brand} {item.product.name}</h4>
+                <p>{item.selectedVariant}</p>
+                <div className="item-price-row">
+                   <span>Qty: {item.quantity}</span>
+                   <strong>₹{((item.product.price || item.product.salePrice || 0) * item.quantity)}</strong>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -330,7 +356,7 @@ const Checkout: React.FC = () => {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
       if (!data.serviceable) {
-        toast.error(`Sorry, we don't serve in ${pincode} yet. We currently serve in ${data.city || 'limited areas'}.`, {
+        toast.error(`Oops, we do not serve this area currently. We will be live soon and keep you informed`, {
           duration: 4000,
           icon: '📍'
         });
@@ -711,14 +737,7 @@ const Checkout: React.FC = () => {
                <button className="pod-change-btn">Change</button>
             </div>
 
-            <div className="gstin-entry-row">
-               <div className="gst-icon-box">%</div>
-               <div className="gst-text">
-                  <span>Add GSTIN</span>
-                  <p>Claim input tax credit</p>
-               </div>
-               <ChevronRight size={20} />
-            </div>
+          
 
             <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
               <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>

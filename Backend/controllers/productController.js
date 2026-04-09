@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const Brand = require('../models/Brand');
 const Settings = require('../models/Settings');
+const Category = require('../models/Category');
+const SubCategory = require('../models/SubCategory');
 
 // Helper to resolve image names to actual file paths from Image Master
 const resolveProductImages = (product) => {
@@ -194,7 +196,10 @@ exports.getAllProducts = async (req, res) => {
     }
 
     if (search) {
-      const regex = new RegExp(search, 'i');
+      const searchTerms = search.split(',').map(s => s.trim()).filter(Boolean);
+      const regexPattern = searchTerms.map(s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+      const regex = new RegExp(regexPattern, 'i');
+      
       const orConditions = [
         { productName: regex },
         { brand: regex },
@@ -205,10 +210,12 @@ exports.getAllProducts = async (req, res) => {
         { 'variants.sku': regex }
       ];
 
-      Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
-        if (name.toLowerCase().includes(search.toLowerCase())) {
-          orConditions.push({ category: id });
-        }
+      searchTerms.forEach(term => {
+        Object.entries(CATEGORY_MAP).forEach(([name, id]) => {
+          if (name.toLowerCase().includes(term.toLowerCase())) {
+            orConditions.push({ category: id });
+          }
+        });
       });
 
       query.$or = orConditions;
@@ -266,7 +273,10 @@ exports.autocomplete = async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
 
-    const regex = new RegExp(q, 'i');
+    const searchTerms = q.split(',').map(s => s.trim()).filter(Boolean);
+    const regexPattern = searchTerms.map(s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+    const regex = new RegExp(regexPattern, 'i');
+
     let products = await Product.find({
       $or: [
         { productName: regex },
@@ -327,7 +337,6 @@ exports.getCategories = async (req, res) => {
       query.isFeatured = true;
     }
     
-    const Category = require('../models/Category');
     const categories = await Category.find(query).sort({ name: 1 });
     res.json(categories);
   } catch (err) {
@@ -352,6 +361,74 @@ exports.getSettings = async (req, res) => {
       await settings.save();
     }
     res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getSubCategories = async (req, res) => {
+  try {
+    const filter = { isActive: true };
+    if (req.query.categoryId) {
+      const mongoose = require('mongoose');
+      if (mongoose.Types.ObjectId.isValid(req.query.categoryId)) {
+        filter.categoryId = req.query.categoryId;
+      } else {
+        const cat = await Category.findOne({ name: req.query.categoryId });
+        if (cat) filter.categoryId = cat._id;
+        else return res.json([]); 
+      }
+    }
+    const subCategories = await SubCategory.find(filter).sort({ name: 1 });
+    res.json(subCategories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const productId = req.params.id;
+    const userId = req.user.id || req.user._id;
+    const Review = require('../models/Review');
+
+    // Check if user already reviewed
+    const existing = await Review.findOne({ productId, userId });
+    if (existing) {
+      return res.status(400).json({ message: 'You have already reviewed this product' });
+    }
+
+    const review = new Review({
+      productId,
+      userId,
+      userName: req.user.fullName || 'User',
+      rating: Number(rating),
+      comment
+    });
+
+    await review.save();
+
+    // Update Product average rating
+    const reviews = await Review.find({ productId });
+    const avgRating = reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length;
+
+    await Product.findByIdAndUpdate(productId, {
+      avgRating,
+      numReviews: reviews.length
+    });
+
+    res.status(201).json({ message: 'Review added successfully', review });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getProductReviews = async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const reviews = await Review.find({ productId: req.params.id, isApproved: true }).sort({ createdAt: -1 });
+    res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

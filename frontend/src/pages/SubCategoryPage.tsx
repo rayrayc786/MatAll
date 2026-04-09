@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Home, ArrowUpDown, Filter } from 'lucide-react';
+import { ArrowLeft, Home, ArrowUpDown, Filter, MessageCircle } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import './sub-category.css';
 import SEO from '../components/SEO';
@@ -50,18 +50,22 @@ const SubCategoryPage: React.FC = () => {
       try {
         const dbCategoryName = SLUG_MAP[slug || ''] || slug;
         const encodedCat = encodeURIComponent(dbCategoryName || '');
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${encodedCat}`);
-        
-        setProducts(data);
+        const { data: prodsData } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${encodedCat}`);
+        setProducts(prodsData);
         setDisplayCategory(dbCategoryName || 'Category');
 
-        // Extract unique subcategories
-        const uniqueSubs = Array.from(new Set(data.map((p: any) => p.subCategory))).filter(Boolean);
-        const subData = uniqueSubs.map(sub => {
-          const firstProd = data.find((p: any) => p.subCategory === sub);
+        // Fetch sub-categories to get images
+        const { data: subsData } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/sub-categories`);
+        
+        // Match product subcategories with their metadata
+        const uniqueSubsNames = Array.from(new Set(prodsData.map((p: any) => p.subCategory))).filter(Boolean);
+        const subData = uniqueSubsNames.map(name => {
+          const subMeta = subsData.find((s: any) => s.name === name);
+          const firstProd = prodsData.find((p: any) => p.subCategory === name);
+          
           return {
-            name: sub,
-            image: firstProd?.imageUrl ? getFullImageUrl(firstProd.imageUrl) : 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
+            name: name as string,
+            image: subMeta?.imageUrl ? getFullImageUrl(subMeta.imageUrl) : (firstProd?.imageUrl ? getFullImageUrl(firstProd.imageUrl) : null)
           };
         });
         setSubCategories(subData);
@@ -140,7 +144,24 @@ const SubCategoryPage: React.FC = () => {
               onClick={() => setSelectedSubCat(sub.name)}
             >
               <div className="cat-img-v2">
-                <img src={sub.image} alt={sub.name} />
+                {sub.image && (
+                  <img 
+                    src={sub.image} 
+                    alt={sub.name} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      const fallback = parent?.querySelector('.sub-initials-fallback');
+                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                    }}
+                  />
+                )}
+                <div 
+                  className="sub-initials-fallback"
+                  style={{ display: sub.image ? 'none' : 'flex' }}
+                >
+                  {sub.name.substring(0, 2).toUpperCase()}
+                </div>
               </div>
               <span className="cat-label-v2">{sub.name}</span>
             </div>
@@ -166,6 +187,17 @@ const SubCategoryPage: React.FC = () => {
             <div className="empty-state-v2">
               <h3>No items found</h3>
               <p>We couldn't find any products in {displayCategory} at the moment.</p>
+              <button 
+                className="whatsapp-contact-btn"
+                onClick={() => {
+                  const phoneNumber = '919216921698';
+                  const message = encodeURIComponent(`Hi, I'm looking for products in ${displayCategory} on MatAll but couldn't find any. Can you help?`);
+                  window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+                }}
+              >
+                <MessageCircle size={20} />
+                Contact us on WhatsApp
+              </button>
               <button onClick={() => navigate('/')} className="browse-home-btn">Browse Home</button>
             </div>
           )}

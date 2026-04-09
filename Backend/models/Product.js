@@ -64,7 +64,11 @@ const ProductSchema = new mongoose.Schema({
   imageUrl: { type: String },
   price: { type: Number },
   mrp: { type: Number },
-  salePrice: { type: Number }
+  salePrice: { type: Number },
+
+  // Rating and Reviews
+  avgRating: { type: Number, default: 0 },
+  numReviews: { type: Number, default: 0 }
 }, { timestamps: true });
 
 ProductSchema.index({ productName: 'text', alternateNames: 'text', description: 'text', category: 'text', brand: 'text', 'variants.sku': 'text' });

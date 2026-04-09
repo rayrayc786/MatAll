@@ -19,6 +19,24 @@ axios.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isUserNotFound = error.response?.status === 404 && error.response?.data?.message === "User not found";
+    const isUnauthorized = error.response?.status === 401;
+
+    if (isUnauthorized || isUserNotFound) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Only redirect if not already on login to avoid loops
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // User Pages
 import Home from './pages/Home';
 import Login from './pages/Login';

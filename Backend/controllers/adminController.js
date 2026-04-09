@@ -678,3 +678,34 @@ exports.getSearchLogs = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getAllReviewsAdmin = async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const reviews = await Review.find({}).populate('productId', 'productName').sort({ createdAt: -1 });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteReviewAdmin = async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const review = await Review.findByIdAndDelete(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    
+    // Recalculate avgRating for the product
+    const reviews = await Review.find({ productId: review.productId });
+    const avgRating = reviews.length > 0 ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+
+    await Product.findByIdAndUpdate(review.productId, {
+      avgRating,
+      numReviews: reviews.length
+    });
+
+    res.json({ message: 'Review deleted and product stats updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

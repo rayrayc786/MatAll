@@ -103,5 +103,9 @@ router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 router.get('/search-logs', adminController.getSearchLogs);
 
+// Review management
+router.get('/reviews', adminController.getAllReviewsAdmin);
+router.delete('/reviews/:id', adminController.deleteReviewAdmin);
+
 module.exports = router;
 

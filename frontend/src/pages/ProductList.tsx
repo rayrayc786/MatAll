@@ -6,7 +6,8 @@ import {
   Home, 
   Filter,
   ArrowUpDown,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
@@ -53,7 +54,7 @@ const ProductList: React.FC = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/brands`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/brands`);
         setAllBrands(data);
       } catch (err) { console.error('Failed to fetch brands:', err); }
     };
@@ -96,7 +97,7 @@ const ProductList: React.FC = () => {
         return;
       }
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories?categoryId=${categoryId}`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/sub-categories?categoryId=${categoryId}`);
         const list = data.map((sc: any) => ({
           name: sc.name,
           link: `/products?category=${categoryId}&subCategory=${sc.name}`
@@ -113,7 +114,7 @@ const ProductList: React.FC = () => {
     const fetchModalSubCats = async () => {
       if (!activeModalCat) return;
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories?categoryId=${activeModalCat}`);
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/sub-categories?categoryId=${activeModalCat}`);
         setModalSubCats(data);
       } catch (err) { console.error(err); }
     };
@@ -213,23 +214,40 @@ const ProductList: React.FC = () => {
             </div>
             <span>All Brands</span>
           </div>
-          {brands.map((brand: any, idx) => (
-            <div 
-              key={idx} 
-              className={`brand-sidebar-item ${selectedBrand === brand ? 'active' : ''}`}
-              onClick={() => setSelectedBrand(brand)}
-            >
-              <div className="brand-sidebar-img">
-                <img 
-                  src={(allBrands.find(b => b.name === brand)?.logoUrl) 
-                    ? getFullImageUrl(allBrands.find(b => b.name === brand)?.logoUrl) 
-                    : (products.find(p => p.brand === brand)?.imageUrl ? getFullImageUrl(products.find(p => p.brand === brand)?.imageUrl) : `https://ui-avatars.com/api/?name=${encodeURIComponent(brand)}&background=f1f5f9&color=000&bold=true`)} 
-                  alt={brand} 
-                />
+          {brands.map((brand: any, idx) => {
+            const brandData = allBrands.find(b => b.name.toLowerCase() === brand.toString().toLowerCase());
+            const brandLogo = brandData?.logoUrl;
+            
+            return (
+              <div 
+                key={idx} 
+                className={`brand-sidebar-item ${selectedBrand === brand ? 'active' : ''}`}
+                onClick={() => setSelectedBrand(brand)}
+              >
+                <div className="brand-sidebar-img">
+                  {brandLogo && (
+                    <img 
+                      src={getFullImageUrl(brandLogo)} 
+                      alt={brand} 
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        const fallback = parent?.querySelector('.brand-initials');
+                        if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                      }}
+                    />
+                  )}
+                  <div 
+                    className="brand-initials" 
+                    style={{ display: brandLogo ? 'none' : 'flex' }}
+                  >
+                    {brand.substring(0, 2).toUpperCase()}
+                  </div>
+                </div>
+                <span>{brand}</span>
               </div>
-              <span>{brand}</span>
-            </div>
-          ))}
+            );
+          })}
         </aside>
 
         {/* Product Grid Area */}
@@ -243,7 +261,20 @@ const ProductList: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="no-products">No products found for this selection.</div>
+            <div className="no-products">
+              <p>No products found for this selection.</p>
+              <button 
+                className="whatsapp-contact-btn"
+                onClick={() => {
+                  const phoneNumber = '919216921698';
+                  const message = encodeURIComponent(`Hi, I couldn't find ${selectedBrand || 'what I was looking for'} on MatAll. Can you help?`);
+                  window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+                }}
+              >
+                <MessageCircle size={20} />
+                Contact us on WhatsApp
+              </button>
+            </div>
           )}
 
           {/* Blog Space */}

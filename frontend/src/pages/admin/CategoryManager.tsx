@@ -27,7 +27,8 @@ const CategoryManager: React.FC = () => {
     name: '',
     categoryId: '',
     parentSubCategoryId: '',
-    isActive: true
+    isActive: true,
+    imageUrl: ''
   });
 
   const fetchData = async () => {
@@ -60,6 +61,21 @@ const CategoryManager: React.FC = () => {
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
       setCatFormData({ ...catFormData, imageUrl: data.imageUrl });
+      toast.success('Image uploaded successfully');
+    } catch (err) {
+      toast.error('Upload failed');
+    }
+  };
+
+  const handleSubCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append('image', file);
+    
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/upload-image`, uploadData);
+      setSubFormData({ ...subFormData, imageUrl: data.imageUrl });
       toast.success('Image uploaded successfully');
     } catch (err) {
       toast.error('Upload failed');
@@ -148,7 +164,8 @@ const CategoryManager: React.FC = () => {
       name: sub.name,
       categoryId: sub.categoryId?._id || sub.categoryId,
       parentSubCategoryId: sub.parentSubCategoryId?._id || sub.parentSubCategoryId || '',
-      isActive: sub.isActive
+      isActive: sub.isActive,
+      imageUrl: sub.imageUrl || ''
     });
     setShowSubModal(true);
   };
@@ -159,7 +176,8 @@ const CategoryManager: React.FC = () => {
         name: '',
         categoryId: parentId,
         parentSubCategoryId: '',
-        isActive: true
+        isActive: true,
+        imageUrl: ''
       });
     } else {
       const parentSub = subCategories.find(s => s._id === parentId);
@@ -167,7 +185,8 @@ const CategoryManager: React.FC = () => {
         name: '',
         categoryId: parentSub?.categoryId?._id || parentSub?.categoryId || '',
         parentSubCategoryId: parentId,
-        isActive: true
+        isActive: true,
+        imageUrl: ''
       });
     }
     setEditingSub(null);
@@ -227,6 +246,17 @@ const CategoryManager: React.FC = () => {
             }}>
               {sub.isActive ? 'ACTIVE' : 'INACTIVE'}
             </span>
+          </td>
+          <td>
+            {sub.imageUrl ? (
+              <div style={{ width: '32px', height: '32px', borderRadius: '4px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <img src={getFullImageUrl(sub.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ) : (
+              <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Image size={14} color="#94a3b8" />
+              </div>
+            )}
           </td>
           <td className="actions-cell">
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -491,6 +521,7 @@ const CategoryManager: React.FC = () => {
                   </select>
                 </div>
 
+
                 <div className="form-group">
                   <label>Parent Sub-Category (Optional for nesting)</label>
                   <select 
@@ -509,6 +540,31 @@ const CategoryManager: React.FC = () => {
                       ))
                     }
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Sub-Category Image (Optional)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '4px' }}>
+                    <div style={{ 
+                      width: '80px', 
+                      height: '80px', 
+                      borderRadius: '8px', 
+                      border: '2px dashed #e2e8f0', 
+                      backgroundImage: subFormData.imageUrl ? `url(${getFullImageUrl(subFormData.imageUrl)})` : 'none', 
+                      backgroundSize: 'cover', 
+                      backgroundPosition: 'center', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center' 
+                    }}>
+                      {!subFormData.imageUrl && <Image size={20} color="#64748b" opacity={0.5} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input type="text" value={subFormData.imageUrl} onChange={e => setSubFormData({...subFormData, imageUrl: e.target.value})} placeholder="URL or upload below" style={{ marginBottom: '8px' }} />
+                      <input type="file" id="sub-img-upload" hidden accept="image/*" onChange={handleSubCategoryImageUpload} />
+                      <label htmlFor="sub-img-upload" className="secondary-btn xs" style={{ cursor: 'pointer', display: 'inline-block' }}>Upload File</label>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>

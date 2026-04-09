@@ -34,8 +34,8 @@ const SiteFooter: React.FC = () => {
     const fetchData = async () => {
       try {
         const [catsRes, subsRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/categories`),
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/sub-categories`)
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/categories`),
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/sub-categories`)
         ]);
         if (catsRes.data && catsRes.data.length > 0) {
           setCategories(catsRes.data.filter((c: any) => c.isActive));
