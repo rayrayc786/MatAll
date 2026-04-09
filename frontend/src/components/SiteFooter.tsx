@@ -105,7 +105,7 @@ const SiteFooter: React.FC = () => {
       
       <div className="footer-copyright-bar">
         <div className="footer-copyright-content">
-          © 2026 MatAll | Adventitous Solutions Private Limited
+          © 2026 | MatAll App by Adventitous Solutions Private Limited
         </div>
       </div>
     </footer>
