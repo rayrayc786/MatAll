@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - newUI
 
 jobs:
   deploy:
@@ -17,20 +18,26 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /var/www/MatAll
-            git pull origin main
+            
+            # Reset to origin to avoid local conflict issues
+            git fetch --all
+            git reset --hard origin/${{ github.ref_name }}
 
             # Backend
             cd Backend
             npm install
-            pm2 restart all
+            pm2 delete matall-backend || true
+            pm2 start server.js --name "matall-backend"
+            pm2 save
 
             # Frontend
             cd ../frontend
             npm install
             npm run build
 
-            # Clean + copy
+            # Clean + copy to Nginx root
             rm -rf /var/www/html/*
             cp -r dist/* /var/www/html/
 
