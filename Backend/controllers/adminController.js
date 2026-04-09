@@ -16,6 +16,7 @@ const path = require('path');
 const GSTClassification = require('../models/GSTClassification');
 const ServiceableArea = require('../models/ServiceableArea');
 const Settings = require('../models/Settings');
+const SearchLog = require('../models/SearchLog');
 const axios = require('axios');
 
 
@@ -317,7 +318,8 @@ exports.bulkUploadProducts = async (req, res) => {
       }).filter(Boolean);
 
       const variant = {
-        sku: String(rowData['Product Code (SKU)'] || rowData['SKU'] || '').trim(),
+        sku: String(rowData['SKU Number'] || rowData['SKU'] || rowData['Product Code (SKU)']  || '').trim(),
+        productCode: String(rowData['Product ID'] || '').trim(),
         name: attributes.map(a => `${a.name}: ${a.value}`).join(', ') || 'Standard',
         price: parseFloat(rowData['Sale Price']) || 0,
         attributes,
@@ -351,6 +353,7 @@ exports.bulkUploadProducts = async (req, res) => {
           brand,
           alternateNames: (rowData['Alternate Names'] ? String(rowData['Alternate Names']).split(',').map(s => s.trim()) : []),
           description: rowData['Product Description'],
+          productCode: String(rowData['Product ID'] || '').trim(),
           hsnCode: String(rowData['HSN Code'] || '').trim(),
           sellingMeasure: rowData['Selling Measure'],
           measureTerm: rowData['Measure Term'],
@@ -662,6 +665,46 @@ exports.toggleActiveStatus = async (req, res) => {
     product.isActive = !product.isActive;
     await product.save();
     res.json({ message: `Product is now ${product.isActive ? 'Active' : 'Hidden'}`, isActive: product.isActive });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getSearchLogs = async (req, res) => {
+  try {
+    const logs = await SearchLog.find().populate('user', 'fullName phoneNumber').sort({ createdAt: -1 });
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getAllReviewsAdmin = async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const reviews = await Review.find({}).populate('productId', 'productName').sort({ createdAt: -1 });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteReviewAdmin = async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const review = await Review.findByIdAndDelete(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    
+    // Recalculate avgRating for the product
+    const reviews = await Review.find({ productId: review.productId });
+    const avgRating = reviews.length > 0 ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+
+    await Product.findByIdAndUpdate(review.productId, {
+      avgRating,
+      numReviews: reviews.length
+    });
+
+    res.json({ message: 'Review deleted and product stats updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

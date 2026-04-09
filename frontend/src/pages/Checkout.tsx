@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Home, 
-  ChevronRight, 
   Receipt, 
   ChevronDown,
   Plus,
@@ -19,6 +18,7 @@ import toast from 'react-hot-toast';
 import { Map, AdvancedMarker, useApiIsLoaded, useMapsLibrary } from '@vis.gl/react-google-maps';
 import './checkout.css';
 import SEO from '../components/SEO';
+import { getFullImageUrl } from '../utils/imageUrl';
 
 interface Address {
   _id?: string;
@@ -63,7 +63,13 @@ const Checkout: React.FC = () => {
      landmark: '',
      directions: '',
      recipientName: '',
-     recipientPhone: ''
+     recipientPhone: '',
+     pincode: '',
+     city: '',
+     state: '',
+     country: 'India',
+     isBilling: false,
+     isShipping: true
   });
   
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -288,6 +294,32 @@ const Checkout: React.FC = () => {
               </div>
             </div>
           ))}
+          {cart.map((item, idx) => (
+            <div 
+              key={idx} 
+              className="shipment-item" 
+              onClick={() => navigate(`/products/${item.product._id}`)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="item-thumb">
+                <img 
+                  src={getFullImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0]))} 
+                  alt="" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+                  }}
+                />
+              </div>
+              <div className="item-info">
+                <h4>{item.product.brand} {item.product.name}</h4>
+                <p>{item.selectedVariant}</p>
+                <div className="item-price-row">
+                   <span>Qty: {item.quantity}</span>
+                   <strong>₹{((item.product.price || item.product.salePrice || 0) * item.quantity)}</strong>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -324,7 +356,7 @@ const Checkout: React.FC = () => {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
       if (!data.serviceable) {
-        toast.error(`Sorry, we don't serve in ${pincode} yet. We currently serve in ${data.city || 'limited areas'}.`, {
+        toast.error(`Oops, we do not serve this area currently. We will be live soon and keep you informed`, {
           duration: 4000,
           icon: '📍'
         });
@@ -439,7 +471,7 @@ const Checkout: React.FC = () => {
         <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
       </header>
       <div className="map-placeholder dynamic">
-        {isLoaded ? (
+        {isLoaded && mapCenter ? (
           <Map
             style={{ width: '100%', height: '100%' }}
             defaultCenter={mapCenter}
@@ -449,7 +481,8 @@ const Checkout: React.FC = () => {
             disableDefaultUI={true}
             gestureHandling={'greedy'}
           >
-            <AdvancedMarker position={mapCenter} />
+            {/* Guard against crashes if Marker renders before Map internal data is ready */}
+            {mapCenter && <AdvancedMarker position={mapCenter} />}
           </Map>
         ) : (
           <div className="map-loading">Loading Maps...</div>
@@ -521,24 +554,72 @@ const Checkout: React.FC = () => {
             value={addressData.house}
             onChange={(e) => setAddressData({ ...addressData, house: e.target.value })}
           />
-          <input 
-            type="text" 
-            placeholder="Floor" 
-            value={addressData.floor}
-            onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
-          />
-          <input 
-            type="text" 
-            placeholder="Tower/ Block (optional)" 
-            value={addressData.tower}
-            onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
-          />
+          <div className="input-row-double">
+             <input 
+                type="text" 
+                placeholder="Floor" 
+                value={addressData.floor}
+                onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
+             />
+             <input 
+                type="text" 
+                placeholder="Tower/ Block" 
+                value={addressData.tower}
+                onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
+             />
+          </div>
           <input 
             type="text" 
             placeholder="Nearby Landmark" 
             value={addressData.landmark}
             onChange={(e) => setAddressData({ ...addressData, landmark: e.target.value })}
           />
+          <div className="input-row-double">
+            <input 
+              type="text" 
+              placeholder="Pincode" 
+              value={addressData.pincode}
+              onChange={(e) => setAddressData({ ...addressData, pincode: e.target.value })}
+            />
+            <input 
+              type="text" 
+              placeholder="City" 
+              value={addressData.city}
+              onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
+            />
+          </div>
+          <div className="input-row-double">
+            <input 
+              type="text" 
+              placeholder="State" 
+              value={addressData.state}
+              onChange={(e) => setAddressData({ ...addressData, state: e.target.value })}
+            />
+            <input 
+              type="text" 
+              placeholder="Country" 
+              value={addressData.country || 'India'}
+              onChange={(e) => setAddressData({ ...addressData, country: e.target.value })}
+            />
+          </div>
+          <div className="checkbox-row-group">
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={addressData.isBilling}
+                onChange={(e) => setAddressData({ ...addressData, isBilling: e.target.checked })}
+              />
+              <span>Set as Billing Address</span>
+            </label>
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={addressData.isShipping}
+                onChange={(e) => setAddressData({ ...addressData, isShipping: e.target.checked })}
+              />
+              <span>Set as Shipping Address</span>
+            </label>
+          </div>
           <div className="textarea-wrapper">
             <textarea 
                placeholder="Any directions. Help rider reach your location"
@@ -569,12 +650,41 @@ const Checkout: React.FC = () => {
            const finalAddr = {
               name: addressData.nickname || 'Unknown',
               addressText: `${addressData.house ? addressData.house + ', ' : ''}${addressData.floor ? 'Floor ' + addressData.floor + ', ' : ''}${fullAddress}`,
+              fullAddress: fullAddress,
+              pincode: addressData.pincode,
+              city: addressData.city,
+              state: addressData.state,
+              country: addressData.country,
+              isBilling: addressData.isBilling,
+              isShipping: addressData.isShipping,
               type: 'Home' as any,
               recipientName: addressData.recipientName,
               recipientPhone: addressData.recipientPhone
            };
            setSelectedAddress(finalAddr);
            setStep('checkout');
+
+           // Persist address to user profile
+           const token = localStorage.getItem('token');
+           if (token) {
+              axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/profile/jobsites`, {
+                 name: finalAddr.name,
+                 addressText: finalAddr.fullAddress,
+                 pincode: finalAddr.pincode,
+                 city: finalAddr.city,
+                 state: finalAddr.state,
+                 country: finalAddr.country,
+                 isBilling: finalAddr.isBilling,
+                 isShipping: finalAddr.isShipping,
+                 location: {
+                    type: 'Point',
+                    coordinates: [mapCenter.lng, mapCenter.lat]
+                 },
+                 contactPerson: finalAddr.recipientName,
+                 contactPhone: finalAddr.recipientPhone
+              }).catch(err => console.error('Failed to save address to profile:', err));
+           }
+
            toast.success('Location confirmed!');
         }}>
           Save & Continue
@@ -627,14 +737,7 @@ const Checkout: React.FC = () => {
                <button className="pod-change-btn">Change</button>
             </div>
 
-            <div className="gstin-entry-row">
-               <div className="gst-icon-box">%</div>
-               <div className="gst-text">
-                  <span>Add GSTIN</span>
-                  <p>Claim input tax credit</p>
-               </div>
-               <ChevronRight size={20} />
-            </div>
+          
 
             <div className={`policy-expandable ${showPolicy ? 'open' : ''}`}>
               <div className="policy-row" onClick={() => setShowPolicy(!showPolicy)}>

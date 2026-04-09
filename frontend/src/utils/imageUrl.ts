@@ -13,5 +13,5 @@ export const getFullImageUrl = (url?: string) => {
     processedUrl = url.startsWith('/') ? url : `/${url}`;
   }
 
-  return `${cleanBase}${processedUrl}`;
+  return encodeURI(`${cleanBase}${processedUrl}`);
 };

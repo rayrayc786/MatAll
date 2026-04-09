@@ -92,6 +92,8 @@ exports.createRazorpayOrder = async (req, res) => {
     }
 
     const { amount } = req.body; // Amount in INR
+    console.log(`[Razorpay] Creating order for amount: ${amount} INR`);
+    
     const rzp = getRazorpayInstance();
 
     const options = {
@@ -101,11 +103,17 @@ exports.createRazorpayOrder = async (req, res) => {
       payment_capture: 1
     };
 
+    console.log('[Razorpay] Requesting order from Razorpay API...');
     const order = await rzp.orders.create(options);
+    console.log(`[Razorpay] Order created: ${order.id}`);
     res.json(order);
   } catch (err) {
     console.error('Razorpay create order error:', err);
-    res.status(500).json({ error: err.message });
+    const errorMessage = err.error?.description || err.message || 'Failed to create payment session';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? err : undefined 
+    });
   }
 };
 

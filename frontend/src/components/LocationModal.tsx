@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Navigation, X, Home, Map as MapIcon, Loader2, ChevronRight, Mic, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { Map, AdvancedMarker, useMapsLibrary } from '@vis.gl/react-google-maps';
+import { Map, Marker, useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
 import './locationModal.css';
 
 interface LocationModalProps {
@@ -12,7 +12,7 @@ interface LocationModalProps {
   currentAddress?: string;
 }
 
-const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelectAddress }) => {
+const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelectAddress, currentAddress }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -42,12 +42,31 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
   const placesLibrary = useMapsLibrary('places');
   const geocodingLibrary = useMapsLibrary('geocoding');
 
+  // Safe Marker component using stable Marker
+  const MapMarker = ({ position }: { position: google.maps.LatLngLiteral }) => {
+    const map = useMap();
+    if (!map) return null;
+    return <Marker position={position} />;
+  };
+
+  // Sync form state when user transitions to add address form
+  useEffect(() => {
+    if (showAddForm && !newAddrText) {
+      if (selectedAddress || searchTerm || currentAddress) {
+        setNewAddrText(selectedAddress || searchTerm || currentAddress || '');
+        setNewAddrCoords([mapCenter.lng, mapCenter.lat]);
+      }
+    }
+  }, [showAddForm, selectedAddress, searchTerm, currentAddress, mapCenter]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setStep(1);
       setShowAddForm(false);
       
+      if (currentAddress) setSearchTerm(currentAddress);
+
       if (navigator.geolocation) {
          navigator.geolocation.getCurrentPosition((pos) => {
            setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -66,14 +85,12 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     if (value.length > 2 && placesLibrary) {
         setIsSearching(true);
         try {
-            const request = {
+            const request: any = {
                 input: value,
-                locationRestriction: {
-                    north: 37.0902,
-                    south: 8.4,
-                    east: 97.25,
-                    west: 68.7,
-                },
+                locationRestriction: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(8.4, 68.7),
+                    new google.maps.LatLng(37.0, 97.2)
+                ),
                 includedRegionCodes: ['in']
             };
             const { suggestions: results } = await placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
@@ -101,7 +118,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
       if (!data.serviceable) {
-        toast.error(`Sorry, we don't serve in ${pincode} yet. We currently serve in ${data.city || 'limited areas'}.`, {
+        toast.error(`Oops, we do not serve this area currently. We will be live soon and keep you informed`, {
           duration: 4000,
           icon: '📍'
         });
@@ -130,7 +147,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
 
             if (!isServiceableResult) {
                 setSelectedAddress('');
-                setSearchTerm('Location Not Serviceable');
+                setSearchTerm('Oops, we do not serve this area currently. We will be live soon and keep you informed');
                 setIsServiceable(false);
                 return;
             }
@@ -167,7 +184,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
 
             if (!isServiceableResult) {
               setSelectedAddress('');
-              setSearchTerm('Location Not Serviceable');
+              setSearchTerm('Oops, we do not serve this area currently. We will be live soon and keep you informed');
               setIsServiceable(false);
               return;
             }
@@ -204,7 +221,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
               setIsLocating(false);
               setIsServiceable(false);
               setSelectedAddress('');
-              setSearchTerm('Location Not Serviceable');
+              setSearchTerm('Oops, we do not serve this area currently. We will be live soon and keep you informed');
               return;
             }
 
@@ -239,7 +256,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddrCoords || !newAddrText) {
-        toast.error('Please select an address from suggestions');
+        toast.error('Please select a valid location on the map');
         return;
     }
 
@@ -248,18 +265,22 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
         const formattedAddress = `${houseNumber ? houseNumber + ', ' : ''}${floor ? 'Floor ' + floor + ', ' : ''}${tower ? tower + ', ' : ''}${newAddrText}${landmark ? ' (Near ' + landmark + ')' : ''}`;
         
         const newJobsite = {
-            name: newAddrName || newAddrType,
+            name: newAddrName || newAddrType || 'My Address',
             addressType: newAddrType,
             addressText: formattedAddress,
             contactPhone: newAddrPhone,
             location: {
                 type: 'Point',
-                coordinates: newAddrCoords
+                coordinates: newAddrCoords // [longitude, latitude]
             }
         };
 
-        const updatedJobsites = [...(user.jobsites || []), newJobsite];
+        // Fetch fresh user data from localStorage to avoid stale spread
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedJobsites = [...(currentUser.jobsites || []), newJobsite];
         
+        console.log('Saving address:', newJobsite);
+
         const { data } = await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/api/auth/profile`,
             { jobsites: updatedJobsites },
@@ -267,11 +288,12 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
         );
 
         localStorage.setItem('user', JSON.stringify(data));
-        toast.success('Address added successfully');
+        toast.success('Address saved to profile');
         onSelectAddress(formattedAddress, newAddrCoords);
         onClose();
-    } catch (err) {
-        toast.error('Failed to add address');
+    } catch (err: any) {
+        console.error('Save address error:', err.response?.data || err.message);
+        toast.error(err.response?.data?.message || 'Failed to save address. Please try again.');
     }
   };
 
@@ -294,7 +316,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                     <p>This helps us deliver your order quick.</p>
                  </div>
                  <div className="decision-actions">
-                    <button className="decision-btn yellow" onClick={() => setStep(2)}>
+                    <button className="decision-btn yellow" onClick={() => { setStep(2); setSearchTerm(''); }}>
                        I am not at the delivery location
                     </button>
                     <button className="decision-btn black" onClick={handleUseCurrentLocation} disabled={isLocating}>
@@ -333,6 +355,11 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                     onChange={handleSearchChange}
                     autoFocus
                   />
+                  {searchTerm && (
+                    <button type="button" className="clear-search-btn" onClick={() => setSearchTerm('')}>
+                      <X size={16} />
+                    </button>
+                  )}
                   {isSearching && <Loader2 size={18} className="animate-spin" />}
                 </div>
 
@@ -371,7 +398,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                            if (c) setMapCenter({ lat: c.lat, lng: c.lng });
                         }}
                       >
-                        <AdvancedMarker position={mapCenter} />
+                        <MapMarker position={mapCenter} />
                       </Map>
                       
                       <button className="locate-me-btn-overlay" onClick={() => {
@@ -472,8 +499,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSelect
                         className={`toggle-btn ${orderingFor === 'Yourself' ? 'active' : ''}`}
                         onClick={() => {
                            setOrderingFor('Yourself');
-                           setNewAddrName(user.name || '');
-                           setNewAddrPhone(user.phone || '');
+                           setNewAddrName(user.fullName || '');
+                           setNewAddrPhone(user.phoneNumber || '');
                         }}
                      >
                         Yourself

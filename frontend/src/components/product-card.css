@@ -41,8 +41,8 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   background: rgba(255,255,255,0.9);
   border: none;
   border-radius: 50%;
@@ -50,10 +50,13 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 5;
+  z-index: 10;
   color: #999;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: all 0.2s;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .list-fav-btn:hover {
@@ -88,10 +91,8 @@
   align-items: center;
   gap: 4px;
   padding: 2px 0;
-  max-width: 65px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .list-unit-info.is-clickable {
@@ -213,11 +214,11 @@
   font-weight: 500;
   margin-bottom: 8px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 2.1rem;
+  height: 3.2rem;
 }
 
 .brand-bold {

@@ -33,12 +33,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   }, [product._id]);
   
-  // Random ratings for UI consistency with reference
-  const ratingData = useMemo(() => {
-    const rating = (Math.random() * (5 - 3.8) + 3.8).toFixed(1);
-    const count = Math.floor(Math.random() * 5000) + 100;
-    return { rating, count: count.toLocaleString() };
-  }, [product._id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,7 +62,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.list-add-container') || target.closest('.list-fav-btn') || target.closest('.dropdown-trigger')) {
+    // Enhanced check to prevent navigation when clicking action buttons
+    if (
+      target.closest('.list-add-container') || 
+      target.closest('.list-fav-btn') || 
+      target.closest('.dropdown-trigger') ||
+      target.closest('.options-indicator-row') ||
+      target.tagName.toLowerCase() === 'button'
+    ) {
       return;
     }
     navigate(`/products/${product._id}`);
@@ -76,6 +77,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please login to favorite products');
@@ -124,6 +126,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           src={getFullImageUrl(selectedVariant?.images?.[0] || product.images?.[0] || product.imageUrl)} 
           alt={product.name} 
           className="list-product-img"
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
+          }}
         />
         {/* <div className="stock-dot-indicator">
           <div className="dot"></div>
@@ -138,28 +143,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             onClick={(e) => {
               if (product.variants?.length > 1) {
                 e.stopPropagation();
+                e.preventDefault();
                 setShowVariantModal(true);
               }
             }}
           >
             {selectedVariant?.attributes && Object.keys(selectedVariant.attributes).length > 0 
-              ? Object.values(selectedVariant.attributes).join(', ') 
-              : selectedVariant?.name || product.unitLabel || 'Standard'}
+              ? Object.values(selectedVariant.attributes)[0]
+              : (selectedVariant?.name && selectedVariant.name !== 'Standard' 
+                  ? selectedVariant.name.split(',')[0].trim() 
+                  : product.unitLabel || 'Standard')}
             {product.variants?.length > 1 && <ChevronDown size={14} className="unit-arrow" />}
           </div>
           
           <div className="list-add-container">
             {cartItem ? (
-              <div className="list-qty-control" onClick={e => e.stopPropagation()}>
-                <button onClick={() => addToCart(product, -1, currentVariantName)}><Minus size={12} /></button>
+              <div className="list-qty-control" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
+                <button onClick={(e) => { e.stopPropagation(); addToCart(product, -1, currentVariantName); }}><Minus size={12} /></button>
                 <span className="list-qty-val">{cartItem.quantity}</span>
-                <button onClick={() => addToCart(product, 1, currentVariantName)}><Plus size={12} /></button>
+                <button onClick={(e) => { e.stopPropagation(); addToCart(product, 1, currentVariantName); }}><Plus size={12} /></button>
               </div>
             ) : (
               <div className="add-btn-wrapper">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     if (product.variants && product.variants.length > 1) {
                       setShowVariantModal(true);
                     } else {
@@ -206,8 +215,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="list-meta-row">
           <div className="list-rating">
             <Star size={10} fill="#facc15" color="#facc15" />
-            <span className="rating-val">{ratingData.rating}</span>
-            <span className="rating-count">({ratingData.count})</span>
+            <span className="rating-val">{(product.avgRating || 0).toFixed(1)}</span>
+            <span className="rating-count">({product.numReviews || 0})</span>
           </div>
           <div className="list-delivery-time">
              <Clock size={10} />

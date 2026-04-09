@@ -92,28 +92,40 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // 1. Initial Load and Polling (Fetch from server)
   useEffect(() => {
     refreshSettings();
 
     // Listen for updates from other tabs
-    settingsChannel.onmessage = (event) => {
+    const handleBroadcast = (event: MessageEvent) => {
       if (event.data === 'refresh') {
         refreshSettings(false);
       }
     };
-    // Refresh from server every 30 seconds
-    const serverInterval = setInterval(refreshSettings, 30000);
-    
-    // Re-check local calculation every minute (to handle clock crossing boundaries)
-    const localInterval = setInterval(() => {
-      setIsCurrentlyEnabled(checkStatus(settings));
-    }, 60000);
+    settingsChannel.addEventListener('message', handleBroadcast);
 
+    // Refresh from server every 30 seconds
+    const serverInterval = setInterval(() => {
+      refreshSettings(false);
+    }, 30000);
+    
     return () => {
+      settingsChannel.removeEventListener('message', handleBroadcast);
       clearInterval(serverInterval);
-      clearInterval(localInterval);
     };
-  }, [settings.useOperatingHours, settings.serviceStartTime, settings.serviceEndTime, settings.isServiceEnabled]);
+  }, []);
+
+  // 2. Local Status Check (Handles the minute-by-minute clock crossing)
+  useEffect(() => {
+    const checkNow = () => {
+      setIsCurrentlyEnabled(checkStatus(settings));
+    };
+
+    checkNow();
+    const localInterval = setInterval(checkNow, 60000);
+    
+    return () => clearInterval(localInterval);
+  }, [settings]);
 
   return (
     <SettingsContext.Provider value={{ settings, loading, isCurrentlyEnabled, refreshSettings }}>

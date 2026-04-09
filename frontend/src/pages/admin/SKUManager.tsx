@@ -27,6 +27,7 @@ const SKUManager: React.FC = () => {
     productName: '',
     name: '',
     sku: '',
+    productCode: '',
     unitType: 'individual',
     unitLabel: 'unit',
     weightPerUnit: 0,
@@ -295,6 +296,7 @@ const SKUManager: React.FC = () => {
       productName: sku.productName || sku.name || '',
       name: sku.name || '',
       sku: sku.sku || '',
+      productCode: sku.productCode || '',
       unitType: sku.unitType || 'individual',
       unitLabel: sku.unitLabel || 'unit',
       weightPerUnit: sku.weightPerUnit || 0,
@@ -315,7 +317,10 @@ const SKUManager: React.FC = () => {
       infoPara: sku.infoPara || '',
       description: sku.description || '',
       bulkPricing: sku.bulkPricing || [],
-      variants: sku.variants || [],
+      variants: (sku.variants || []).map((v: any) => ({
+        ...v,
+        productCode: v.productCode || sku.productCode || ''
+      })),
       images: sku.images || [sku.imageUrl].filter(Boolean)
     });
     setProductTab('general');
@@ -328,6 +333,7 @@ const SKUManager: React.FC = () => {
       productName: '',
       name: '',
       sku: '',
+      productCode: '',
       unitType: 'individual',
       unitLabel: 'unit',
       weightPerUnit: 0,
@@ -550,7 +556,11 @@ const SKUManager: React.FC = () => {
                       <input type="text" value={formData.productName || formData.name || ''} onChange={e => setFormData({...formData, productName: e.target.value, name: e.target.value})} required />
                     </div>
                     <div className="form-group">
-                      <label>SKU / Product Code</label>
+                      <label>Product Code</label>
+                      <input type="text" value={formData.productCode || ''} onChange={e => setFormData({...formData, productCode: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label>SKU (for variants)</label>
                       <input type="text" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} />
                     </div>
                     
@@ -742,7 +752,7 @@ const SKUManager: React.FC = () => {
                             setFormData({...formData, variants: newV});
                           }} />
                         </div>
-                        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                           <div className="form-group">
                             <label>Price (₹)</label>
                             <input type="number" value={v.price || v.pricing?.salePrice || 0} onChange={(e) => {
@@ -758,7 +768,15 @@ const SKUManager: React.FC = () => {
                             }} />
                           </div>
                           <div className="form-group">
-                            <label>SKU (Product Code)</label>
+                            <label>Product Code</label>
+                            <input type="text" value={v.productCode || ''} onChange={(e) => {
+                              const newV = [...formData.variants];
+                              newV[idx].productCode = e.target.value;
+                              setFormData({...formData, variants: newV});
+                            }} />
+                          </div>
+                          <div className="form-group">
+                            <label>SKU Number</label>
                             <input type="text" value={v.sku || ''} onChange={(e) => {
                               const newV = [...formData.variants];
                               newV[idx].sku = e.target.value;

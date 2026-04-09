@@ -1,125 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Star, CheckCircle, XCircle, Trash2 } from 'lucide-react';
-import './admin-dashboard.css';
+import { Trash2, Star, MessageSquare } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const ReviewManager: React.FC = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
   const fetchReviews = async () => {
     try {
       const token = localStorage.getItem('token');
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/reviews/admin`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/reviews`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReviews(data);
     } catch (err) {
-      console.error(err);
+      toast.error('Failed to fetch reviews');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchReviews();
-  }, []);
-
-  const updateStatus = async (id: string, status: string) => {
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/reviews/admin/${id}/status`, { status }, {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/admin/reviews/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchReviews();
+      toast.success('Review deleted');
+      setReviews(prev => prev.filter(r => r._id !== id));
     } catch (err) {
-      console.error(err);
-      alert('Failed to update review status');
+      toast.error('Failed to delete review');
     }
   };
-
-  const deleteReview = async (id: string) => {
-    if (!window.confirm('Delete this review?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/reviews/admin/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchReviews();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete review');
-    }
-  };
-
-  if (loading) return <div>Loading reviews...</div>;
 
   return (
-    <div className="admin-content-card">
-      <div className="admin-card-header">
-        <h2>Customer Reviews</h2>
+    <div className="admin-page-container">
+      <div className="admin-header">
+        <h2>Review Management</h2>
+        <p>Manage all customer ratings and feedback</p>
       </div>
-      <div className="table-responsive">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Customer</th>
-              <th>Rating</th>
-              <th>Review Details</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reviews.map(r => (
-              <tr key={r._id}>
-                <td>{r.productId?.brand || ''} {r.productId?.name || r.productId?.productName}</td>
-                <td>
-                  <div>{r.userId?.name}</div>
-                  <div className="txt-sec">{r.userId?.email}</div>
-                </td>
-                <td>
-                  <div style={{ display: 'flex' }}>
-                   {[1,2,3,4,5].map(s => (
-                     <Star key={s} size={14} fill={s <= r.rating ? "#facc15" : "transparent"} color={s <= r.rating ? "#facc15" : "#cbd5e1"} />
-                   ))}
-                  </div>
-                </td>
-                <td>
-                  <p style={{ margin: 0, maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.comment}>
-                    {r.comment}
-                  </p>
-                </td>
-                <td>
-                  <span className={`status-badge ${(r.status || 'pending').toLowerCase()}`}>{r.status}</span>
-                </td>
-                <td>
-                  <div className="action-cell">
-                    {r.status !== 'approved' && (
-                      <button className="icon-action-btn success" onClick={() => updateStatus(r._id, 'approved')} title="Approve">
-                        <CheckCircle size={16} />
+
+      <div className="admin-content-card">
+        {loading ? (
+          <div className="p-8 text-center">Loading reviews...</div>
+        ) : reviews.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
+            <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
+            <p>No reviews found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Customer</th>
+                  <th>Rating</th>
+                  <th>Comment</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.map((review) => (
+                  <tr key={review._id}>
+                    <td><strong>{review.productId?.productName || 'Deleted Product'}</strong></td>
+                    <td>{review.userName}</td>
+                    <td>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <Star key={s} size={14} fill={s <= review.rating ? "#FFD700" : "none"} color={s <= review.rating ? "#FFD700" : "#cbd5e1"} />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="max-w-xs truncate">{review.comment || '--'}</td>
+                    <td>{new Date(review.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <button className="text-red-500 hover:bg-red-50 p-2 rounded" onClick={() => handleDelete(review._id)}>
+                        <Trash2 size={18} />
                       </button>
-                    )}
-                    {r.status !== 'rejected' && (
-                      <button className="icon-action-btn warning" onClick={() => updateStatus(r._id, 'rejected')} title="Reject">
-                        <XCircle size={16} />
-                      </button>
-                    )}
-                    <button className="icon-action-btn danger" onClick={() => deleteReview(r._id)} title="Delete">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {reviews.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ textAlign: 'center' }}>No reviews found</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

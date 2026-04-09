@@ -244,8 +244,12 @@ const Tracking: React.FC = () => {
            </div>
            <div className="order-item-list-detailed">
               {order.items.map((item: any, idx: number) => (
-                 <div key={idx} className="item-row-wrapper-detailed">
-                    <div className="item-row-detailed">
+                  <div key={idx} className="item-row-wrapper-detailed">
+                    <div 
+                      className="item-row-detailed" 
+                      onClick={() => navigate(`/products/${item.productId?._id || item.product?._id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
                         <div className="item-thumb-box">
                            <img 
                               src={getFullImageUrl(item?.productId?.imageUrl || item?.product?.imageUrl || (item?.productId?.images && item?.productId?.images[0]))} 

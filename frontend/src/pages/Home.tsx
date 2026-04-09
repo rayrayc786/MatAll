@@ -75,7 +75,13 @@ const Home: React.FC = () => {
                 return (
                   <Link to={`/products?category=${encodeURIComponent(cat.name)}`} key={cat._id} className="category-modern-card">
                     <div className="category-card-img-box">
-                      <img src={catImg} alt={cat.name} />
+                      <img 
+                        src={catImg} 
+                        alt={cat.name} 
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                     </div>
                     <div className="category-card-info">
                       <h4 className="cat-card-title">{cat.name}</h4>
@@ -103,9 +109,26 @@ const Home: React.FC = () => {
           <div className="brands-horizontal-scroll">
             {featuredBrands.length > 0 ? (
               featuredBrands.map(brand => (
-                <Link to={`/brand/${brand.name}`} key={brand._id} className="brand-tile">
+                <Link to={`/products?brand=${encodeURIComponent(brand.name)}`} key={brand._id} className="brand-tile">
                   <div className="brand-logo-box">
-                    <img src={getFullImageUrl(brand.logoUrl)} alt={brand.name} />
+                    {brand.logoUrl && (
+                      <img 
+                        src={getFullImageUrl(brand.logoUrl)} 
+                        alt={brand.name} 
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          const fallback = parent?.querySelector('.brand-initials');
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                    )}
+                    <div 
+                      className="brand-initials"
+                      style={{ display: brand.logoUrl ? 'none' : 'flex' }}
+                    >
+                      {brand.name.substring(0, 2).toUpperCase()}
+                    </div>
                   </div>
                   <span>{brand.name}</span>
                 </Link>
@@ -148,7 +171,13 @@ const Home: React.FC = () => {
                 return (
                   <div key={offer._id} className="offer-card" onClick={() => offer.link && navigate(offer.link)} style={{ cursor: offer.link ? 'pointer' : 'default' }}>
                     <div className="offer-img-box">
-                      <img src={offerImg} alt={offer.title} />
+                      <img 
+                        src={offerImg} 
+                        alt={offer.title} 
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                       {offer.discount && <div className="offer-badge">{offer.discount}</div>}
                     </div>
                     <div className="offer-details">

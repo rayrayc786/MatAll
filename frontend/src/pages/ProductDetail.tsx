@@ -12,7 +12,8 @@ import {
   Minus,
   RotateCcw,
   ShieldCheck,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import ProductCard from '../components/ProductCard';
@@ -83,7 +84,7 @@ const ProductDetail: React.FC = () => {
         }
         
         try {
-          const reviewsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/reviews/product/${data._id}`);
+          const reviewsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}/reviews`);
           setReviews(reviewsRes.data);
         } catch (rErr) {
           console.error("Failed to fetch reviews", rErr);
@@ -219,14 +220,14 @@ const ProductDetail: React.FC = () => {
         <div className="detail-right-col">
           <main className="detail-main-info">
              {/* Metadata */}
-             {/* <div className="meta-stats-row">
-                <div className="delivery-mini"><Clock size={12} /> <span>10 mins</span></div>
+             <div className="meta-stats-row">
+                <div className="delivery-mini"><Clock size={12} /> <span>{product.deliveryTime || '10 mins'}</span></div>
                 <div className="rating-mini">
                    <Star size={12} fill="#facc15" color="#facc15" /> 
-                   <span>4.5</span> 
-                   <span className="count">(3.2 lac)</span>
+                   <span>{(product.avgRating || 0).toFixed(1)}</span> 
+                   <span className="count">({product.numReviews || 0})</span>
                 </div>
-             </div> */}
+             </div>
 
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                <h1 className="prd-title-large" style={{ flex: 1 }}>
@@ -361,11 +362,12 @@ const ProductDetail: React.FC = () => {
                                <td className="spec-title">Sub-Category</td>
                                <td className="spec-value">{product.subCategory}</td>
                             </tr>
+                            
                             {selectedVariant && (
                               <>
                                 <tr>
-                                   <td className="spec-title">SKU / Model</td>
-                                   <td className="spec-value">{selectedVariant.sku}</td>
+                                   <td className="spec-title">Product Code / SKU Number</td>
+                                   <td className="spec-value">{product.productCode} | {selectedVariant.sku}</td>
                                 </tr>
                                 {selectedVariant.measure?.value && (
                                   <tr>
@@ -529,7 +531,7 @@ const ProductDetail: React.FC = () => {
                       {reviews.map((r, idx) => (
                         <div key={idx} style={{ paddingBottom: '1rem', borderBottom: idx !== reviews.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{r.userId?.name || 'Verified Customer'}</span>
+                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{r.userName || 'Verified Customer'}</span>
                             <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                               {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>

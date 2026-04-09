@@ -11,7 +11,7 @@ import ProductCard from '../components/ProductCard';
 
 import './sub-category.css'; // Reusing established layout styles
 import SEO from '../components/SEO';
-
+import { getFullImageUrl } from '../utils/imageUrl';
 const BrandStore: React.FC = () => {
   const { brandName } = useParams();
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ const BrandStore: React.FC = () => {
           const firstProd = data.find((p: any) => p.subCategory === sub);
           return {
             name: sub,
-            image: firstProd?.imageUrl || 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
+            image: firstProd?.imageUrl ? getFullImageUrl(firstProd.imageUrl) : 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
           };
         });
         setSubCategories(subData);

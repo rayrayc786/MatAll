@@ -122,7 +122,7 @@ const Navbar: React.FC = () => {
         <Search size={20} className="search-icon" color="#333" />
         <input 
           type="text" 
-          placeholder='Search products...' 
+          placeholder='Search (e.g. Pipe, Wire)...' 
           value={searchTerm}
           onChange={onInputChange}
           onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
