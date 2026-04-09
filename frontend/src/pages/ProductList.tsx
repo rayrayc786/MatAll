@@ -10,9 +10,9 @@ import {
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
-import './product-list.css';
 import SEO from '../components/SEO';
-
+import { getFullImageUrl } from '../utils/imageUrl';
+import './product-list.css';
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -26,6 +26,7 @@ const ProductList: React.FC = () => {
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const [modalSubCats, setModalSubCats] = useState<any[]>([]);
   const [activeModalCat, setActiveModalCat] = useState<string | null>(null);
+  const [allBrands, setAllBrands] = useState<any[]>([]);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -48,6 +49,16 @@ const ProductList: React.FC = () => {
     };
     fetchAllCats();
   }, [categoryId]);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/brands`);
+        setAllBrands(data);
+      } catch (err) { console.error('Failed to fetch brands:', err); }
+    };
+    fetchBrands();
+  }, []);
 
   useEffect(() => {
     if (initialBrand) {
@@ -209,7 +220,12 @@ const ProductList: React.FC = () => {
               onClick={() => setSelectedBrand(brand)}
             >
               <div className="brand-sidebar-img">
-                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(brand)}&background=f1f5f9&color=000&bold=true`} alt={brand} />
+                <img 
+                  src={(allBrands.find(b => b.name === brand)?.logoUrl) 
+                    ? getFullImageUrl(allBrands.find(b => b.name === brand)?.logoUrl) 
+                    : (products.find(p => p.brand === brand)?.imageUrl ? getFullImageUrl(products.find(p => p.brand === brand)?.imageUrl) : `https://ui-avatars.com/api/?name=${encodeURIComponent(brand)}&background=f1f5f9&color=000&bold=true`)} 
+                  alt={brand} 
+                />
               </div>
               <span>{brand}</span>
             </div>
@@ -275,7 +291,12 @@ const ProductList: React.FC = () => {
                            }}
                          >
                             <div className="subcat-img">
-                               <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(sc.name)}&background=f1f5f9&color=000&bold=true`} alt={sc.name} />
+                               <img 
+                                 src={(products.find(p => p.subCategory === sc.name)?.imageUrl) 
+                                   ? getFullImageUrl(products.find(p => p.subCategory === sc.name)?.imageUrl) 
+                                   : `https://ui-avatars.com/api/?name=${encodeURIComponent(sc.name)}&background=f1f5f9&color=000&bold=true`} 
+                                 alt={sc.name} 
+                               />
                             </div>
                             <span>{sc.name}</span>
                          </div>

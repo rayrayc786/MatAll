@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const SearchLog = require('../models/SearchLog');
 const fs = require('fs');
 const path = require('path');
 const Brand = require('../models/Brand');
@@ -139,7 +140,8 @@ const hydrateProduct = (product) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const { category, brand, subCategory, search, isPopular } = req.query;
+    const { category, brand, subCategory, search: rawSearch, isPopular } = req.query;
+    const search = Array.isArray(rawSearch) ? rawSearch[0] : (rawSearch || '');
     let query = { isActive: true };
 
     const CATEGORY_MAP = {
@@ -213,6 +215,20 @@ exports.getAllProducts = async (req, res) => {
     }
 
     let products = await Product.find(query).lean();
+    
+    // Log the search
+    if (search) {
+      try {
+        await SearchLog.create({
+          query: search,
+          resultsCount: products.length,
+          ip: req.ip || req.connection.remoteAddress,
+          user: req.user ? req.user.id || req.user._id : null
+        });
+      } catch (logErr) {
+        console.error('Error logging search:', logErr);
+      }
+    }
     const hydrated = products.map(p => {
       const h = hydrateProduct(p);
       if (p.subCategory && !h.subCategory) h.subCategory = p.subCategory;

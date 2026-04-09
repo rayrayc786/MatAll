@@ -63,7 +63,13 @@ const Checkout: React.FC = () => {
      landmark: '',
      directions: '',
      recipientName: '',
-     recipientPhone: ''
+     recipientPhone: '',
+     pincode: '',
+     city: '',
+     state: '',
+     country: 'India',
+     isBilling: false,
+     isShipping: true
   });
   
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -439,7 +445,7 @@ const Checkout: React.FC = () => {
         <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
       </header>
       <div className="map-placeholder dynamic">
-        {isLoaded ? (
+        {isLoaded && mapCenter ? (
           <Map
             style={{ width: '100%', height: '100%' }}
             defaultCenter={mapCenter}
@@ -449,7 +455,8 @@ const Checkout: React.FC = () => {
             disableDefaultUI={true}
             gestureHandling={'greedy'}
           >
-            <AdvancedMarker position={mapCenter} />
+            {/* Guard against crashes if Marker renders before Map internal data is ready */}
+            {mapCenter && <AdvancedMarker position={mapCenter} />}
           </Map>
         ) : (
           <div className="map-loading">Loading Maps...</div>
@@ -521,24 +528,72 @@ const Checkout: React.FC = () => {
             value={addressData.house}
             onChange={(e) => setAddressData({ ...addressData, house: e.target.value })}
           />
-          <input 
-            type="text" 
-            placeholder="Floor" 
-            value={addressData.floor}
-            onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
-          />
-          <input 
-            type="text" 
-            placeholder="Tower/ Block (optional)" 
-            value={addressData.tower}
-            onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
-          />
+          <div className="input-row-double">
+             <input 
+                type="text" 
+                placeholder="Floor" 
+                value={addressData.floor}
+                onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
+             />
+             <input 
+                type="text" 
+                placeholder="Tower/ Block" 
+                value={addressData.tower}
+                onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
+             />
+          </div>
           <input 
             type="text" 
             placeholder="Nearby Landmark" 
             value={addressData.landmark}
             onChange={(e) => setAddressData({ ...addressData, landmark: e.target.value })}
           />
+          <div className="input-row-double">
+            <input 
+              type="text" 
+              placeholder="Pincode" 
+              value={addressData.pincode}
+              onChange={(e) => setAddressData({ ...addressData, pincode: e.target.value })}
+            />
+            <input 
+              type="text" 
+              placeholder="City" 
+              value={addressData.city}
+              onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
+            />
+          </div>
+          <div className="input-row-double">
+            <input 
+              type="text" 
+              placeholder="State" 
+              value={addressData.state}
+              onChange={(e) => setAddressData({ ...addressData, state: e.target.value })}
+            />
+            <input 
+              type="text" 
+              placeholder="Country" 
+              value={addressData.country || 'India'}
+              onChange={(e) => setAddressData({ ...addressData, country: e.target.value })}
+            />
+          </div>
+          <div className="checkbox-row-group">
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={addressData.isBilling}
+                onChange={(e) => setAddressData({ ...addressData, isBilling: e.target.checked })}
+              />
+              <span>Set as Billing Address</span>
+            </label>
+            <label className="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={addressData.isShipping}
+                onChange={(e) => setAddressData({ ...addressData, isShipping: e.target.checked })}
+              />
+              <span>Set as Shipping Address</span>
+            </label>
+          </div>
           <div className="textarea-wrapper">
             <textarea 
                placeholder="Any directions. Help rider reach your location"
@@ -569,12 +624,41 @@ const Checkout: React.FC = () => {
            const finalAddr = {
               name: addressData.nickname || 'Unknown',
               addressText: `${addressData.house ? addressData.house + ', ' : ''}${addressData.floor ? 'Floor ' + addressData.floor + ', ' : ''}${fullAddress}`,
+              fullAddress: fullAddress,
+              pincode: addressData.pincode,
+              city: addressData.city,
+              state: addressData.state,
+              country: addressData.country,
+              isBilling: addressData.isBilling,
+              isShipping: addressData.isShipping,
               type: 'Home' as any,
               recipientName: addressData.recipientName,
               recipientPhone: addressData.recipientPhone
            };
            setSelectedAddress(finalAddr);
            setStep('checkout');
+
+           // Persist address to user profile
+           const token = localStorage.getItem('token');
+           if (token) {
+              axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/profile/jobsites`, {
+                 name: finalAddr.name,
+                 addressText: finalAddr.fullAddress,
+                 pincode: finalAddr.pincode,
+                 city: finalAddr.city,
+                 state: finalAddr.state,
+                 country: finalAddr.country,
+                 isBilling: finalAddr.isBilling,
+                 isShipping: finalAddr.isShipping,
+                 location: {
+                    type: 'Point',
+                    coordinates: [mapCenter.lng, mapCenter.lat]
+                 },
+                 contactPerson: finalAddr.recipientName,
+                 contactPhone: finalAddr.recipientPhone
+              }).catch(err => console.error('Failed to save address to profile:', err));
+           }
+
            toast.success('Location confirmed!');
         }}>
           Save & Continue

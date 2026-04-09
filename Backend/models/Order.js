@@ -36,6 +36,7 @@ const OrderSchema = new mongoose.Schema({
   vehicleClass: { type: String, required: true },
   
   totalAmount: { type: Number, required: true }, // Grand Total (incl all fees & taxes)
+  paidAmount: { type: Number }, // Amount paid via Gateway (for partial/full tracking)
   subTotal: { type: Number }, // Sum of items (incl GST)
   totalBaseAmount: { type: Number }, // Sum of items base price
   totalTaxAmount: { type: Number }, // Sum of IGST/CGST/SGST from items
@@ -51,6 +52,11 @@ const OrderSchema = new mongoose.Schema({
   
   deliveryAddress: {
     name: String,
+    fullAddress: String,
+    pincode: String,
+    city: String,
+    state: String,
+    country: String,
     location: {
       type: { type: String, enum: ['Point'] },
       coordinates: [Number]

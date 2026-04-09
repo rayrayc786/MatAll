@@ -5,7 +5,7 @@ import { ArrowLeft, Home, ArrowUpDown, Filter } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import './sub-category.css';
 import SEO from '../components/SEO';
-
+import { getFullImageUrl } from '../utils/imageUrl';
 const SLUG_MAP: {[key: string]: string} = {
   'wooden-boards': 'Wooden & Boards',
   'electricals': 'Electricals',
@@ -61,7 +61,7 @@ const SubCategoryPage: React.FC = () => {
           const firstProd = data.find((p: any) => p.subCategory === sub);
           return {
             name: sub,
-            image: firstProd?.imageUrl || 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
+            image: firstProd?.imageUrl ? getFullImageUrl(firstProd.imageUrl) : 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',
           };
         });
         setSubCategories(subData);

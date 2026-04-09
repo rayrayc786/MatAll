@@ -19,6 +19,7 @@ import {
 import { getFullImageUrl } from '../../utils/imageUrl';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import './admin-dashboard.css';
 import Reports from '../Reports';
 import FooterManager from './FooterManager';
 import ServiceSettings from './ServiceSettings';
@@ -613,7 +614,7 @@ const AdminDashboard: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports' | 'actions'>((tabParam as any) || 'dashboard');
   const subParam = searchParams.get('sub');
-  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links' | 'gst' | 'settings' | 'reviews'>((subParam as any) || 'list');
+  const [activeActionTab, setActiveActionTab] = useState<'list' | 'users' | 'orders' | 'categories' | 'products' | 'tickets' | 'userRequests' | 'footer-links' | 'gst' | 'settings' | 'reviews' | 'searchLogs'>((subParam as any) || 'list');
   const [loading, setLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
@@ -622,6 +623,7 @@ const AdminDashboard: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [userRequests, setUserRequests] = useState<any[]>([]);
+  const [searchLogs, setSearchLogs] = useState<any[]>([]);
   const [gstClassifications, setGstClassifications] = useState<any[]>([]);
 
   // Management State
@@ -640,14 +642,17 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [uRes, oRes, cRes, pRes, urRes, statsRes] = await Promise.all([
+      const results = await Promise.all([
         axios.get(`${API_BASE}/admin/users`),
         axios.get(`${API_BASE}/orders`),
         axios.get(`${API_BASE}/admin/categories`),
         axios.get(`${API_BASE}/admin/products`),
         axios.get(`${API_BASE}/user-requests`),
-        axios.get(`${API_BASE}/admin/stats`)
+        axios.get(`${API_BASE}/admin/stats`),
+        axios.get(`${API_BASE}/admin/search-logs`)
       ]);
+      
+      const [uRes, oRes, cRes, pRes, urRes, statsRes, searchRes] = results;
       
       if (uRes.data) setUsers(uRes.data);
       if (oRes.data) setOrders(oRes.data);
@@ -655,6 +660,7 @@ const AdminDashboard: React.FC = () => {
       if (pRes.data) setProducts(pRes.data);
       if (urRes.data) setUserRequests(urRes.data);
       if (statsRes.data) setDashboardStats(statsRes.data);
+      if (searchRes && searchRes.data) setSearchLogs(searchRes.data);
 
       const gstRes = await axios.get(`${API_BASE}/admin/gst-classifications`);
       if (gstRes.data) setGstClassifications(gstRes.data);
@@ -929,6 +935,12 @@ const AdminDashboard: React.FC = () => {
       name: 'Review Management',
       sub: 'Manage customer reviews for products, approve or reject them',
       color: '#FFEA00'
+    },
+    {
+      id: 'searchLogs',
+      name: 'Search History / Logs',
+      sub: 'Monitor what users are searching for to improve inventory',
+      color: '#DEDEDE'
     }
   ];
 
@@ -1330,6 +1342,59 @@ const AdminDashboard: React.FC = () => {
 
 
 
+  const renderSearchLogsManagement = () => (
+    <div className="admin-scroll-content animate-fade-in">
+      <div className="management-header-card grey">
+        <div className="header-info">
+          <h2>Search History / Logs</h2>
+        </div>
+        <div className="search-bar-admin">
+          <Search size={18} />
+          <input 
+            type="text" 
+            placeholder="Filter Queries..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="admin-list-container">
+        {searchLogs.filter(log => 
+          (log.query || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (log.user?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase())
+        ).length === 0 ? <p className="text-center py-4">No search logs found.</p> : 
+        <div className="search-logs-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Query</th>
+                <th>Results</th>
+                <th>User</th>
+                <th>IP Address</th>
+                <th>Date & Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {searchLogs.filter(log => 
+                (log.query || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (log.user?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase())
+              ).map((log, i) => (
+                <tr key={log._id || i}>
+                  <td className="font-bold">{log.query}</td>
+                  <td>{log.resultsCount}</td>
+                  <td>{log.user ? `${log.user.fullName} (${log.user.phoneNumber})` : 'Guest'}</td>
+                  <td>{log.ip || 'N/A'}</td>
+                  <td>{new Date(log.createdAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+    </div>
+  );
+
   const renderGstManagement = () => (
     <div className="admin-scroll-content animate-fade-in">
       <div className="management-header-card grey">
@@ -1385,6 +1450,7 @@ const AdminDashboard: React.FC = () => {
     if (activeActionTab === 'footer-links') return <FooterManager />;
     if (activeActionTab === 'settings') return <ServiceSettings />;
     if (activeActionTab === 'reviews') return <ReviewManager />;
+    if (activeActionTab === 'searchLogs') return renderSearchLogsManagement();
 
     return (
       <div className="admin-scroll-content animate-fade-in">
@@ -1425,7 +1491,7 @@ const AdminDashboard: React.FC = () => {
             <button className="mobile-menu-trigger" onClick={toggleSidebar}>
                <Menu size={24} />
             </button>
-            <h1>{activeActionTab !== 'list' ? activeActionTab.charAt(0).toUpperCase() + activeActionTab.slice(1) : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+            <h1>{activeActionTab !== 'list' ? (ACTION_ITEMS.find(i => i.id === activeActionTab)?.name || activeActionTab.charAt(0).toUpperCase() + activeActionTab.slice(1)) : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
           </div>
           <div className="header-right-actions">
              <div className="admin-profile-logo-box">

@@ -133,10 +133,15 @@ const createOrder = async (orderData) => {
     vehicleClass,
     darkStoreId,
     deliveryAddress: {
-      name: orderData.shippingAddress || 'Home',
-      location: {
+      name: orderData.deliveryAddress?.name || 'Home',
+      fullAddress: orderData.deliveryAddress?.fullAddress || '',
+      pincode: orderData.deliveryAddress?.pincode || '',
+      city: orderData.deliveryAddress?.city || '',
+      state: orderData.deliveryAddress?.state || '',
+      country: orderData.deliveryAddress?.country || 'India',
+      location: orderData.deliveryAddress?.location || {
         type: 'Point',
-        coordinates: [76.7179, 30.7046] // Default Punjab for mock
+        coordinates: [76.7179, 30.7046] // Fallback Punjab
       }
     }
   });
@@ -144,42 +149,58 @@ const createOrder = async (orderData) => {
   const savedOrder = await newOrder.save();
   
   // Async Sync to Hisaab Kitaab (Don't await to avoid slowing down checkout)
-  // syncToHisaabKitaab(savedOrder).catch(err => console.error('HisaabKitaab Sync Error:', err.message));
+  syncToHisaabKitaab(savedOrder._id).catch(err => console.error('HisaabKitaab Sync Error:', err.message));
 
   return savedOrder;
 };
 
-// const syncToHisaabKitaab = async (order) => {
-//   const API_KEY = process.env.HISAAB_KITAAB_API_KEY;
-//   if (!API_KEY) return;
+const syncToHisaabKitaab = async (orderId) => {
+  const API_KEY = process.env.HISAAB_KITAAB_API_KEY;
+  if (!API_KEY) {
+    console.warn('[HisabKitab] API Key missing. Skipping sync.');
+    return;
+  }
 
-//   try {
-//     const invoiceData = {
-//       invoice_number: `MATALL-${order._id.toString().slice(-6).toUpperCase()}`,
-//       date: new Date(order.createdAt).toISOString().split('T')[0],
-//       customer_name: order.deliveryAddress?.name || 'Walk-in Customer',
-//       payment_method: order.paymentMethod || 'Cash',
-//       items: order.items.map(item => ({
-//         name: `Product ID: ${item.productId}`,
-//         qty: item.quantity,
-//         rate: item.unitPrice,
-//         tax_rate: 0 // Modify if you have tax logic
-//       })),
-//       total_amount: order.totalAmount,
-//       notes: `Automated sync from MatAll App. Order ID: ${order._id}. Incl platform fee Rs 19.`
-//     };
+  try {
+    // Populate the order with product details for naming
+    const order = await Order.findById(orderId).populate('items.productId');
+    if (!order) return;
 
-//     await axios.post('https://api.hisabkitab.co/v1/invoices', invoiceData, {
-//       headers: {
-//         'Authorization': `Bearer ${API_KEY}`,
-//         'Content-Type': 'application/json'
-//       }
-//     });
-//     console.log(`[HisaabKitaab] Invoice synced successfully for Order ${order._id}`);
-//   } catch (err) {
-//     throw new Error(`Failed to sync: ${err.response?.data?.message || err.message}`);
-//   }
-// };
+    const invoiceData = {
+      invoice_number: `BIQ-${order._id.toString().slice(-6).toUpperCase()}`,
+      date: new Date(order.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-'), // DD-MM-YYYY
+      customer_ledger_id: parseInt(process.env.HISABKITAB_CASH_LEDGER_ID || '1604700'),
+      invoice_type: 1, // Standard Tax Invoice
+      customer_name: order.deliveryAddress?.name || 'Customer',
+      billing_address: {
+        address_1: order.deliveryAddress?.fullAddress || 'N/A',
+        country_id: 1, // India
+        state_id: 1,   // Default
+        city_id: 1,    // Default
+        pin_code: order.deliveryAddress?.pincode || '110001'
+      },
+      payment_method: order.paymentMethod || 'COD',
+      items: order.items.map(item => ({
+        name: item.productId?.name || `Product ${item.productId}`,
+        qty: item.quantity,
+        rate: item.unitPrice,
+        tax_rate: item.taxRate || 18
+      })),
+      total_amount: order.totalAmount,
+      notes: `Order ID: ${order._id}. Paid: ₹${order.paidAmount || 0}. Balance: ₹${(order.totalAmount - (order.paidAmount || 0)).toFixed(2)}. Automated sync from BuildItQuick App.`
+    };
+
+    await axios.post('https://api.hisabkitab.co/third-party/sale-transactions', invoiceData, {
+      headers: {
+        'ApiKey': API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log(`[HisabKitab] Invoice synced successfully for Order ${order._id}`);
+  } catch (err) {
+    console.error(`[HisabKitab] Sync Failed for Order ${orderId}: ${err.response?.data?.message || err.message}`);
+  }
+};
 
 const getOrderById = async (orderId) => {
   return await Order.findById(orderId).populate('items.productId');

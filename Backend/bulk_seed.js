@@ -64,6 +64,7 @@ async function seedBulk() {
           brand: brand,
           alternateNames: altNames,
           description: row['Product Description'] || '',
+          productCode: row['Product ID'] || '',
           hsnCode: String(row['HSN Code'] || ''),
           sellingMeasure: row['Selling Measure'] || '',
           deliveryTime: row['Delivery Time'] || '',
@@ -116,7 +117,8 @@ async function seedBulk() {
       const gstPercentage = gstVal < 1 ? gstVal * 100 : gstVal;
 
       const variant = {
-        sku: row['Product Code'] || row['Product ID'] || `V-${index}`,
+        sku: row['SKU Number'] || row['SKU']  `V-${index}`,
+        productCode:  row['Product ID'] || '',
         name: variantAttrsString ? `${product.productName} - ${variantAttrsString}` : product.productName,
         attributes: attributes, 
         pricing: {

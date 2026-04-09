@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const VariantSchema = new mongoose.Schema({
-  sku: { type: String }, // Product Code
+  sku: { type: String }, // SKU Number
+  productCode: { type: String }, // Product Code
   name: { type: String }, // Generated human-readable name
   attributes: {
     type: Map,
@@ -44,6 +45,7 @@ const ProductSchema = new mongoose.Schema({
   brand: { type: String },
   alternateNames: [{ type: String }],
   description: { type: String },
+  productCode: { type: String }, // Root level Product Code
   
   // Shared Parent Attributes
   hsnCode: { type: String },

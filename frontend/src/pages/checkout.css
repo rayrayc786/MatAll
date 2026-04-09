@@ -605,6 +605,43 @@
   border-color: #FFEA00;
 }
 
+.input-row-double {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.input-row-double input {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkbox-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0.25rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
+  cursor: pointer;
+  accent-color: #FFEA00;
+}
+
+.checkbox-label span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 .textarea-wrapper {
   position: relative;
 }

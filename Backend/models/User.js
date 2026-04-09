@@ -8,6 +8,12 @@ const JobsiteSchema = new mongoose.Schema({
     default: 'Other' 
   },
   addressText: { type: String, required: true },
+  pincode: { type: String },
+  city: { type: String },
+  state: { type: String },
+  country: { type: String, default: 'India' },
+  isBilling: { type: Boolean, default: false },
+  isShipping: { type: Boolean, default: true },
   location: {
     type: {
       type: String,

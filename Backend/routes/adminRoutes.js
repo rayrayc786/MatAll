@@ -101,6 +101,7 @@ router.delete('/serviceable-areas/:id', adminController.deleteServiceableArea);
 router.get('/check-serviceability/:pincode', adminController.checkServiceability);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
+router.get('/search-logs', adminController.getSearchLogs);
 
 module.exports = router;
 
