@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import { Map, AdvancedMarker, useApiIsLoaded, useMapsLibrary } from '@vis.gl/react-google-maps';
 import './checkout.css';
 import SEO from '../components/SEO';
-import { getFullImageUrl } from '../utils/imageUrl';
+// import { getFullImageUrl } from '../utils/imageUrl';
 
 interface Address {
   _id?: string;
@@ -294,7 +294,7 @@ const Checkout: React.FC = () => {
               </div>
             </div>
           ))}
-          {cart.map((item, idx) => (
+          {/* {cart.map((item, idx) => (
             <div 
               key={idx} 
               className="shipment-item" 
@@ -319,7 +319,7 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          ))} */}
         </div>
       </div>
     </div>
