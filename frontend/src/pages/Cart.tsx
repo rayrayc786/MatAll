@@ -24,6 +24,7 @@ const Cart: React.FC = () => {
   const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [maxDeliveryTime, setMaxDeliveryTime] = useState('15 mins');
+  const [displayAddress, setDisplayAddress] = useState('Select delivery location');
 
   // Same fee logic as Checkout.tsx
   // Use fees from settings
@@ -55,6 +56,20 @@ const Cart: React.FC = () => {
       }
     };
     fetchRecs();
+
+    // Load user address from localStorage
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        if (user.jobsites && user.jobsites.length > 0) {
+          const primaryAddr = user.jobsites[0];
+          setDisplayAddress(`${primaryAddr.name}: ${primaryAddr.addressText}`);
+        }
+      } catch (e) {
+        console.error('Failed to parse user for address', e);
+      }
+    }
   }, []);
 
   const handleMoveToWishlist = async (product: any, variant?: string) => {
@@ -235,7 +250,7 @@ const Cart: React.FC = () => {
           <div className="addr-icon-pill"><MapPin size={18} /></div>
           <div className="addr-text-pill">
             <p>Delivering to Home</p>
-            <span>Mattaur, Sector 70, Sahibzada Ajit Singh Nagar, Punjab...</span>
+            <span>{displayAddress}</span>
           </div>
           <button className="addr-change-btn">Change</button>
         </div>

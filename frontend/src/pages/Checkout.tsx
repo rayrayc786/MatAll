@@ -732,7 +732,7 @@ const Checkout: React.FC = () => {
                <div className="pod-icon-circle pin-yellow"><MapPin size={20} /></div>
                <div className="pod-info-stack">
                   <p className="pod-label-top">Delivering to <strong>{selectedAddress?.name || 'Home'}</strong></p>
-                  <p className="pod-subtext-main">{selectedAddress?.addressText || 'Mattaur, Sector 70, SAS Nagar'}</p>
+                  <p className="pod-subtext-main">{selectedAddress?.addressText || 'Select Delivery Location'}</p>
                </div>
                <button className="pod-change-btn">Change</button>
             </div>

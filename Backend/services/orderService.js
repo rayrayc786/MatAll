@@ -107,8 +107,8 @@ const createOrder = async (orderData) => {
     if (!defaultStore) {
       console.log('No DarkStore found. Creating a Default Hub for you...');
       defaultStore = await DarkStore.create({
-        storeName: 'Default Hub - Punjab',
-        location: { type: 'Point', coordinates: [76.7179, 30.7046] },
+        storeName: 'Main Warehouse Hub',
+        location: { type: 'Point', coordinates: [0, 0] },
         serviceabilityRadius: 50000,
         isOpen: true
       });
@@ -141,7 +141,7 @@ const createOrder = async (orderData) => {
       country: orderData.deliveryAddress?.country || 'India',
       location: orderData.deliveryAddress?.location || {
         type: 'Point',
-        coordinates: [76.7179, 30.7046] // Fallback Punjab
+        coordinates: [0, 0] // Default fallback if no location provided
       }
     }
   });

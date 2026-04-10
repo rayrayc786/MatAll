@@ -10,10 +10,10 @@ require('dotenv').config();
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/matall';
 
 const seedDarkStore = {
-  storeName: 'Main Hub - Punjab',
+  storeName: 'Main Warehouse Hub',
   location: {
     type: 'Point',
-    coordinates: [76.7179, 30.7046]
+    coordinates: [77.2090, 28.6139] // Delhi fallback center
   },
   serviceabilityRadius: 50000,
   isOpen: true

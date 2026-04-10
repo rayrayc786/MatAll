@@ -33,18 +33,27 @@ jobs:
             # Backend
             cd Backend
             npm install
-            pm2 delete matall-backend || true
-            pm2 start server.js --name "matall-backend"
+            
+            # Use reload for zero-downtime; it will fall back to start if process isn't running
+            pm2 reload matall-backend --update-env || pm2 start server.js --name "matall-backend"
             pm2 save
+            
+            # Verify status
+            pm2 list
 
             # Frontend
             cd ../frontend
             npm install
+            # Use vite build directly to skip potentially blocking TS errors if you want immediate deployment
+            # Change back to 'npm run build' if you want strict typechecking in CI
             npm run build
 
-            # Clean + copy to Nginx root
-            rm -rf /var/www/html/*
-            cp -r dist/* /var/www/html/
-
-            # Restart nginx
-            sudo systemctl restart nginx
+            # Only update live folder if build succeeded
+            if [ -d "dist" ]; then
+              rm -rf /var/www/html/*
+              cp -r dist/* /var/www/html/
+              sudo systemctl restart nginx
+            else
+              echo "Build failed - dist folder not found. Skipping copy."
+              exit 1
+            fi
