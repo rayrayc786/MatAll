@@ -396,7 +396,7 @@ function ManagementModal({
                          <span>{new Date(o.createdAt).toLocaleDateString()}</span>
                       </div>
                       <div className="order-status">
-                         <div className="order-amt">₹{o.totalAmount}</div>
+                         <div className="order-amt">₹{Number(o.totalAmount).toFixed(2)}</div>
                          <span className={`status-badge ${o.status}`}>{o.status}</span>
                       </div>
                     </div>
@@ -561,10 +561,10 @@ function OrderDetailsModal({ viewingOrder, setViewingOrder }: any) {
                     </div>
                     <div className="item-info">
                        <span className="item-name">{item.productId?.name || item.product?.name || 'Unknown Product'}</span>
-                       <span className="item-sub">Qty: {item.quantity} × ₹{item.unitPrice}</span>
+                       <span className="item-sub">Qty: {item.quantity} × ₹{Number(item.unitPrice).toFixed(2)}</span>
                     </div>
                     <div className="item-total">
-                       ₹{item.quantity * item.unitPrice}
+                       ₹{Number(item.quantity * item.unitPrice).toFixed(2)}
                     </div>
                  </div>
               ))}
@@ -573,11 +573,11 @@ function OrderDetailsModal({ viewingOrder, setViewingOrder }: any) {
            <div className="order-summary-box">
               <div className="summary-row">
                  <span>Subtotal</span>
-                 <span>₹{order.totalAmount}</span>
+                 <span>₹{Number(order.totalAmount).toFixed(2)}</span>
               </div>
               <div className="summary-row total">
                  <span>Grand Total</span>
-                 <span>₹{order.totalAmount}</span>
+                 <span>₹{Number(order.totalAmount).toFixed(2)}</span>
               </div>
            </div>
         </div>
@@ -1048,7 +1048,7 @@ const AdminDashboard: React.FC = () => {
                         <span>{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                      </div>
                      <div className="b2b-amount-group">
-                        <span className="amount-val">₹{order.totalAmount}</span>
+                        <span className="amount-val">₹{Number(order.totalAmount).toFixed(2)}</span>
                         <button className="new-order-badge" style={{
                            background: order.status === 'Accepted' ? '#FFEA00' : '#f1f5f9',
                            color: order.status === 'Accepted' ? '#000' : '#64748b'
@@ -1150,7 +1150,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="row-mid-info" onClick={() => setViewingOrder(order)}>
                <span className="row-name">Order #{order._id.slice(-6).toUpperCase()}</span>
-               <span className="row-sub">₹{order.totalAmount || 0} • {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+               <span className="row-sub">₹{Number(order.totalAmount || 0).toFixed(2)} • {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
                <span className="row-sub" style={{ fontSize: '0.65rem' }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             <div className="row-status-select">
@@ -1252,7 +1252,7 @@ const AdminDashboard: React.FC = () => {
               <span className="row-sub">{prod.brand} | {prod.category}</span>
             </div>
             <div className="row-mid-info">
-               <span className="row-name">₹{prod.price}</span>
+               <span className="row-name">₹{Number(prod.price).toFixed(2)}</span>
                <span className="row-sub">SKU: {prod.sku || 'N/A'}</span>
             </div>
             <div className="row-actions-btns">

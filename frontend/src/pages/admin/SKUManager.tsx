@@ -498,8 +498,8 @@ const SKUManager: React.FC = () => {
                       <div className="sku-sale-price">Multiple Prices</div>
                     ) : (
                       <>
-                        <div className="sku-mrp-text">MRP: ₹{sku.mrp || 0}</div>
-                        <div className="sku-sale-price">Sale: ₹{sku.salePrice || sku.price}</div>
+                        <div className="sku-mrp-text">MRP: ₹{(sku.mrp || 0).toFixed(2)}</div>
+                        <div className="sku-sale-price">Sale: ₹{(sku.salePrice || sku.price || 0).toFixed(2)}</div>
                       </>
                     )}
                   </td>

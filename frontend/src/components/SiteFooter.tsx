@@ -60,7 +60,7 @@ const SiteFooter: React.FC = () => {
     { label: 'About', path: '/about', hidden: true },
     { label: 'Team', path: '/team', hidden: true },
     { label: 'Careers', path: '/careers', hidden: true },
-    { label: 'Privacy Policy', path: '/privacy-policy', hidden: true },
+    { label: 'MatAll Policies', path: '/MatAll_Policies.pdf', isStatic: true },
     { label: 'Terms of Service', path: '/terms-of-service', hidden: true },
     { label: 'Refund Policy', path: '/refund-policy', hidden: true }
   ];
@@ -72,9 +72,13 @@ const SiteFooter: React.FC = () => {
         <div className="footer-links-column">
           <h3 className="footer-sub-title">Useful Links</h3>
           <ul className="footer-links-list">
-            {usefulLinks.filter(link => !link.hidden).map((link, idx) => (
+            {usefulLinks.filter(link => !link.hidden).map((link: any, idx) => (
               <li key={idx}>
-                <Link to={link.path}>{link.label}</Link>
+                {link.isStatic ? (
+                  <a href={link.path} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                ) : (
+                  <Link to={link.path}>{link.label}</Link>
+                )}
               </li>
             ))}
           </ul>

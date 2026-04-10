@@ -43,11 +43,11 @@ const InvoicingReports: React.FC = () => {
           </div>
           <div className="finance-item" style={{ flex: 1 }}>
             <span className="label" style={{ fontSize: '12px', color: '#64748b' }}>Driver Payouts (Est. Pending)</span>
-            <div className="value" style={{ fontSize: '24px', fontWeight: 'bold', color: '#d97706' }}>₹{pendingPayouts.toLocaleString()}</div>
+            <div className="value" style={{ fontSize: '24px', fontWeight: 'bold', color: '#d97706' }}>₹{pendingPayouts.toFixed(2)}</div>
           </div>
           <div className="finance-item" style={{ flex: 1 }}>
             <span className="label" style={{ fontSize: '12px', color: '#64748b' }}>Gross Merch Value (GMV)</span>
-            <div className="value" style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>₹{totalGMV.toLocaleString()}</div>
+            <div className="value" style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>₹{totalGMV.toFixed(2)}</div>
           </div>
         </section>
 
