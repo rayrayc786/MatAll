@@ -645,7 +645,20 @@ exports.bulkCreateServiceableAreas = async (req, res) => {
 exports.checkServiceability = async (req, res) => {
   try {
     const { pincode } = req.params;
-    const area = await ServiceableArea.findOne({ pincode, isActive: true });
+    // Check if it's a 6 digit number
+    const isPincode = /^\d{6}$/.test(pincode);
+    
+    let area;
+    if (isPincode) {
+        area = await ServiceableArea.findOne({ pincode, isActive: true });
+    } else {
+        // Treat as city name - check if any pincode in this city is active
+        area = await ServiceableArea.findOne({ 
+          city: { $regex: new RegExp(`^${pincode}$`, 'i') }, 
+          isActive: true 
+        });
+    }
+
     if (area) {
       res.json({ serviceable: true, city: area.city });
     } else {

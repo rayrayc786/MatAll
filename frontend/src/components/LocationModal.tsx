@@ -151,13 +151,18 @@ const LocationModal: React.FC<LocationModalProps> = ({
     const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
     const pincode = pincodeComp ? pincodeComp.long_name : '';
 
-    if (!pincode) {
-      toast.error("Could not detect pincode. Please try another spot.");
+    const localityComp = addressComponents.find((c: any) => c.types.includes('locality'));
+    const city = localityComp ? localityComp.long_name : '';
+
+    if (!pincode && !city) {
+      toast.error("Could not detect location. Please try a more specific spot.");
       return false;
     }
 
     try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${pincode}`);
+      const query = pincode || city;
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/check-serviceability/${encodeURIComponent(query)}`);
+      
       if (!data.serviceable) {
         toast.error(`Oops, we do not serve this area currently. We will be live soon and keep you informed`, {
           duration: 4000,
@@ -168,8 +173,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
       return true;
     } catch (err) {
       console.error('Serviceability check failed', err);
-      // If the API fails, maybe allow for now or strict? Let's be strict.
-      return true; // Or false based on preference. Let's allow if API fails but keep it logged.
+      return true; 
     }
   };
 
