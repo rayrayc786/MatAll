@@ -19,7 +19,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ searchNode }) => {
   const isLoggedIn = !!localStorage.getItem('token');
   const navigate = useNavigate();
 
-  const displayAddress = location?.address || 'Detecting location...';
+  const displayAddress = location?.matchingJobsite 
+    ? (`${location.matchingJobsite.name}: ${location.matchingJobsite.addressText}`)
+    : (location?.address || 'Detecting location...');
+
+  const shortAddress = location?.matchingJobsite?.name || location?.address?.split(',')[0] || 'Detecting...';
 
   const updateBackendAddress = async (addrText: string, coords: [number, number]) => {
     try {
@@ -66,7 +70,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ searchNode }) => {
             <div className="location-wrapper">
               <span className="delivery-time-mobile">Delivery in 60 minutes</span>
               <div className="location-section-landing" onClick={() => setIsModalOpen(true)}>
-                <span className="addr-landing">{displayAddress}</span>
+                <span className="addr-landing">{shortAddress}</span>
                 {isLocating ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (

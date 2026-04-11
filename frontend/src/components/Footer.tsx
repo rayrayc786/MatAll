@@ -20,7 +20,7 @@ const Footer: React.FC = () => {
       </Link>
       <Link to="/orders" className={`footer-item ${isActive('/orders') ? 'active' : ''}`}>
         <RotateCcw size={22} />
-        <span>Repeat</span>
+        <span>Orders</span>
       </Link>
       <Link to="/products" className={`footer-item ${isActive('/products') ? 'active' : ''}`}>
         <ShoppingBag size={22} />

@@ -45,7 +45,10 @@ const Checkout: React.FC = () => {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   
   // Map/Address states
-  const [mapCenter, setMapCenter] = useState({ lat: 28.6139, lng: 77.2090 });
+  const [mapCenter, setMapCenter] = useState(() => {
+    if (globalLocation?.coords) return globalLocation.coords;
+    return { lat: 28.6139, lng: 77.2090 };
+  });
   const [detectedAddr, setDetectedAddr] = useState({ main: 'Detecting...', sub: 'Please wait' });
   const [fullAddress, setFullAddress] = useState('');
   const [isServiceable, setIsServiceable] = useState(true);
@@ -126,25 +129,53 @@ const Checkout: React.FC = () => {
     if (user.jobsites) {
       setAddresses(user.jobsites);
       
-      // NEW LOGIC: Try to find a jobsite that matches the global selection
+      // Recognition logic: match global location with a saved jobsite
       if (globalLocation) {
-        const matchingJobsite = user.jobsites.find((s: any) => s.addressText === globalLocation.address);
-        if (matchingJobsite) {
-          setSelectedAddress(matchingJobsite);
+        if (globalLocation.matchingJobsite) {
+             setSelectedAddress(globalLocation.matchingJobsite);
         } else {
-          // Fallback to global location even if not saved as jobsite (as a temporary address)
-          setSelectedAddress({
-            name: 'Selected Location',
-            addressText: globalLocation.address,
-            type: 'Other',
-            location: { type: 'Point', coordinates: [globalLocation.coords.lng, globalLocation.coords.lat] }
-          } as any);
+             // If no saved match, we DON'T auto-select. Force user to add site.
+             setSelectedAddress(null);
         }
       } else if (user.jobsites.length > 0) {
         setSelectedAddress(user.jobsites[0]);
       }
     }
-  }, []);
+  }, [globalLocation]);
+
+  // Sync map center with global location or detect it
+  useEffect(() => {
+    if (step === 'location-ask' || step === 'map-confirm') {
+      if (globalLocation && (mapCenter.lat === 28.6139 || !fullAddress)) {
+        setMapCenter(globalLocation.coords);
+        const addr = globalLocation.address;
+        const parts = addr.split(',');
+        setDetectedAddr({
+          main: parts[0] || 'Selected location',
+          sub: parts.slice(1, 4).join(', ') || ''
+        });
+        setFullAddress(addr);
+      } else if (navigator.geolocation && mapCenter.lat === 28.6139) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          if (geocodingLibrary) {
+            const geocoder = new geocodingLibrary.Geocoder();
+            geocoder.geocode({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, (results, status) => {
+              if (status === "OK" && results?.[0]) {
+                const addr = results[0].formatted_address;
+                const parts = addr.split(',');
+                setDetectedAddr({
+                  main: parts[0] || 'Detected',
+                  sub: parts.slice(1, 4).join(', ') || ''
+                });
+                setFullAddress(addr);
+              }
+            });
+          }
+        });
+      }
+    }
+  }, [step, globalLocation, geocodingLibrary]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -157,19 +188,20 @@ const Checkout: React.FC = () => {
   };
 
   const handlePlaceOrder = (mode: 'full' | 'partial') => {
-    if (!settings.isServiceEnabled) {
-      toast.error(settings.offlineMessage || "Service is currently offline.");
-      return;
-    }
-    const hasOnDemand = cart.some(item => item.product.deliveryTime === 'On Demand');
-    if (hasOnDemand) {
-      toast.error('Some items in your cart are only available on demand. Please remove them to proceed with online buying.');
+    if (!settings.isServiceEnabled || (globalLocation && !globalLocation.isServiceable)) {
+      toast.error(settings.offlineMessage || "Service is currently unavailable in this location.");
       return;
     }
 
-    if (!selectedAddress) {
-      toast.error('Please select a delivery address');
+    if (!selectedAddress || !selectedAddress._id) {
+      toast.error('Please add or select a saved delivery address to proceed.');
       setStep('address-list');
+      return;
+    }
+
+    const hasOnDemand = cart.some(item => item.product.deliveryTime === 'On Demand');
+    if (hasOnDemand) {
+      toast.error('Some items in your cart are only available on demand. Please remove them to proceed with online buying.');
       return;
     }
 

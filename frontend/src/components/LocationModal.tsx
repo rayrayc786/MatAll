@@ -3,6 +3,7 @@ import { Search, MapPin, Navigation, X, Home, Map as MapIcon, Loader2, ChevronRi
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Map, Marker, useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
+import { useLocationContext } from '../contexts/LocationContext';
 import './locationModal.css';
 
 interface LocationModalProps {
@@ -22,13 +23,17 @@ const LocationModal: React.FC<LocationModalProps> = ({
   initialData,
   editIndex
 }) => {
+  const { location: globalLocation } = useLocationContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [step, setStep] = useState<1 | 2>(1); // 1: Decision, 2: Search/Selection
   const [showAddForm, setShowAddForm] = useState(false);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 28.6139, lng: 77.2090 });
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(() => {
+    if (globalLocation?.coords) return globalLocation.coords;
+    return { lat: 28.6139, lng: 77.2090 };
+  });
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [isServiceable, setIsServiceable] = useState(true);
 
@@ -70,54 +75,84 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      
-      if (initialData) {
-        // Edit Mode
-        setStep(2);
-        setShowAddForm(true);
-        setNewAddrName(initialData.name || '');
-        setNewAddrType(initialData.addressType || 'Home');
-        setNewAddrText(initialData.addressText || '');
-        setNewAddrPhone(initialData.contactPhone || '');
-        setNewAddrCoords(initialData.location?.coordinates || null);
-        if (initialData.location?.coordinates) {
-          setMapCenter({ 
-            lat: initialData.location.coordinates[1], 
-            lng: initialData.location.coordinates[0] 
-          });
+        document.body.style.overflow = 'hidden';
+        if (initialData) {
+            // Edit Mode logic
+            setStep(2);
+            setShowAddForm(true);
+            setNewAddrName(initialData.name || '');
+            setNewAddrType(initialData.addressType || 'Home');
+            setNewAddrText(initialData.addressText || '');
+            setNewAddrPhone(initialData.contactPhone || '');
+            setNewAddrCoords(initialData.location?.coordinates || null);
+            if (initialData.location?.coordinates) {
+                setMapCenter({ 
+                    lat: initialData.location.coordinates[1], 
+                    lng: initialData.location.coordinates[0] 
+                });
+            }
+            setSearchTerm(initialData.addressText || '');
+            setSelectedAddress(initialData.addressText || '');
+        } else {
+            // New Mode - RESET
+            setStep(1);
+            setShowAddForm(false);
+            setNewAddrName('');
+            setNewAddrType('Home');
+            setNewAddrText('');
+            setNewAddrPhone('');
+            setNewAddrCoords(null);
+            setHouseNumber('');
+            setFloor('');
+            setTower('');
+            setLandmark('');
+            setDirections('');
+            
+            if (globalLocation) {
+                setMapCenter(globalLocation.coords);
+                setSearchTerm(globalLocation.address);
+                setSelectedAddress(globalLocation.address);
+                setIsServiceable(globalLocation.isServiceable);
+            } else if (currentAddress) {
+                setSearchTerm(currentAddress);
+            }
         }
-        // Fill search term to show markers correctly
-        setSearchTerm(initialData.addressText || '');
-        setSelectedAddress(initialData.addressText || '');
-      } else {
-        // Fresh Add Mode
-        setStep(1);
-        setShowAddForm(false);
-        setNewAddrName('');
-        setNewAddrType('Home');
-        setNewAddrText('');
-        setNewAddrPhone('');
-        setNewAddrCoords(null);
-        setHouseNumber('');
-        setFloor('');
-        setTower('');
-        setLandmark('');
-        setDirections('');
-        
-        if (currentAddress) setSearchTerm(currentAddress);
-
-        if (navigator.geolocation) {
-           navigator.geolocation.getCurrentPosition((pos) => {
-             setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-           }, () => {}, { timeout: 10000 });
-        }
-      }
     } else {
-      document.body.style.overflow = 'unset';
+        document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, currentAddress, globalLocation]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setSuggestions([]);
+    }
+  }, [searchTerm]);
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+
+  const findMatchingSavedAddress = (lat: number, lng: number) => {
+    if (!isLoggedIn || !user?.jobsites) return null;
+    const THRESHOLD = 50; // 50 meters
+    return user.jobsites.find((site: any) => {
+      if (!site.location?.coordinates) return false;
+      const [sLng, sLat] = site.location.coordinates;
+      return calculateDistance(lat, lng, sLat, sLng) < THRESHOLD;
+    });
+  };
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -211,13 +246,22 @@ const LocationModal: React.FC<LocationModalProps> = ({
             }
 
             setMapCenter({ lat, lng });
-            setSelectedAddress(address);
-            setSearchTerm(address);
+            
+            // Check for saved match
+            const match = findMatchingSavedAddress(lat, lng);
+            if (match) {
+               setSelectedAddress(match.addressText);
+               setSearchTerm(match.addressText);
+            } else {
+               setSelectedAddress(address);
+               setSearchTerm(address);
+            }
+
             setIsServiceable(true);
             setSuggestions([]);
             
             if (showAddForm) {
-                setNewAddrText(address);
+                setNewAddrText(match ? match.addressText : address);
                 setNewAddrCoords([lng, lat]);
             }
         }
@@ -246,11 +290,19 @@ const LocationModal: React.FC<LocationModalProps> = ({
               return;
             }
 
-            setSelectedAddress(address);
-            setSearchTerm(address);
+            // Check for saved match
+            const match = findMatchingSavedAddress(lat, lng);
+            if (match) {
+               setSelectedAddress(match.addressText);
+               setSearchTerm(match.addressText);
+            } else {
+               setSelectedAddress(address);
+               setSearchTerm(address);
+            }
+
             setIsServiceable(true);
             if (showAddForm) {
-              setNewAddrText(address);
+              setNewAddrText(match ? match.addressText : address);
               setNewAddrCoords([lng, lat]);
             }
           }
@@ -269,6 +321,17 @@ const LocationModal: React.FC<LocationModalProps> = ({
       const { latitude, longitude } = pos.coords;
       setMapCenter({ lat: latitude, lng: longitude });
       
+      const match = findMatchingSavedAddress(latitude, longitude);
+      if (match) {
+        setIsServiceable(true);
+        setSelectedAddress(match.addressText);
+        setSearchTerm(match.addressText);
+        setIsLocating(false);
+        onSelectAddress(match.addressText, [longitude, latitude]);
+        onClose();
+        return;
+      }
+
       if (geocodingLibrary) {
         const geocoder = new geocodingLibrary.Geocoder();
         geocoder.geocode({ location: { lat: latitude, lng: longitude } }, async (results, status) => {
@@ -288,8 +351,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
             setIsLocating(false);
             
             if (step === 1) {
-              onSelectAddress(address, [longitude, latitude]);
-              onClose();
+              setShowAddForm(true);
             }
           } else {
             toast.error('Failed to get address');
@@ -305,7 +367,13 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
 
   const confirmLocation = () => {
-    setShowAddForm(true);
+    const match = findMatchingSavedAddress(mapCenter.lat, mapCenter.lng);
+    if (match) {
+        onSelectAddress(match.addressText, match.location.coordinates);
+        onClose();
+    } else {
+        setShowAddForm(true);
+    }
   };
 
   const handleAddAddress = async (e: React.FormEvent) => {
@@ -418,7 +486,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
                     autoFocus
                   />
                   {searchTerm && (
-                    <button type="button" className="clear-search-btn" onClick={() => setSearchTerm('')}>
+                    <button type="button" className="clear-search-btn" onClick={() => { setSearchTerm(''); setSuggestions([]); }}>
                       <X size={16} />
                     </button>
                   )}

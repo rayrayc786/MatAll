@@ -90,7 +90,10 @@ const Orders: React.FC = () => {
               <div key={order._id} className="order-history-tile">
                 <div className="tile-top-info" onClick={() => navigate(`/tracking/${order._id}`)}>
                    <div className="tile-main-details">
-                      <span className="savings-highlight">Savings of ₹{(Math.random() * 200).toFixed(0)}, Delivered in 45 mins</span>
+                      <span className="savings-highlight">
+                        Savings of ₹{(Math.random() * 200).toFixed(0)}
+                        {order.status === 'Delivered' ? ', Delivered in 45 mins' : ''}
+                      </span>
                       <p className="order-sub-meta">
                         ₹{order.totalAmount}, {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}, {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>

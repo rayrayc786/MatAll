@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import axios from 'axios';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
 
-interface Location {
+export interface Location {
   address: string;
   coords: { lat: number; lng: number };
   isServiceable: boolean;
+  matchingJobsite?: any; // To store a linked saved address
 }
 
 interface LocationContextType {
@@ -18,6 +19,36 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
+// Helper to calculate distance in meters
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371e3; // meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
+const findMatchingAddress = (lat: number, lng: number) => {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  const user = JSON.parse(userStr);
+  if (!user.jobsites || !Array.isArray(user.jobsites)) return null;
+
+  const THRESHOLD = 50; // 50 meters
+  return user.jobsites.find((site: any) => {
+    if (!site.location?.coordinates) return false;
+    const [sLng, sLat] = site.location.coordinates;
+    return calculateDistance(lat, lng, sLat, sLng) < THRESHOLD;
+  });
+};
+
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [location, setLocationState] = useState<Location | null>(() => {
     const saved = localStorage.getItem('user_location');
@@ -29,8 +60,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const geocodingLibrary = useMapsLibrary('geocoding');
 
   const setLocation = (loc: Location) => {
-    setLocationState(loc);
-    localStorage.setItem('user_location', JSON.stringify(loc));
+    // Before setting, check if it matches a saved address
+    const match = findMatchingAddress(loc.coords.lat, loc.coords.lng);
+    const finalLoc = { ...loc, matchingJobsite: match || loc.matchingJobsite };
+    
+    setLocationState(finalLoc);
+    localStorage.setItem('user_location', JSON.stringify(finalLoc));
   };
 
   const checkServiceability = async (pincode: string, city: string) => {
@@ -44,7 +79,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return !!data.serviceable;
     } catch (err) {
       console.error('Serviceability check failed:', err);
-      return false; // Strict: if check fails, assume not serviceable
+      return false;
     }
   };
 
@@ -58,7 +93,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const result = response.results[0];
         const address = result.formatted_address;
         
-        // Extract pincode and city correctly
         const pincodeComp = result.address_components.find((c: any) => c.types.includes('postal_code'));
         const cityComp = result.address_components.find((c: any) => c.types.includes('locality')) || 
                         result.address_components.find((c: any) => c.types.includes('administrative_area_level_2'));
@@ -88,10 +122,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const { latitude, longitude } = position.coords;
           const result = await getAddressFromCoords(latitude, longitude);
           if (result) {
+            const match = findMatchingAddress(latitude, longitude);
             setLocation({
-              address: result.address,
+              address: match ? match.addressText : result.address,
               coords: { lat: latitude, lng: longitude },
-              isServiceable: result.isServiceable
+              isServiceable: result.isServiceable,
+              matchingJobsite: match
             });
           }
           setIsLocating(false);
@@ -107,38 +143,53 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [getAddressFromCoords]);
 
-  // Handle watchPosition for automatic movement detection
   useEffect(() => {
     if (!navigator.geolocation) return;
 
+    // Use a reference check or just local variable to avoid dependency loop
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         
-        // Only update if moved significantly (e.g., > 100 meters)
-        // For simplicity, we can also check if the existing address is far from new coords
-        // but here we'll just check if the coordinates changed significantly enough
+        // Find if this current spot in the background matches any saved jobsite
+        const match = findMatchingAddress(latitude, longitude);
         
-        if (!location || 
-            Math.abs(location.coords.lat - latitude) > 0.001 || 
-            Math.abs(location.coords.lng - longitude) > 0.001) {
-          
-          const result = await getAddressFromCoords(latitude, longitude);
-          if (result) {
-            setLocation({
-              address: result.address,
-              coords: { lat: latitude, lng: longitude },
-              isServiceable: result.isServiceable
-            });
-          }
-        }
+        setLocationState((currentLoc: Location | null) => {
+            // Priority 1: If we found a saved jobsite match in the background
+            if (match) {
+                // Only update if it's different from what's currently set
+                if (!currentLoc || 
+                    currentLoc.matchingJobsite?._id !== match._id || 
+                    Math.abs(currentLoc.coords.lat - latitude) > 0.001) {
+                    
+                    const finalLoc = {
+                        address: match.addressText,
+                        coords: { lat: latitude, lng: longitude },
+                        isServiceable: true,
+                        matchingJobsite: match
+                    };
+                    localStorage.setItem('user_location', JSON.stringify(finalLoc));
+                    return finalLoc;
+                }
+                return currentLoc;
+            }
+
+            // Priority 2: If we don't have a match and NO manual location is set yet, detect generic address
+            if (!currentLoc) {
+                // We'll let the user manually trigger this or handle in a separate effect
+                // To avoid flickering, background watch should mostly look for saved matches
+                return currentLoc;
+            }
+
+            return currentLoc;
+        });
       },
       (err) => console.warn('WatchPosition error:', err),
-      { enableHighAccuracy: true, distanceFilter: 100 } as any // distanceFilter is supported in some browsers/wrappers
+      { enableHighAccuracy: true, distanceFilter: 10 } as any 
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [getAddressFromCoords, location]);
+  }, []); // Remove getAddressFromCoords and location to stop the loop
 
   useEffect(() => {
     if (!location && geocodingLibrary) {

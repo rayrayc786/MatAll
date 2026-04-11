@@ -21,7 +21,6 @@ const Tracking: React.FC = () => {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeAction, setActiveTab] = useState<'none' | 'track' | 'feedback' | 'faqs'>('track');
-  const [rating, setRating] = useState(5);
   const [reviewState, setReviewState] = useState<{ [productId: string]: { rating: number, comment: string, isOpen: boolean, isSubmitting: boolean, submitted: boolean } }>({});
 
   const toggleReviewForm = (productId: string) => {
@@ -179,36 +178,6 @@ const Tracking: React.FC = () => {
     );
   };
 
-  const renderFeedback = () => (
-    <div className="feedback-section-prd animate-fade-in">
-      <h3 className="feedback-title">Rate this order experience</h3>
-      <div className="star-rating-row">
-        {[1,2,3,4,5].map(s => (
-          <Star 
-            key={s} 
-            size={32} 
-            fill={s <= rating ? "#facc15" : "transparent"} 
-            color={s <= rating ? "#facc15" : "#cbd5e1"}
-            onClick={() => setRating(s)}
-            className="star-icon"
-          />
-        ))}
-      </div>
-      <div className="feedback-form">
-        <textarea placeholder="Feedback to improve (Do not include personal details)"></textarea>
-        <button className="submit-feedback-btn">Submit Review</button>
-      </div>
-      
-      <div className="social-links-prd">
-        <p>Follow us on social</p>
-        <div className="social-icons">
-           <div className="social-circle">IG</div>
-           <div className="social-circle">FB</div>
-           <div className="social-circle">X</div>
-        </div>
-      </div>
-    </div>
-  );
 
 
   return (
@@ -407,7 +376,6 @@ const Tracking: React.FC = () => {
               </div>
               <ChevronDown size={18} className={activeAction === 'feedback' ? 'rotate-180 transition-transform' : 'transition-transform'} />
            </div>
-           {activeAction === 'feedback' && renderFeedback()}
         </div>
       </main>
     </div>

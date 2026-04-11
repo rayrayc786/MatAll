@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Minus, Heart, Star, X, Clock, ChevronDown } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { useLocationContext } from '../contexts/LocationContext';
 import toast from 'react-hot-toast';
 import { getFullImageUrl } from '../utils/imageUrl';
 import OnDemandModal from './OnDemandModal';
@@ -15,6 +16,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { cart, addToCart } = useCart();
+  const { location } = useLocationContext();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -172,7 +174,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
           
           <div className="list-add-container">
-            {product.deliveryTime === 'On Demand' ? (
+            {location && !location.isServiceable ? (
+               <button className="list-add-btn disabled" style={{ background: '#94a3b8', border: '1px solid #94a3b8', color: '#fff', fontSize: '0.65rem' }} disabled>
+                UNAVAILABLE
+               </button>
+            ) : product.deliveryTime === 'On Demand' ? (
               <button 
                 className="list-request-btn"
                 onClick={(e) => {
