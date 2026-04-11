@@ -361,6 +361,7 @@ exports.bulkUploadProducts = async (req, res) => {
           deliveryTime: rowData['Delivery Time'],
           returns: rowData['Returns'],
           logisticsRule: rowData['Logistics Rule'],
+          logisticsCategory: rowData['Logistics'],
           status: rowData['Status'] || 'In stock',
           variants: [variant],
           variantTokens: new Set([variantToken]),
@@ -602,6 +603,45 @@ exports.createServiceableArea = sah.create;
 exports.updateServiceableArea = sah.update;
 exports.deleteServiceableArea = sah.delete;
 
+exports.bulkUpdateServiceableAreas = async (req, res) => {
+  try {
+    const { ids, city, isActive } = req.body;
+    let filter = {};
+    if (ids) filter = { _id: { $in: ids } };
+    else if (city) filter = { city };
+    else return res.status(400).json({ error: 'City or IDs required' });
+    
+    const result = await ServiceableArea.updateMany(filter, { isActive });
+    res.json({ message: `Updated ${result.modifiedCount} areas`, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.bulkCreateServiceableAreas = async (req, res) => {
+  try {
+    const { areas } = req.body; // Array of { pincode, city, state, isActive }
+    if (!areas || !Array.isArray(areas)) return res.status(400).json({ error: 'Areas array required' });
+
+    const bulkOps = areas.map(area => ({
+      updateOne: {
+        filter: { pincode: area.pincode },
+        update: { $set: area },
+        upsert: true
+      }
+    }));
+
+    const result = await ServiceableArea.bulkWrite(bulkOps);
+    res.json({ 
+      message: 'Bulk creation complete', 
+      upsertedCount: result.upsertedCount,
+      modifiedCount: result.modifiedCount 
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.checkServiceability = async (req, res) => {
   try {
     const { pincode } = req.params;
@@ -707,5 +747,16 @@ exports.deleteReviewAdmin = async (req, res) => {
     res.json({ message: 'Review deleted and product stats updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.proxyCityPincodes = async (req, res) => {
+  try {
+    const { city } = req.params;
+    const { data } = await axios.get(`https://api.postalpincode.in/postoffice/${encodeURIComponent(city)}`);
+    res.json(data);
+  } catch (err) {
+    console.error('Proxy lookup failed:', err);
+    res.status(500).json({ error: 'Failed to fetch pincodes from external service' });
   }
 };
