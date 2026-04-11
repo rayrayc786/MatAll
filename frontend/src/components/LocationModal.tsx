@@ -132,7 +132,8 @@ const LocationModal: React.FC<LocationModalProps> = ({
                     new google.maps.LatLng(8.4, 68.7),
                     new google.maps.LatLng(37.0, 97.2)
                 ),
-                includedRegionCodes: ['in']
+                includedRegionCodes: ['in'],
+                includedPrimaryTypes: ['address', 'establishment']
             };
             const { suggestions: results } = await placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
             setSuggestions(results || []);
