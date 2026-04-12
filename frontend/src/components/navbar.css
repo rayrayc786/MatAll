@@ -115,6 +115,17 @@
   padding: 0 1rem;
   height: 52px;
   gap: 0.75rem;
+  position: relative;
+}
+
+.search-bar input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 0.95rem;
+  color: #333;
+  padding-right: 85px; /* Space for AI triggers */
 }
 
 .search-bar-actions {

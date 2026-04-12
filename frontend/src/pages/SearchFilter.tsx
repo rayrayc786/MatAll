@@ -62,6 +62,16 @@ const SearchFilter: React.FC = () => {
     }
   }, [searchTerm, baseSuggestions]);
 
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   const recognitionRef = React.useRef<any>(null);
 
   const handleVoiceSearch = () => {
@@ -102,23 +112,32 @@ const SearchFilter: React.FC = () => {
         console.error('Speech recognition error:', event.error);
         
         if (event.error === 'not-allowed') {
-          toast.error("Microphone access denied. Please enable it in settings.");
+          toast.error("Microphone access denied. Please enable it in browser settings.");
         } else if (event.error === 'network') {
-          toast.error("Network error occurred. Please check your connection.");
+          const isBrave = !!(navigator as any).brave;
+          if (isBrave) {
+            toast.error("Network error: Brave browser blocks voice search. Please enable 'Google Services' in settings.", { duration: 6000 });
+          } else {
+            toast.error("Network error: Could not connect to speech service. Please check your internet.");
+          }
         } else if (event.error === 'no-speech') {
           toast.error("No speech detected. Please try again.");
+        } else if (event.error === 'service-not-allowed') {
+          toast.error("Speech service not allowed. Check your browser's privacy settings.");
         } else {
-          toast.error(`Error: ${event.error}`);
+          toast.error(`Speech recognition error: ${event.error}`);
         }
       };
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
+        if (!transcript) return;
+        
         setSearchTerm(transcript);
         toast.success(`Searching for: ${transcript}`, { id: 'voice-search-toast' });
         
         setTimeout(() => {
-          navigate(`/products?search=${encodeURIComponent(transcript)}`);
+          navigate(`/products?search=${encodeURIComponent(transcript.trim())}`);
         }, 800);
       };
 
@@ -166,11 +185,23 @@ const SearchFilter: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Mic 
-            size={22} 
-            className={`mic-icon ${isListening ? 'listening' : ''}`} 
-            onClick={handleVoiceSearch}
-          />
+          <div className="search-bar-actions-mobile">
+            <Mic 
+              size={22} 
+              className={`mic-icon ${isListening ? 'listening' : ''}`} 
+              onClick={handleVoiceSearch}
+            />
+            <div className="icon-divider-v"></div>
+            <Camera 
+              size={22} 
+              className="camera-icon-mobile"
+              onClick={() => {
+                const searchParams = new URLSearchParams(window.location.search);
+                searchParams.set('openUpload', 'true');
+                navigate(`/?openUpload=true`); // Navigate home to trigger AISearch modal
+              }}
+            />
+          </div>
         </form>
 
         <div className="search-actions-row">

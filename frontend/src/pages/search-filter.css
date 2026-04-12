@@ -91,6 +91,23 @@
   filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
 }
 
+.search-bar-actions-mobile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-divider-v {
+  width: 1px;
+  height: 20px;
+  background-color: #e2e8f0;
+}
+
+.camera-icon-mobile {
+  color: #64748b;
+  cursor: pointer;
+}
+
 .requirement-popup {
   position: fixed;
   top: 0;

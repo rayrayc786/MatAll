@@ -31,6 +31,11 @@ const AISearch: React.FC = () => {
     return () => {
       delete (window as any).openAISearchModal;
       delete (window as any).startVoiceSearchGlobal;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
     };
   }, [location, navigate]);
 
@@ -97,21 +102,30 @@ const AISearch: React.FC = () => {
         console.error('Speech recognition error:', event.error);
         
         if (event.error === 'not-allowed') {
-          toast.error("Microphone access denied. Please enable it in settings.");
+          toast.error("Microphone access denied. Please enable it in browser settings.");
         } else if (event.error === 'network') {
-          toast.error("Network error occurred. Please check your connection.");
+          const isBrave = !!(navigator as any).brave;
+          if (isBrave) {
+            toast.error("Network error: Brave browser blocks voice search by default. Please enable 'Google Services for Push Messaging and Speech Recognition' in settings.", { duration: 6000 });
+          } else {
+            toast.error("Network error: Browser could not connect to speech recognition service. Please check your internet or try another browser.");
+          }
         } else if (event.error === 'no-speech') {
-          toast.error("No speech detected. Please try again.");
+          toast.error("No speech detected. Please speak more clearly.");
+        } else if (event.error === 'service-not-allowed') {
+          toast.error("Speech service not allowed. Check your browser's privacy settings.");
         } else {
-          toast.error(`Error: ${event.error}`);
+          toast.error(`Speech recognition error: ${event.error}`);
         }
       };
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
+        if (!transcript) return;
+        
         toast.success(`Searching for: ${transcript}`, { id: 'voice-search-toast' });
         setTimeout(() => {
-          navigate(`/products?search=${encodeURIComponent(transcript)}`);
+          navigate(`/products?search=${encodeURIComponent(transcript.trim())}`);
         }, 500);
       };
 
@@ -226,16 +240,17 @@ const AISearch: React.FC = () => {
 
   return (
     <>
-      <div className="ai-search-hidden-container" style={{ display: 'none' }}>
-        <div className="ai-search-triggers">
-          <button type="button" onClick={startVoiceSearch} className={`ai-trigger ${isRecording ? 'pulse' : ''}`}>
-            <Mic size={18} />
-          </button>
-          <button type="button" onClick={() => setShowModal(true)} className="ai-trigger">
-            <Camera size={18} />
-          </button>
-        </div>
+    <div className="ai-search-container">
+      <div className="ai-search-triggers">
+        <div className="icon-divider"></div>
+        <button type="button" onClick={startVoiceSearch} className={`ai-trigger ${isRecording ? 'pulse' : ''}`} title="Voice Search">
+          <Mic size={18} />
+        </button>
+        <button type="button" onClick={() => setShowModal(true)} className="ai-trigger" title="Camera/Upload Search">
+          <Camera size={18} />
+        </button>
       </div>
+    </div>
 
       {showModal && (
         <div className="modal-overlay">

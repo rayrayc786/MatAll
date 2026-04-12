@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, 
-  Home, 
-  Receipt, 
-  ChevronDown,
-  Plus,
-  Edit3,
-  Clock,
   MapPin,
-  Mic,
-  Navigation
+  Clock,
+  ArrowLeft,
+  ChevronDown,
+  Receipt,
+  ShoppingBasket
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocationContext } from '../contexts/LocationContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { Map, AdvancedMarker, useApiIsLoaded, useMapsLibrary } from '@vis.gl/react-google-maps';
+import LocationModal from '../components/LocationModal';
 import './checkout.css';
 import SEO from '../components/SEO';
 // import { getFullImageUrl } from '../utils/imageUrl';
@@ -32,52 +28,22 @@ interface Address {
 }
 
 const Checkout: React.FC = () => {
-  const isLoaded = useApiIsLoaded();
-  const geocodingLibrary = useMapsLibrary('geocoding');
   
   const { cart, clearCart, totalAmount, totalGst } = useCart();
   const { settings } = useSettings();
   const { location: globalLocation, setLocation: setGlobalLocation } = useLocationContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'checkout' | 'address-list' | 'location-ask' | 'map-confirm' | 'address-form'>('checkout');
-  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  
-  // Map/Address states
-  const [mapCenter, setMapCenter] = useState(() => {
-    if (globalLocation?.coords) return globalLocation.coords;
-    return { lat: 28.6139, lng: 77.2090 };
-  });
-  const [detectedAddr, setDetectedAddr] = useState({ main: 'Detecting...', sub: 'Please wait' });
-  const [fullAddress, setFullAddress] = useState('');
-  const [isServiceable, setIsServiceable] = useState(true);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [initialData, setInitialData] = useState<any>(null);
 
-  
-  // Form States
-  const [isSelf, setIsSelf] = useState(true);
   const [showPolicy, setShowPolicy] = useState(false);
   const [showSplitPopup, setShowSplitPopup] = useState(false);
   const [countdown, setCountdown] = useState(5);
-  const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
 
-  const [addressData, setAddressData] = useState({
-     nickname: '',
-     house: '',
-     floor: '',
-     tower: '',
-     landmark: '',
-     directions: '',
-     recipientName: '',
-     recipientPhone: '',
-     pincode: '',
-     city: '',
-     state: '',
-     country: 'India',
-     isBilling: false,
-     isShipping: true
-  });
-  
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const getLogisticsInfo = () => {
@@ -143,39 +109,6 @@ const Checkout: React.FC = () => {
     }
   }, [globalLocation]);
 
-  // Sync map center with global location or detect it
-  useEffect(() => {
-    if (step === 'location-ask' || step === 'map-confirm') {
-      if (globalLocation && (mapCenter.lat === 28.6139 || !fullAddress)) {
-        setMapCenter(globalLocation.coords);
-        const addr = globalLocation.address;
-        const parts = addr.split(',');
-        setDetectedAddr({
-          main: parts[0] || 'Selected location',
-          sub: parts.slice(1, 4).join(', ') || ''
-        });
-        setFullAddress(addr);
-      } else if (navigator.geolocation && mapCenter.lat === 28.6139) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          if (geocodingLibrary) {
-            const geocoder = new geocodingLibrary.Geocoder();
-            geocoder.geocode({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, (results, status) => {
-              if (status === "OK" && results?.[0]) {
-                const addr = results[0].formatted_address;
-                const parts = addr.split(',');
-                setDetectedAddr({
-                  main: parts[0] || 'Detected',
-                  sub: parts.slice(1, 4).join(', ') || ''
-                });
-                setFullAddress(addr);
-              }
-            });
-          }
-        });
-      }
-    }
-  }, [step, globalLocation, geocodingLibrary]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -193,9 +126,9 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    if (!selectedAddress || !selectedAddress._id) {
-      toast.error('Please add or select a saved delivery address to proceed.');
-      setStep('address-list');
+    if (!selectedAddress) {
+      toast.error('Please add or select a delivery address to proceed.');
+      setIsLocationModalOpen(true);
       return;
     }
 
@@ -297,7 +230,7 @@ const Checkout: React.FC = () => {
 
     if (!selectedAddress) {
       toast.error('Please select a delivery address first');
-      setStep('address-list');
+      setIsLocationModalOpen(true);
       return;
     }
 
@@ -363,491 +296,26 @@ const Checkout: React.FC = () => {
     </div>
   );
 
-  const renderAddressSelection = () => (
-    <div className="address-modal-overlay" onClick={() => setStep('checkout')}>
-      <div className="address-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Select delivery location</h3>
-          <button className="close-btn" onClick={() => setStep('checkout')}>×</button>
-        </div>
-        
-        <div className="address-list-container">
-          <button className="add-new-addr-btn" onClick={() => setStep('location-ask')}>
-            <Plus size={18} /> Add New Address
-          </button>
-          
-          {addresses.map((addr, idx) => {
-            const isSelected = selectedAddress?._id === addr._id || (selectedAddress?.addressText === addr.addressText && !!addr.addressText);
-            
-            return (
-              <div 
-                key={addr._id || idx} 
-                className={`address-item-card ${isSelected ? 'selected' : ''}`}
-                onClick={() => { 
-                  setSelectedAddress(addr); 
-                  setGlobalLocation({
-                    address: addr.addressText,
-                    coords: (addr as any).location?.coordinates ? { lat: (addr as any).location.coordinates[1], lng: (addr as any).location.coordinates[0] } : { lat: 0, lng: 0 },
-                    isServiceable: true,
-                    matchingJobsite: addr // IMPORTANT: Link the jobsite object
-                  }, true); // Mark as manual selection
-                  setStep('checkout'); 
-                }}
-              >
-                <div className="addr-main">
-                  <div className="addr-title-row">
-                    <strong>{addr.name}</strong>
-                    <span className="addr-tag">{addr.type}</span>
-                  </div>
-                  <p className="addr-text-full">{addr.addressText}</p>
-                  <div 
-                    className="addr-edit-action" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingAddrId(addr._id || null);
-                      // Form data populating logic...
-                      setAddressData({
-                        ...addressData,
-                        nickname: addr.name,
-                        house: '', 
-                        floor: '',
-                        tower: '',
-                        landmark: '',
-                        directions: '',
-                        recipientName: addr.recipientName || '',
-                        recipientPhone: addr.recipientPhone || '',
-                        pincode: (addr as any).pincode || '',
-                        city: (addr as any).city || '',
-                        state: (addr as any).state || '',
-                        country: (addr as any).country || 'India',
-                      });
-                      setStep('address-form');
-                    }}
-                  >
-                    <Edit3 size={14} /> Edit Address
-                  </div>
-                </div>
-                <div className="addr-radio">
-                  <div className={`radio-outer ${isSelected ? 'checked' : ''}`}>
-                    <div className="radio-inner"></div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {/* {cart.map((item, idx) => (
-            <div 
-              key={idx} 
-              className="shipment-item" 
-              onClick={() => navigate(`/products/${item.product._id}`)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="item-thumb">
-                <img 
-                  src={getFullImageUrl(item.product.imageUrl || (item.product.images && item.product.images[0]))} 
-                  alt="" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
-                  }}
-                />
-              </div>
-              <div className="item-info">
-                <h4>{item.product.brand} {item.product.name}</h4>
-                <p>{item.selectedVariant}</p>
-                <div className="item-price-row">
-                   <span>Qty: {item.quantity}</span>
-                   <strong>₹{((item.product.price || item.product.salePrice || 0) * item.quantity)}</strong>
-                </div>
-              </div>
-            </div>
-          ))} */}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderLocationAsk = () => (
-    <div className="address-modal-overlay">
-      <div className="address-modal-content prompt-modal">
-        <h3 className="prompt-title">Where shall we deliver?</h3>
-        <p className="prompt-sub">This helps us deliver your order quick.</p>
-        
-        <button className="prompt-btn btn-yellow" onClick={() => setStep('map-confirm')}>
-          I am not at the delivery location
-        </button>
-        <button className="prompt-btn btn-black" onClick={() => { handleUseCurrentLocation(); setStep('map-confirm'); }}>
-          I am at the delivery location
-        </button>
-        
-        <button className="modal-back-link" onClick={() => setStep('address-list')}>Back</button>
-      </div>
-    </div>
-  );
-
-  const checkPincode = async (results: any) => {
-    const addressComponents = results[0].address_components;
-    const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
-    const pincode = pincodeComp ? pincodeComp.long_name : '';
-
-    const localityComp = addressComponents.find((c: any) => c.types.includes('locality'));
-    const city = localityComp ? localityComp.long_name : '';
-
-    if (!pincode && !city) {
-      toast.error("Could not detect location. Please try a more specific spot.");
-      return false;
-    }
-
-    try {
-      const query = pincode || city;
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-serviceability/${encodeURIComponent(query)}`);
-      if (!data.serviceable) {
-        toast.error(`Oops, we do not serve this area currently. We will be live soon and keep you informed`, {
-          duration: 4000,
-          icon: '📍'
-        });
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error('Serviceability check failed', err);
-      toast.error("Locality check currently unavailable.");
-      return false; 
-    }
-  };
-
-  const handleMapMoveEnd = (e: any) => {
-
-    const center = e.detail.center;
-    if (!center) return;
-    const lat = center.lat;
-    const lng = center.lng;
-    setMapCenter({ lat, lng });
-    
-    if (geocodingLibrary) {
-      const geocoder = new geocodingLibrary.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
-        if (status === "OK" && results?.[0]) {
-          const isServiceable = await checkPincode(results);
-          const address = results[0].formatted_address;
-          const parts = address.split(',');
-          
-          if (!isServiceable) {
-            setDetectedAddr({
-              main: 'Location Not Serviceable',
-              sub: 'We currently do not serve in this area'
-            });
-            setFullAddress('');
-            setIsServiceable(false);
-            return;
-          }
-
-          setDetectedAddr({
-            main: parts[0] || 'Unknown',
-            sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
-          });
-          setFullAddress(address);
-          setIsServiceable(true);
-
-        }
-      });
-    }
-
-
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-      toast.loading('Detecting location...', { id: 'geo-toast' });
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setMapCenter({ lat, lng });
-          
-          if (geocodingLibrary) {
-            const geocoder = new geocodingLibrary.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
-              if (status === "OK" && results?.[0]) {
-                const isServiceable = await checkPincode(results);
-                toast.dismiss('geo-toast');
-                
-                const address = results[0].formatted_address;
-                const parts = address.split(',');
-
-                if (!isServiceable) {
-                  setDetectedAddr({
-                    main: 'Location Not Serviceable',
-                    sub: 'We currently do not serve in this area'
-                  });
-                  setFullAddress('');
-                  setIsServiceable(false);
-                  return;
-                }
-
-                setDetectedAddr({
-                  main: parts[0] || 'Unknown',
-                  sub: parts.slice(1, 4).join(', ') || 'Unknown Area'
-                });
-                setFullAddress(address);
-                setIsServiceable(true);
-
-                toast.success('Location found!', { id: 'geo-toast' });
-              }
-            });
-          }
-
-
-        },
-        (error) => {
-          toast.error('Could not get your location', { id: 'geo-toast' });
-          console.error('Geo error', error);
-        },
-        { enableHighAccuracy: true }
-      );
-    } else {
-      toast.error('Geolocation is not supported by your browser');
-    }
-  };
-
-  const renderMapConfirm = () => (
-    <div className="map-confirm-screen">
-      <header className="map-header">
-        <button className="icon-btn-plain" onClick={() => setStep('location-ask')}><ArrowLeft size={20} /></button>
-        <span>Confirm location on map</span>
-        <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
-      </header>
-      <div className="map-placeholder dynamic">
-        {isLoaded && mapCenter ? (
-          <Map
-            style={{ width: '100%', height: '100%' }}
-            center={mapCenter}
-            defaultZoom={16}
-            onCameraChanged={handleMapMoveEnd}
-            mapId={import.meta.env.VITE_GOOGLE_MAP_ID}
-            disableDefaultUI={true}
-            gestureHandling={'greedy'}
-          >
-            {/* Guard against crashes if Marker renders before Map internal data is ready */}
-            {mapCenter && <AdvancedMarker position={mapCenter} />}
-          </Map>
-        ) : (
-          <div className="map-loading">Loading Maps...</div>
-        )}
-        <div className="center-marker-overlay">
-           <MapPin size={40} color="#ef4444" fill="#ef4444" />
-        </div>
-        <button className="locate-me-fab" onClick={handleUseCurrentLocation} aria-label="Use Current Location">
-           <Navigation size={22} color="#1e293b" fill="#1e293b" />
-        </button>
-      </div>
-      <div className="map-bottom-sheet">
-        <div className="detected-addr-box">
-          <MapPin size={22} className="yellow-pin" />
-          <div className="detected-text">
-            <strong>{detectedAddr.main}</strong>
-            <p>{detectedAddr.sub}</p>
-          </div>
-        </div>
-        <button 
-           className="btn-input-complete" 
-           disabled={!isServiceable || !fullAddress}
-           style={{ opacity: (!isServiceable || !fullAddress) ? 0.5 : 1, cursor: (!isServiceable || !fullAddress) ? 'not-allowed' : 'pointer' }}
-           onClick={() => {
-              setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
-              setStep('address-form');
-           }}
-        >
-          Add complete address
-        </button>
-
-      </div>
-    </div>
-  );
-
-  const renderAddressForm = () => (
-    <div className="address-form-screen">
-      <header className="map-header">
-        <button className="icon-btn-plain" onClick={() => setStep('map-confirm')}><ArrowLeft size={20} /></button>
-        <span>Add more address details</span>
-        <button className="icon-btn-plain" onClick={() => navigate('/')}><Home size={20} /></button>
-      </header>
+  const handleAddressSelect = (addressText: string) => {
+    // Refresh user data to get the latest addresses
+    const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (updatedUser.jobsites) {
+      setAddresses(updatedUser.jobsites);
       
-      <div className="form-scroll-content">
-        <div className="who-ordering-section">
-          <p>Who are you ordering for?</p>
-          <div className="toggle-row">
-            <button className={`toggle-btn ${isSelf ? 'active' : ''}`} onClick={() => {
-               setIsSelf(true);
-               setAddressData({ ...addressData, recipientName: user.fullName || '', recipientPhone: user.phoneNumber || '' });
-            }}>Yourself</button>
-            <button className={`toggle-btn ${!isSelf ? 'active' : ''}`} onClick={() => {
-               setIsSelf(false);
-               setAddressData({ ...addressData, recipientName: '', recipientPhone: '' });
-            }}>Someone else</button>
-          </div>
-        </div>
+      // Find the site that matches this addressText or coordinate
+      const match = updatedUser.jobsites.find((s: any) => s.addressText === addressText);
+      if (match) {
+        setSelectedAddress(match);
+        setGlobalLocation({
+          address: match.addressText,
+          coords: { lat: match.location.coordinates[1], lng: match.location.coordinates[0] },
+          isServiceable: true,
+          matchingJobsite: match
+        }, true);
+      }
+    }
+  };
 
-        <div className="input-group">
-          <input 
-            type="text" 
-            placeholder="Address Nickname (e.g. Home, Site 1)" 
-            value={addressData.nickname}
-            onChange={(e) => setAddressData({ ...addressData, nickname: e.target.value })}
-          />
-          <input 
-            type="text" 
-            placeholder="House/ Unit Number" 
-            value={addressData.house}
-            onChange={(e) => setAddressData({ ...addressData, house: e.target.value })}
-          />
-          <div className="input-row-double">
-             <input 
-                type="text" 
-                placeholder="Floor" 
-                value={addressData.floor}
-                onChange={(e) => setAddressData({ ...addressData, floor: e.target.value })}
-             />
-             <input 
-                type="text" 
-                placeholder="Tower/ Block" 
-                value={addressData.tower}
-                onChange={(e) => setAddressData({ ...addressData, tower: e.target.value })}
-             />
-          </div>
-          <input 
-            type="text" 
-            placeholder="Nearby Landmark" 
-            value={addressData.landmark}
-            onChange={(e) => setAddressData({ ...addressData, landmark: e.target.value })}
-          />
-          <div className="input-row-double">
-            <input 
-              type="text" 
-              placeholder="Pincode" 
-              value={addressData.pincode}
-              onChange={(e) => setAddressData({ ...addressData, pincode: e.target.value })}
-            />
-            <input 
-              type="text" 
-              placeholder="City" 
-              value={addressData.city}
-              onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
-            />
-          </div>
-          <div className="input-row-double">
-            <input 
-              type="text" 
-              placeholder="State" 
-              value={addressData.state}
-              onChange={(e) => setAddressData({ ...addressData, state: e.target.value })}
-            />
-            <input 
-              type="text" 
-              placeholder="Country" 
-              value={addressData.country || 'India'}
-              onChange={(e) => setAddressData({ ...addressData, country: e.target.value })}
-            />
-          </div>
-          <div className="checkbox-row-group">
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                checked={addressData.isBilling}
-                onChange={(e) => setAddressData({ ...addressData, isBilling: e.target.checked })}
-              />
-              <span>Set as Billing Address</span>
-            </label>
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                checked={addressData.isShipping}
-                onChange={(e) => setAddressData({ ...addressData, isShipping: e.target.checked })}
-              />
-              <span>Set as Shipping Address</span>
-            </label>
-          </div>
-          <div className="textarea-wrapper">
-            <textarea 
-               placeholder="Any directions. Help rider reach your location"
-               value={addressData.directions}
-               onChange={(e) => setAddressData({ ...addressData, directions: e.target.value })}
-            ></textarea>
-            <Mic size={18} className="mic-icon-small" />
-          </div>
-          {!isSelf && (
-            <>
-              <input 
-                type="text" 
-                placeholder="Enter Recipient's name" 
-                value={addressData.recipientName}
-                onChange={(e) => setAddressData({ ...addressData, recipientName: e.target.value })}
-              />
-              <input 
-                type="tel" 
-                placeholder="Recipient's mobile number" 
-                value={addressData.recipientPhone}
-                onChange={(e) => setAddressData({ ...addressData, recipientPhone: e.target.value })}
-              />
-            </>
-          )}
-        </div>
-
-        <button className="btn-input-complete" onClick={() => {
-           const finalAddr = {
-              _id: editingAddrId || undefined,
-              name: addressData.nickname || 'Unknown',
-              addressText: `${addressData.house ? addressData.house + ', ' : ''}${addressData.floor ? 'Floor ' + addressData.floor + ', ' : ''}${fullAddress}`,
-              fullAddress: fullAddress,
-              pincode: addressData.pincode,
-              city: addressData.city,
-              state: addressData.state,
-              country: addressData.country,
-              isBilling: addressData.isBilling,
-              isShipping: addressData.isShipping,
-              type: 'Home' as any,
-              recipientName: addressData.recipientName,
-              recipientPhone: addressData.recipientPhone
-           };
-           setSelectedAddress(finalAddr);
-           setStep('checkout');
-
-           // Persist address to user profile
-           const token = localStorage.getItem('token');
-           if (token) {
-              const apiPath = editingAddrId 
-                ? `${import.meta.env.VITE_API_BASE_URL}/api/auth/profile/jobsites/${editingAddrId}`
-                : `${import.meta.env.VITE_API_BASE_URL}/api/auth/profile/jobsites`;
-              
-              const method = editingAddrId ? 'put' : 'post';
-
-              axios[method](apiPath, {
-                 name: finalAddr.name,
-                 addressText: finalAddr.fullAddress,
-                 pincode: finalAddr.pincode,
-                 city: finalAddr.city,
-                 state: finalAddr.state,
-                 country: finalAddr.country,
-                 isBilling: finalAddr.isBilling,
-                 isShipping: finalAddr.isShipping,
-                 location: {
-                    type: 'Point',
-                    coordinates: [mapCenter.lng, mapCenter.lat]
-                 },
-                 contactPerson: finalAddr.recipientName,
-                 contactPhone: finalAddr.recipientPhone
-              }).then(() => {
-                // Refresh local addresses to show updated one next time
-                setEditingAddrId(null);
-              }).catch(err => console.error('Failed to save address to profile:', err));
-           }
-
-           toast.success(editingAddrId ? 'Address updated!' : 'Location confirmed!');
-        }}>
-          Save & Continue
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="blinkit-checkout-page">
@@ -863,7 +331,13 @@ const Checkout: React.FC = () => {
 
       <main className="checkout-content main-content-responsive">
         <div className="checkout-grid-responsive">
+          <section className="checkout-section">
+
           <div className="checkout-left-col">
+            <div className="section-title-row">
+                <ShoppingBasket size={18} />
+                <h3>Checkout Summary</h3>
+            </div>
             <div className="delivery-slot-card">
                <div className="slot-header">
                   <Clock size={18} />
@@ -871,7 +345,8 @@ const Checkout: React.FC = () => {
                </div>
                <p className="slot-sub">Shipment of {cart.length} Item{cart.length > 1 ? 's' : ''}</p>
             </div>
-            <div className="checkout-user-pod">
+
+            <div className="checkout-user-pod" onClick={() => setIsLocationModalOpen(true)}>
               <div className="pod-icon-circle"><Receipt size={20} /></div>
               <div className="pod-info-stack">
                 <p className="pod-label-top">Order for</p>
@@ -880,10 +355,9 @@ const Checkout: React.FC = () => {
                   <span>{user.phoneNumber || ''}</span>
                 </div>
               </div>
-              <button className="pod-change-btn" onClick={() => setStep('address-list')}>Change</button>
+              <button className="pod-change-btn">Change</button>
             </div>
-
-            <div className="checkout-user-pod" onClick={() => setStep('address-list')}>
+            <div className="checkout-user-pod" onClick={() => setIsLocationModalOpen(true)}>
                <div className="pod-icon-circle pin-yellow"><MapPin size={20} /></div>
                <div className="pod-info-stack">
                   <p className="pod-label-top">Delivering to <strong>{selectedAddress?.name || 'Home'}</strong></p>
@@ -906,6 +380,7 @@ const Checkout: React.FC = () => {
               )}
             </div>
           </div>
+          </section>
 
           <div className="checkout-right-col">
             <section className="checkout-section">
@@ -923,7 +398,7 @@ const Checkout: React.FC = () => {
                   <span className="bill-val">₹{totalGst.toFixed(2)}</span>
                 </div>
                 <div className="bill-row-checkout">
-                  <span>Delivery Charge (mode: {deliveryMode})</span>
+                  <span>Delivery Charge (incl GST) (Mode: {deliveryMode})</span>
                   <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge.toFixed(2)}` : <span className="free">FREE</span>}</span>
                 </div>
                 <div className="bill-row-checkout">
@@ -1013,10 +488,18 @@ const Checkout: React.FC = () => {
         </div>
       </footer>
 
-      {step === 'address-list' && renderAddressSelection()}
-      {step === 'location-ask' && renderLocationAsk()}
-      {step === 'map-confirm' && renderMapConfirm()}
-      {step === 'address-form' && renderAddressForm()}
+      <LocationModal 
+        isOpen={isLocationModalOpen}
+        onClose={() => {
+          setIsLocationModalOpen(false);
+          setInitialData(null);
+          setEditIndex(null);
+        }}
+        onSelectAddress={handleAddressSelect}
+        currentAddress={selectedAddress?.addressText}
+        initialData={initialData}
+        editIndex={editIndex}
+      />
       {showSplitPopup && renderSplitPopup()}
     </div>
   );

@@ -7,7 +7,8 @@ import {
   Plus,
   Minus,
   ArrowRight,
-  Receipt
+  Receipt,
+  ShoppingBasket
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import ProductCard from '../components/ProductCard';
@@ -26,11 +27,31 @@ const Cart: React.FC = () => {
   const [maxDeliveryTime, setMaxDeliveryTime] = useState('15 mins');
   const [displayAddress, setDisplayAddress] = useState('Select delivery location');
 
-  // Same fee logic as Checkout.tsx
-  // Use fees from settings
-  const deliveryCharge = totalAmount > settings.freeDeliveryThreshold ? 0 : settings.deliveryCharge;
+  const getLogisticsInfo = () => {
+    let maxCat: 'light' | 'medium' | 'heavy' = 'light';
+    cart.forEach(item => {
+      const itemCat = String(item.product.logisticsCategory || 'Light').toLowerCase();
+      if (itemCat === 'heavy') maxCat = 'heavy';
+      else if (itemCat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
+    });
+    
+    const rates = settings.logisticsRates || {
+      light: { rate: settings.deliveryCharge || 50, mode: "Bike" },
+      medium: { rate: settings.deliveryCharge || 50, mode: "Bike" },
+      heavy: { rate: settings.deliveryCharge || 50, mode: "Bike" }
+    };
+    
+    return (rates as any)[maxCat] || { rate: 50, mode: "Bike" };
+  };
+
+  const logisticsInfo = getLogisticsInfo();
+  const deliveryCharge = totalAmount > settings.freeDeliveryThreshold ? 0 : logisticsInfo.rate;
+  const deliveryMode = logisticsInfo.mode;
   const handlingCharge = settings.platformFee;
   const grandTotal = totalAmount + deliveryCharge + handlingCharge;
+
+  const mrpTotal = cart.reduce((acc, item) => acc + (item.product.mrp || item.product.price || 0) * item.quantity, 0);
+  const savings = mrpTotal - totalAmount;
 
   useEffect(() => {
     if (cart.length > 0) {
@@ -129,7 +150,12 @@ const Cart: React.FC = () => {
       <SEO title="My Shopping Cart" description="Review your items in the cart and proceed to checkout for fast delivery." />
       <main className="checkout-content main-content-responsive">
         <div className="checkout-grid-responsive">
+          <section className="checkout-section">
           <div className="checkout-left-col">
+            <div className="section-title-row">
+                <ShoppingBasket size={18} />
+                <h3>Cart Items</h3>
+            </div>
             <div className="shipment-container">
               <div className="ship-head-row">
                 <div className="ship-timer-icon"><Clock size={18} /></div>
@@ -188,7 +214,7 @@ const Cart: React.FC = () => {
                 <span>₹{totalGst.toFixed(2)}</span>
               </div>
               <div className="bill-row-item">
-                <span>Delivery Charge</span>
+                <span>Delivery Charge (incl GST) (Mode: {deliveryMode})</span>
                 {deliveryCharge > 0 ? <span>₹{deliveryCharge.toFixed(2)}</span> : <span style={{ color: '#16a34a' }}>FREE</span>}
               </div>
               <div className="bill-row-item">
@@ -210,6 +236,7 @@ const Cart: React.FC = () => {
               </div>
             </section>
           </div>
+          </section>
 
           <div className="checkout-right-col">
             <section className="checkout-section">
@@ -227,7 +254,7 @@ const Cart: React.FC = () => {
                   <span className="bill-val">₹{totalGst.toFixed(2)}</span>
                 </div>
                 <div className="bill-row-checkout">
-                  <span>Delivery Charge</span>
+                  <span>Delivery Charge (incl GST) (Mode: {deliveryMode})</span>
                   <span className="bill-val">
                     {deliveryCharge > 0 ? `₹${deliveryCharge.toFixed(2)}` : <span className="free">FREE</span>}
                   </span>
@@ -242,6 +269,13 @@ const Cart: React.FC = () => {
                 </div>
               </div>
             </section>
+
+            {savings > 0 && (
+              <div className="savings-tile">
+                <span className="savings-text">Your total savings</span>
+                <span className="savings-amount">₹{savings.toFixed(2)}</span>
+              </div>
+            )}
 
             <div className="desktop-order-actions hide-mobile mt-4">
               <button 

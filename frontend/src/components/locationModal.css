@@ -282,6 +282,18 @@
   border-color: #FFEA00;
 }
 
+.read-only-input {
+  background-color: #f8fafc;
+  cursor: default;
+  color: #64748b;
+  border-color: #e2e8f0 !important;
+}
+
+.read-only-input:focus {
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
 .input-with-mic {
   position: relative;
   display: flex;

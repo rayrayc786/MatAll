@@ -49,7 +49,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
   const [tower, setTower] = useState('');
   const [landmark, setLandmark] = useState('');
   const [directions, setDirections] = useState('');
+  const [apartmentName, setApartmentName] = useState('');
   const [orderingFor, setOrderingFor] = useState<'Yourself' | 'Someone else'>('Yourself');
+  const [pincode, setPincode] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
@@ -65,13 +69,31 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
   // Sync form state when user transitions to add address form
   useEffect(() => {
-    if (showAddForm && !newAddrText) {
-      if (selectedAddress || searchTerm || currentAddress) {
-        setNewAddrText(selectedAddress || searchTerm || currentAddress || '');
+    if (showAddForm) {
+      if (!newAddrText && (selectedAddress || searchTerm || currentAddress)) {
+        const addr = selectedAddress || searchTerm || currentAddress || '';
+        setNewAddrText(addr);
         setNewAddrCoords([mapCenter.lng, mapCenter.lat]);
+        
+        // Try to extract pincode and city if not already set
+        if (!pincode || !city) {
+           const match = addr.match(/\b\d{6}\b/);
+           if (match && !pincode) setPincode(match[0]);
+           
+           if (!city) {
+             const parts = addr.split(',').map(p => p.trim());
+             if (parts.length >= 3) {
+               // Usually: ... [City], [State] [Pincode], [Country]
+               setCity(parts[parts.length - 3]);
+             } else if (parts.length === 2) {
+               // e.g. [City], [Country]
+               setCity(parts[0]);
+             }
+           }
+        }
       }
     }
-  }, [showAddForm, selectedAddress, searchTerm, currentAddress, mapCenter]);
+  }, [showAddForm, selectedAddress, searchTerm, currentAddress, mapCenter, pincode, city]);
 
   useEffect(() => {
     if (isOpen) {
@@ -85,6 +107,9 @@ const LocationModal: React.FC<LocationModalProps> = ({
             setNewAddrText(initialData.addressText || '');
             setNewAddrPhone(initialData.contactPhone || '');
             setNewAddrCoords(initialData.location?.coordinates || null);
+            setPincode(initialData.pincode || '');
+            setCity(initialData.city || '');
+            setStateName(initialData.state || '');
             if (initialData.location?.coordinates) {
                 setMapCenter({ 
                     lat: initialData.location.coordinates[1], 
@@ -109,6 +134,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
             setTower('');
             setLandmark('');
             setDirections('');
+            setApartmentName('');
             
             if (globalLocation) {
                 setMapCenter(globalLocation.coords);
@@ -200,18 +226,31 @@ const LocationModal: React.FC<LocationModalProps> = ({
   const checkPincode = async (results: any) => {
     const addressComponents = results[0].address_components;
     const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
-    const pincode = pincodeComp ? pincodeComp.long_name : '';
+    let pincodeVal = pincodeComp ? pincodeComp.long_name : '';
 
-    const localityComp = addressComponents.find((c: any) => c.types.includes('locality'));
-    const city = localityComp ? localityComp.long_name : '';
+    if (!pincodeVal && results[0].formatted_address) {
+        const match = results[0].formatted_address.match(/\b\d{6}\b/);
+        if (match) pincodeVal = match[0];
+    }
 
-    if (!pincode && !city) {
+    const localityComp = addressComponents.find((c: any) => c.types.includes('locality')) || 
+                         addressComponents.find((c: any) => c.types.includes('administrative_area_level_2'));
+    const cityVal = localityComp ? localityComp.long_name : '';
+
+    const stateComp = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'));
+    const stateVal = stateComp ? stateComp.long_name : '';
+
+    setPincode(pincodeVal);
+    setCity(cityVal);
+    setStateName(stateVal);
+
+    if (!pincodeVal && !cityVal) {
       toast.error("Could not detect location. Please try a more specific spot.");
       return false;
     }
 
     try {
-      const query = pincode || city;
+      const query = pincodeVal || cityVal;
       const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-serviceability/${encodeURIComponent(query)}`);
       
       if (!data.serviceable) {
@@ -418,12 +457,15 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
     try {
         const token = localStorage.getItem('token');
-        const formattedAddress = `${houseNumber ? houseNumber + ', ' : ''}${floor ? 'Floor ' + floor + ', ' : ''}${tower ? tower + ', ' : ''}${newAddrText}${landmark ? ' (Near ' + landmark + ')' : ''}`;
+        const formattedAddress = `${houseNumber ? houseNumber + ', ' : ''}${floor ? 'Floor ' + floor + ', ' : ''}${tower ? tower + ', ' : ''}${apartmentName ? apartmentName + ', ' : ''}${newAddrText}${landmark ? ' (Near ' + landmark + ')' : ''}`;
         
         const newJobsite = {
             name: newAddrName || newAddrType || 'My Address',
             addressType: newAddrType,
             addressText: formattedAddress,
+            pincode: pincode,
+            city: city,
+            state: stateName,
             contactPhone: newAddrPhone,
             location: {
                 type: 'Point',
@@ -710,6 +752,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
                 </div>
 
                 <div className="form-group">
+                    <label>Apartment/ Building Name (optional)</label>
+                    <input type="text" value={apartmentName} onChange={e => setApartmentName(e.target.value)} placeholder="e.g. DLF Heights" />
+                </div>
+
+                <div className="form-group">
                     <label>Tower/ Block (optional)</label>
                     <input type="text" value={tower} onChange={e => setTower(e.target.value)} placeholder="e.g. Block B" />
                 </div>
@@ -717,6 +764,27 @@ const LocationModal: React.FC<LocationModalProps> = ({
                 <div className="form-group">
                     <label>Nearby Landmark</label>
                     <input type="text" value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="e.g. Near Petrol Pump" />
+                </div>
+
+                <div className="form-grid-2col">
+                    <div className="form-group">
+                        <label>PIN Code</label>
+                        <input 
+                            type="text" 
+                            value={pincode} 
+                            onChange={(e) => setPincode(e.target.value)} 
+                            placeholder="e.g. 160062" 
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>City</label>
+                        <input 
+                            type="text" 
+                            value={city} 
+                            onChange={(e) => setCity(e.target.value)} 
+                            placeholder="e.g. Sahibzada Ajit Singh Nagar" 
+                        />
+                    </div>
                 </div>
 
                 <div className="form-group directions-group">

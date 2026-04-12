@@ -932,7 +932,7 @@
     grid-template-columns: 1fr 400px;
     gap: 3.5rem;
     align-items: start;
-    padding: 0 2rem;
+    padding: 1rem 2rem;
   }
 
   .checkout-user-pod,
