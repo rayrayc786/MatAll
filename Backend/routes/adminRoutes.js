@@ -101,6 +101,7 @@ router.put('/serviceable-areas/:id', adminController.updateServiceableArea);
 router.delete('/serviceable-areas/:id', adminController.deleteServiceableArea);
 router.put('/bulk-update-serviceable-areas', adminController.bulkUpdateServiceableAreas);
 router.post('/bulk-create-serviceable-areas', adminController.bulkCreateServiceableAreas);
+router.get('/proxy-city-pincodes/:city', adminController.proxyCityPincodes);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 router.get('/search-logs', adminController.getSearchLogs);

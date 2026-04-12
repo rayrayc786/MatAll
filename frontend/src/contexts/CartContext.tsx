@@ -41,6 +41,7 @@ interface Product {
       stock?: number;
     };
     unitWeightGm?: number;
+    logisticsCategory?: string;
   }[];
   bulkPricing?: { minQty: number, discount: number }[];
   logisticsCategory?: string;

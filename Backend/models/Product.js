@@ -37,7 +37,8 @@ const VariantSchema = new mongoose.Schema({
     suitableFor: { type: String },
     warranty: { type: String }
   },
-  images: [{ type: String }] // Variant-level images with full paths
+  images: [{ type: String }], // Variant-level images with full paths
+  logisticsCategory: { type: String, enum: ['Light', 'Medium', 'Heavy'] } // Variant specific override
 });
 
 const ProductSchema = new mongoose.Schema({

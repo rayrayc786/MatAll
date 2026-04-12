@@ -49,7 +49,8 @@ const Checkout: React.FC = () => {
   const getLogisticsInfo = () => {
     let maxCat: 'light' | 'medium' | 'heavy' = 'light';
     cart.forEach(item => {
-      const itemCat = String(item.product.logisticsCategory || 'Light').toLowerCase();
+      const variant = item.product.variants?.find((v: any) => v.name === item.selectedVariant);
+      const itemCat = String(variant?.logisticsCategory || item.product.logisticsCategory || 'Light').toLowerCase();
       if (itemCat === 'heavy') maxCat = 'heavy';
       else if (itemCat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
     });

@@ -218,9 +218,11 @@ exports.getDashboardStats = async (req, res) => {
       };
     });
 
+    const deliveredOrders = orders.filter(o => o.status === 'Order Delivered').length;
+
     res.json({ 
       gmv, activeDeliveries, lateOrders, totalOrders, hourlyGMV,
-      activeOrders, activeSuppliers, activeCategories, avgDeliveryTime,
+      activeOrders, deliveredOrders, activeSuppliers, activeCategories, avgDeliveryTime,
       revenueData, ordersStatsData, recentOrders
     });
   } catch (err) {
@@ -386,7 +388,8 @@ exports.bulkUploadProducts = async (req, res) => {
           suitableFor: getVal(['Suitable For', 'SuitableFor']),
           warranty: getVal(['Warranty', 'warranty'])
         },
-        images
+        images,
+        logisticsCategory: getVal(['Logistics', 'Variant Logistics', 'variantLogisticsCategory'])
       };
 
       if (!productMap.has(productId)) {

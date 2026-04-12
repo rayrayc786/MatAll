@@ -5,6 +5,7 @@ import {
   Package, 
   Layers, 
   Clock,
+  CheckCircle,
   Search,
   Edit2,
   ChevronRight,
@@ -143,12 +144,15 @@ function ManagementModal({
                         />
                      </div>
                      <div className="input-group-admin">
-                        <label>Volume (m³)</label>
-                        <input 
-                          type="number" 
-                          value={formData.volumePerUnit || 0} 
-                          onChange={e => setFormData({...formData, volumePerUnit: Number(e.target.value)})} 
-                        />
+                        <label>Logistics Category</label>
+                        <select 
+                          value={formData.logisticsCategory || 'Light'} 
+                          onChange={e => setFormData({...formData, logisticsCategory: e.target.value})}
+                        >
+                          <option value="Light">Light (Bike)</option>
+                          <option value="Medium">Medium (Three Wheeler)</option>
+                          <option value="Heavy">Heavy (Truck)</option>
+                        </select>
                      </div>
                   </div>
                   <div className="input-group-admin">
@@ -256,6 +260,22 @@ function ManagementModal({
                             newV[idx].sku = e.target.value;
                             setFormData({...formData, variants: newV});
                           }} />
+                        </div>
+                        <div className="input-group-admin">
+                          <label>Logistics Category</label>
+                          <select 
+                            value={v.logisticsCategory || ''} 
+                            onChange={(e) => {
+                              const newV = [...(formData.variants || [])];
+                              newV[idx].logisticsCategory = e.target.value;
+                              setFormData({...formData, variants: newV});
+                            }}
+                          >
+                            <option value="">Use Default</option>
+                            <option value="Light">Light</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Heavy">Heavy</option>
+                          </select>
                         </div>
                       </div>
                       <button type="button" className="remove-variant-btn" onClick={() => {
@@ -943,6 +963,7 @@ const AdminDashboard: React.FC = () => {
 
   const TILES = [
     { label: 'Active Orders', val: dashboardStats?.activeOrders ?? '0', icon: <Package size={20} />, color: '#FFEA00', tab: 'orders' },
+    { label: 'Delivered Orders', val: dashboardStats?.deliveredOrders ?? '0', icon: <CheckCircle size={20} />, color: '#DEDEDE', tab: 'orders' },
     { label: 'Active Products', val: dashboardStats?.totalProducts ?? products.length ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'products' },
     { label: 'Active Categories', val: dashboardStats?.activeCategories ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'categories' },
     { label: 'Material Requests', val: userRequests.length ?? '0', icon: <Clock size={20} />, color: '#DEDEDE', tab: 'userRequests' },

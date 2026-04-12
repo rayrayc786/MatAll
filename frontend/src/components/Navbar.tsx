@@ -18,7 +18,7 @@ const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   
-  const { cart, totalAmount } = useCart();
+  const { cart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -279,7 +279,7 @@ const Navbar: React.FC = () => {
               </div>
               {isDesktop && cartCount > 0 && (
                 <div className="cart-info-desktop">
-                  <span className="cart-total-text">₹{totalAmount.toFixed(2)}</span>
+                  {/* <span className="cart-total-text">₹{totalAmount.toFixed(2)}</span> */}
                   <span className="cart-label-text">VIEW CART</span>
                 </div>
               )}

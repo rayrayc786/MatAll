@@ -15,7 +15,13 @@ const calculateOrderTotals = (items, settings = null) => {
   // 1. Determine logistics category based on items
   let maxCat = 'light';
   items.forEach(item => {
-    const cat = (item.category || item.product?.logisticsCategory || 'Light').toLowerCase();
+    const product = item.product;
+    const selectedVariantName = item.selectedVariant;
+    const variant = product?.variants?.find(v => v.name === selectedVariantName);
+    
+    // Priority: 1. Variant Logistics Category, 2. Product Logistics Category, 3. Item Category (backwards compatibility), 4. Default 'Light'
+    const cat = (variant?.logisticsCategory || product?.logisticsCategory || item.category || 'Light').toLowerCase();
+    
     if (cat === 'heavy') maxCat = 'heavy';
     else if (cat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
   });
