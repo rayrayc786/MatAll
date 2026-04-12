@@ -62,6 +62,7 @@ interface CartContextType {
   totalWeight: number;
   totalVolume: number;
   totalGst: number;
+  maxLogisticsCategory: 'light' | 'medium' | 'heavy';
   vehicleClass: string;
 }
 
@@ -128,11 +129,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => setCart([]);
 
-  const { totalAmount, totalWeight, totalVolume, totalGst } = useMemo(() => {
+  const { totalAmount, totalWeight, totalVolume, totalGst, maxLogisticsCategory } = useMemo(() => {
     let amount = 0;
     let weight = 0;
     let volume = 0;
     let gstSum = 0;
+    let maxCat: 'light' | 'medium' | 'heavy' = 'light';
 
     cart.forEach(item => {
       let itemPrice = item.product.price; // We treat this as BASE price
@@ -163,18 +165,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Calculate totals
-      const rowTotalInclGst = itemPrice * item.quantity;
-      const itemBasePrice = itemPrice / (1 + itemGstRate / 100);
-      const baseAmountTotal = itemBasePrice * item.quantity;
-      const gstAmountTotal = rowTotalInclGst - baseAmountTotal;
+      const variant: any = item.product.variants?.find(v => v.name === item.selectedVariant);
+      const logisticsCat = String(variant?.logisticsCategory || item.product.logisticsCategory || 'Light').toLowerCase();
+      
+      if (logisticsCat === 'heavy') maxCat = 'heavy';
+      else if (logisticsCat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
 
-      amount += rowTotalInclGst;
-      gstSum += gstAmountTotal;
+      amount += itemPrice * item.quantity;
       weight += itemWeight * item.quantity;
       volume += itemVolume * item.quantity;
+      gstSum += (itemPrice * item.quantity) * (itemGstRate / 100);
     });
 
-    return { totalAmount: amount, totalWeight: weight, totalVolume: volume, totalGst: gstSum };
+    return { 
+      totalAmount: (Math.round(amount * 100) / 100) + (Math.round(gstSum * 100) / 100), 
+      totalWeight: weight, 
+      totalVolume: volume, 
+      totalGst: (Math.round(gstSum * 100) / 100), 
+      maxLogisticsCategory: maxCat 
+    };
   }, [cart]);
 
   const vehicleClass = useMemo(() => {
@@ -186,7 +195,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [totalWeight]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalAmount, totalWeight, totalVolume, totalGst, vehicleClass }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalAmount, totalWeight, totalVolume, totalGst, vehicleClass, maxLogisticsCategory }}>
       {children}
     </CartContext.Provider>
   );

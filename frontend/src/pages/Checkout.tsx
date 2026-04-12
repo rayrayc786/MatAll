@@ -29,7 +29,7 @@ interface Address {
 
 const Checkout: React.FC = () => {
   
-  const { cart, clearCart, totalAmount, totalGst, totalWeight: cartWeight, totalVolume: cartVolume } = useCart();
+  const { cart, clearCart, totalAmount, totalGst, totalWeight: cartWeight, totalVolume: cartVolume, maxLogisticsCategory } = useCart();
   const { settings } = useSettings();
   const { location: globalLocation, setLocation: setGlobalLocation } = useLocationContext();
   const navigate = useNavigate();
@@ -46,26 +46,8 @@ const Checkout: React.FC = () => {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const getLogisticsInfo = () => {
-    let maxCat: 'light' | 'medium' | 'heavy' = 'light';
-    cart.forEach(item => {
-      const variant = item.product.variants?.find((v: any) => v.name === item.selectedVariant);
-      const itemCat = String(variant?.logisticsCategory || item.product.logisticsCategory || 'Light').toLowerCase();
-      if (itemCat === 'heavy') maxCat = 'heavy';
-      else if (itemCat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
-    });
-    
-    // Safety fallback to old deliveryCharge if new structure missing
-    const rates = settings.logisticsRates || {
-      light: { rate: settings.deliveryCharge || 50, mode: "Bike" },
-      medium: { rate: settings.deliveryCharge || 50, mode: "Bike" },
-      heavy: { rate: settings.deliveryCharge || 50, mode: "Bike" }
-    };
-    
-    return (rates as any)[maxCat] || { rate: 50, mode: "Bike" };
-  };
+  const logisticsInfo = settings.logisticsRates[maxLogisticsCategory as keyof typeof settings.logisticsRates] || settings.logisticsRates.light;
 
-  const logisticsInfo = getLogisticsInfo();
   const itemsTotal = totalAmount;
   const mrpTotal = cart.reduce((acc, item) => acc + (item.product.mrp || item.product.price) * item.quantity, 0);
   const savings = mrpTotal - itemsTotal;

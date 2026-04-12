@@ -20,31 +20,15 @@ import './cart.css';
 import SEO from '../components/SEO';
 
 const Cart: React.FC = () => {
-  const { cart, addToCart, removeFromCart, totalAmount, totalGst } = useCart();
+  const { cart, addToCart, removeFromCart, totalAmount, totalGst, maxLogisticsCategory } = useCart();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [maxDeliveryTime, setMaxDeliveryTime] = useState('15 mins');
   const [displayAddress, setDisplayAddress] = useState('Select delivery location');
 
-  const getLogisticsInfo = () => {
-    let maxCat: 'light' | 'medium' | 'heavy' = 'light';
-    cart.forEach(item => {
-      const itemCat = String(item.product.logisticsCategory || 'Light').toLowerCase();
-      if (itemCat === 'heavy') maxCat = 'heavy';
-      else if (itemCat === 'medium' && maxCat !== 'heavy') maxCat = 'medium';
-    });
-    
-    const rates = settings.logisticsRates || {
-      light: { rate: settings.deliveryCharge || 50, mode: "Bike" },
-      medium: { rate: settings.deliveryCharge || 50, mode: "Bike" },
-      heavy: { rate: settings.deliveryCharge || 50, mode: "Bike" }
-    };
-    
-    return (rates as any)[maxCat] || { rate: 50, mode: "Bike" };
-  };
-
-  const logisticsInfo = getLogisticsInfo();
+  const logisticsInfo = settings.logisticsRates[maxLogisticsCategory as keyof typeof settings.logisticsRates] || settings.logisticsRates.light;
+  
   const deliveryCharge = totalAmount > settings.freeDeliveryThreshold ? 0 : logisticsInfo.rate;
   const deliveryMode = logisticsInfo.mode;
   const handlingCharge = settings.platformFee;
@@ -195,7 +179,7 @@ const Cart: React.FC = () => {
                           <span className="c-qty-val">{item.quantity}</span>
                           <button onClick={() => addToCart(item.product, 1, item.selectedVariant)}><Plus size={14} /></button>
                         </div>
-                        <span className="c-item-price">₹{((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}</span>
+                        <span className="c-item-price">₹{((item.product.variants?.find((v: any) => v.name === item.selectedVariant)?.pricing?.salePrice || item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
