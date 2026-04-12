@@ -108,31 +108,33 @@ const Home: React.FC = () => {
           </div>
           <div className="brands-horizontal-scroll">
             {featuredBrands.length > 0 ? (
-              featuredBrands.map(brand => (
-                <Link to={`/products?brand=${encodeURIComponent(brand.name)}`} key={brand._id} className="brand-tile">
-                  <div className="brand-logo-box">
-                    {brand.logoUrl && (
-                      <img 
-                        src={getFullImageUrl(brand.logoUrl)} 
-                        alt={brand.name} 
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          const fallback = parent?.querySelector('.brand-initials');
-                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                        }}
-                      />
-                    )}
-                    <div 
-                      className="brand-initials"
-                      style={{ display: brand.logoUrl ? 'none' : 'flex' }}
-                    >
-                      {brand.name.substring(0, 2).toUpperCase()}
+              <div className="brands-track">
+                {[...featuredBrands, ...featuredBrands].map((brand, index) => (
+                  <Link to={`/products?brand=${encodeURIComponent(brand.name)}`} key={`${brand._id}-${index}`} className="brand-tile">
+                    <div className="brand-logo-box">
+                      {brand.logoUrl && (
+                        <img 
+                          src={getFullImageUrl(brand.logoUrl)} 
+                          alt={brand.name} 
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            const fallback = parent?.querySelector('.brand-initials');
+                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                      )}
+                      <div 
+                        className="brand-initials"
+                        style={{ display: brand.logoUrl ? 'none' : 'flex' }}
+                      >
+                        {brand.name.substring(0, 2).toUpperCase()}
+                      </div>
                     </div>
-                  </div>
-                  <span>{brand.name}</span>
-                </Link>
-              ))
+                    <span>{brand.name}</span>
+                  </Link>
+                ))}
+              </div>
             ) : (
               <p style={{ padding: '1rem', color: '#64748b' }}>No featured brands available</p>
             )}

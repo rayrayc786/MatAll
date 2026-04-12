@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Plus, Search, FileUp, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star, Menu, Eye, EyeOff, Truck } from 'lucide-react';
+import { Plus, Search, FileUp, Download, FileSpreadsheet, Edit3, Trash2, X, CheckCircle2, AlertCircle, Star, Menu, Eye, EyeOff, Truck } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageUrl';
 import './sku.css';
 
@@ -22,6 +22,9 @@ const SKUManager: React.FC = () => {
   const [uploadResult, setUploadResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [productTab, setProductTab] = useState<'general' | 'variants' | 'images'>('general');
+  const [savedExcels, setSavedExcels] = useState<any[]>([]);
+  const [showExcelPanel, setShowExcelPanel] = useState(false);
+
 
   const [formData, setFormData] = useState({
     productName: '',
@@ -115,10 +118,12 @@ const SKUManager: React.FC = () => {
       fetchMasterBrands(), 
       fetchMasterUnits(),
       fetchMasterSubCategories(),
-      fetchMasterDeliveryTimes()
+      fetchMasterDeliveryTimes(),
+      fetchSavedExcels()
     ]);
     setLoading(false);
   };
+
 
   useEffect(() => {
     loadAll();
@@ -144,7 +149,11 @@ const SKUManager: React.FC = () => {
       
       setUploadResult(response.data);
       console.log('Bulk Upload Response:', response.data);
+      if (response.data.savedFile) {
+        toast.success(`Excel saved: ${response.data.savedFile.replace(/^\d+_/, '')}`);
+      }
       fetchSKUs();
+      fetchSavedExcels();
     } catch (err) {
       console.error(err);
       alert('Failed to upload products');
@@ -153,6 +162,32 @@ const SKUManager: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  const fetchSavedExcels = async () => {
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/products/excel-uploads`);
+      setSavedExcels(data);
+    } catch (err) {
+      console.error('Failed to fetch saved excels', err);
+    }
+  };
+
+  const handleDownloadExcel = (filename: string) => {
+    const token = localStorage.getItem('token');
+    const url = `${import.meta.env.VITE_API_BASE_URL}/api/admin/products/excel-uploads/${encodeURIComponent(filename)}`;
+    // Use an anchor trick with auth header via fetch+blob
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.blob())
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename.replace(/^\d+_/, '');
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(() => toast.error('Download failed'));
+  };
+
 
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -392,6 +427,61 @@ const SKUManager: React.FC = () => {
           <button className="secondary-btn" onClick={() => fileInputRef.current?.click()}>
             <FileUp size={18} /> Bulk Upload (Excel)
           </button>
+
+          {/* Saved Excels panel */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="secondary-btn"
+              onClick={() => { fetchSavedExcels(); setShowExcelPanel(p => !p); }}
+              title="View / Download saved Excel uploads"
+            >
+              <FileSpreadsheet size={18} /> Saved Excels ({savedExcels.length})
+            </button>
+
+            {showExcelPanel && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200,
+                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '340px', maxHeight: '340px',
+                overflowY: 'auto', padding: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e293b' }}>📂 Uploaded Excels</span>
+                  <button className="icon-btn" onClick={() => setShowExcelPanel(false)}><X size={14} /></button>
+                </div>
+                {savedExcels.length === 0 ? (
+                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center', padding: '1rem 0' }}>No Excel files uploaded yet.</p>
+                ) : (
+                  savedExcels.map((f: any) => (
+                    <div key={f.filename} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0.5rem 0.6rem', borderRadius: '8px', marginBottom: '4px',
+                      background: '#f8fafc', border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {f.originalName}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                          {new Date(f.uploadedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {' · '}{(f.size / 1024).toFixed(0)} KB
+                        </div>
+                      </div>
+                      <button
+                        className="icon-btn"
+                        onClick={() => handleDownloadExcel(f.filename)}
+                        title="Download this Excel"
+                        style={{ marginLeft: '8px', flexShrink: 0 }}
+                      >
+                        <Download size={15} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           <button className="secondary-btn sku-clear-all-btn" onClick={handleClearAll}>
             <Trash2 size={18} /> Clear All
           </button>

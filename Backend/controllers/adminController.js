@@ -265,7 +265,14 @@ const ExcelJS = require('exceljs');
 exports.bulkUploadProducts = async (req, res) => {
   try {
     if (!req.file) return res.status(400).send('No file uploaded.');
-    
+
+    // ── Save a copy of the Excel for future downloads ──
+    const excelDir = path.join(__dirname, '..', 'public', 'uploads', 'excel');
+    if (!fs.existsSync(excelDir)) fs.mkdirSync(excelDir, { recursive: true });
+    const safeOriginalName = (req.file.originalname || 'upload.xlsx').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const savedFileName = `${Date.now()}_${safeOriginalName}`;
+    fs.writeFileSync(path.join(excelDir, savedFileName), req.file.buffer);
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.file.buffer);
     const worksheet = workbook.getWorksheet(1);
@@ -514,6 +521,7 @@ exports.bulkUploadProducts = async (req, res) => {
 
     res.json({ 
       message: 'Upload complete', 
+      savedFile: savedFileName,
       summary: { 
         totalRows,
         processedProducts: productMap.size,
@@ -533,6 +541,43 @@ exports.bulkUploadProducts = async (req, res) => {
     });
   } catch (err) {
     console.error('Bulk Upload Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.listUploadedExcels = async (req, res) => {
+  try {
+    const excelDir = path.join(__dirname, '..', 'public', 'uploads', 'excel');
+    if (!fs.existsSync(excelDir)) return res.json([]);
+    const files = fs.readdirSync(excelDir)
+      .filter(f => /\.(xlsx|xls)$/i.test(f))
+      .map(f => {
+        const stats = fs.statSync(path.join(excelDir, f));
+        return {
+          filename: f,
+          originalName: f.replace(/^\d+_/, ''), // strip timestamp prefix
+          size: stats.size,
+          uploadedAt: new Date(parseInt(f.split('_')[0])).toISOString()
+        };
+      })
+      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.downloadUploadedExcel = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    // Security: prevent path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const filePath = path.join(__dirname, '..', 'public', 'uploads', 'excel', filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+    res.download(filePath, filename.replace(/^\d+_/, ''));
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };

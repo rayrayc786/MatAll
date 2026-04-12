@@ -164,17 +164,28 @@
   }
 }
 
-/* Brands Horizontal Scroll */
-.brands-horizontal-scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 1.5rem;
-  padding-bottom: 1rem;
-  scrollbar-width: none;
+/* Brands Horizontal Scroll — Marquee */
+@keyframes brands-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
-.brands-horizontal-scroll::-webkit-scrollbar {
-  display: none;
+.brands-horizontal-scroll {
+  overflow: hidden;
+  padding-bottom: 0.5rem;
+  mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+}
+
+.brands-track {
+  display: flex;
+  gap: 1.5rem;
+  width: max-content;
+  animation: brands-marquee 22s linear infinite;
+}
+
+.brands-track:hover {
+  animation-play-state: paused;
 }
 
 .brand-tile {

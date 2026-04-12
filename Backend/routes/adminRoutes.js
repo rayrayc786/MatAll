@@ -27,6 +27,11 @@ router.put('/products/:id', adminController.updateProduct);
 router.delete('/products/clear-all', adminController.clearAllProducts);
 router.delete('/products/:id', adminController.deleteProduct);
 
+// Excel upload management
+router.get('/products/excel-uploads', adminController.listUploadedExcels);
+router.get('/products/excel-uploads/:filename', adminController.downloadUploadedExcel);
+
+
 // User management
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:id/orders', adminController.getUserOrders);
