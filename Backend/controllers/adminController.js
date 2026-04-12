@@ -266,9 +266,13 @@ exports.bulkUploadProducts = async (req, res) => {
   try {
     if (!req.file) return res.status(400).send('No file uploaded.');
 
-    // ── Save a copy of the Excel for future downloads ──
+    // ── Save a copy of the Excel for future downloads (replace previous) ──
     const excelDir = path.join(__dirname, '..', 'public', 'uploads', 'excel');
     if (!fs.existsSync(excelDir)) fs.mkdirSync(excelDir, { recursive: true });
+    // Delete any existing Excel files so only the latest is kept
+    fs.readdirSync(excelDir)
+      .filter(f => /\.(xlsx|xls)$/i.test(f))
+      .forEach(f => fs.unlinkSync(path.join(excelDir, f)));
     const safeOriginalName = (req.file.originalname || 'upload.xlsx').replace(/[^a-zA-Z0-9._-]/g, '_');
     const savedFileName = `${Date.now()}_${safeOriginalName}`;
     fs.writeFileSync(path.join(excelDir, savedFileName), req.file.buffer);

@@ -74,5 +74,13 @@ export default defineConfig(({ mode }) => ({
       }
     })
   ],
+  build: {
+    sourcemap: false,
+    minify: 'esbuild',
+    target: 'esnext'
+  },
+  esbuild: {
+    drop: ['console', 'debugger']
+  }
 }))
 
