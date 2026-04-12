@@ -1246,6 +1246,9 @@ const AdminDashboard: React.FC = () => {
                  <option value="Order Picked">Order Picked</option>
                  <option value="Order on way">Order on way</option>
                  <option value="Order Delivered">Order Delivered</option>
+                 {(['cod', 'cash on delivery'].includes(order.paymentMethod?.toLowerCase()) || !order.paymentMethod) && (
+                   <option value="Payment Received">Payment Received</option>
+                 )}
                  <option value="Cancelled">Cancelled</option>
                </select>
             </div>

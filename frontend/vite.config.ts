@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -65,12 +65,13 @@ export default defineConfig({
         type: 'classic'
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Only precache files in production mode to avoid dev warnings
+        globPatterns: mode === 'production' ? ['**/*.{js,css,html,ico,png,svg,webmanifest}'] : [],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true
       }
     })
   ],
-})
+}))
 

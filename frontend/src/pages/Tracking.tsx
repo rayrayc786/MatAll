@@ -114,6 +114,7 @@ const Tracking: React.FC = () => {
       case 'Order on way':
       case 'dispatched': return 'Order is on the way';
       case 'Order Delivered': return 'Delivered successfully!';
+      case 'Payment Received': return 'Payment received by MatAll';
       case 'Cancelled': return 'This order was cancelled';
       default: return status || 'Processing your order';
     }
@@ -126,7 +127,8 @@ const Tracking: React.FC = () => {
       'Rider at hub for pickup', 
       'Order Picked', 
       'Order on way', 
-      'Order Delivered'
+      'Order Delivered',
+      'Payment Received'
     ];
     
     const currentIndex = statuses.indexOf(order.status);
@@ -167,6 +169,13 @@ const Tracking: React.FC = () => {
             <div className="dot"></div>
             <div className="text">Order Delivered</div>
         </div>
+
+        {(['cod', 'cash on delivery'].includes(order.paymentMethod?.toLowerCase()) || !order.paymentMethod) && (
+          <div className={`timeline-item ${currentIndex >= 6 ? 'active' : ''}`}>
+              <div className="dot"></div>
+              <div className="text">Payment Received</div>
+          </div>
+        )}
 
         {order.status === 'Cancelled' && (
           <div className="timeline-item active danger">
