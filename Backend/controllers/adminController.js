@@ -24,25 +24,42 @@ const axios = require('axios');
 let globalMarginMap = new Map();
 
 // Helper to resolve image names to actual file paths from public/images
-const resolveProductImages = (product) => {
+const getAvailableFiles = () => {
   const imgDir = path.join(__dirname, '..', 'public', 'images');
-  let files = [];
   try {
     if (fs.existsSync(imgDir)) {
-      files = fs.readdirSync(imgDir);
+      return fs.readdirSync(imgDir);
     }
   } catch (err) {
     console.error('Error reading images directory:', err);
   }
+  return [];
+};
 
-  const normalize = (str) => (str || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+const normalizeName = (str) => (str || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 
+const resolveImageExtension = (name, files) => {
+  if (!name) return null;
+  // If it's already a full URL or has an extension, return as is
+  if (name.startsWith('http') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(name)) return name;
+  
+  const target = normalizeName(name);
+  const found = files.find(f => {
+    const baseName = f.split('.')[0];
+    return normalizeName(baseName) === target || normalizeName(f) === target;
+  });
+
+  return found ? `/images/${found}` : `/images/${name}`; // Fallback to original if not found
+};
+
+const resolveProductImages = (product) => {
+  const files = getAvailableFiles();
   const findFile = (name) => {
     if (!name) return null;
-    const target = normalize(name);
+    const target = normalizeName(name);
     return files.find(f => {
       const baseName = f.split('.')[0];
-      return normalize(baseName) === target || normalize(f) === target;
+      return normalizeName(baseName) === target || normalizeName(f) === target;
     });
   };
 
@@ -248,11 +265,10 @@ exports.bulkUploadProducts = async (req, res) => {
     if (!req.file) return res.status(400).send('No file uploaded.');
     
     const workbook = new ExcelJS.Workbook();
-    // Using buffer for multer setup (can move to stream if file is very large)
     await workbook.xlsx.load(req.file.buffer);
     const worksheet = workbook.getWorksheet(1);
 
-    const productGroups = new Map();
+    const productMap = new Map();
     const headers = [];
     
     worksheet.getRow(1).eachCell((cell, colNumber) => {
@@ -262,6 +278,10 @@ exports.bulkUploadProducts = async (req, res) => {
     const skippedDetails = [];
     let totalRows = 0;
 
+    // Prefetch all available local image files to avoid disk overhead in the loop
+    const availableFiles = getAvailableFiles();
+
+    // First Pass: Parse and Group by Product Id
     worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (rowNumber === 1) return; // Skip headers
       totalRows++;
@@ -270,147 +290,219 @@ exports.bulkUploadProducts = async (req, res) => {
       row.eachCell((cell, colNumber) => {
         let val = cell.value;
         if (val && typeof val === 'object') {
-          if (val.richText) {
-            val = val.richText.map(rt => rt.text).join('');
-          } else if (val.result !== undefined) {
-            val = val.result;
-          }
+          if (val.richText) val = val.richText.map(rt => rt.text).join('');
+          else if (val.result !== undefined) val = val.result;
         }
         rowData[headers[colNumber]] = val;
       });
 
-      const category = String(rowData['Category'] || '').trim();
-      const subCategory = String(rowData['Sub Category'] || '').trim();
-      const brand = String(rowData['Brand'] || '').trim();
-      const productName = String(rowData['Product Name'] || '').trim();
+      // Flexible attribute getter
+      const getVal = (names) => {
+        for (let name of names) {
+          if (rowData[name] !== undefined && rowData[name] !== null) return rowData[name];
+        }
+        return null;
+      };
 
-      if (!category || !subCategory || !productName) {
-        skippedDetails.push({
-          row: rowNumber,
-          name: productName || 'Unnamed',
-          reason: `Missing mandatory fields: ${!category ? 'Category ' : ''}${!subCategory ? 'SubCategory ' : ''}${!productName ? 'ProductName' : ''}`
-        });
+      const productId = String(getVal(['Product Id', 'Product ID', 'productId']) || '').trim();
+      const variantId = String(getVal(['Variant Id', 'Variant ID', 'variantId']) || '').trim();
+      const productName = String(getVal(['Product Name', 'ProductName', 'Product name']) || '').trim();
+      
+      if (!productId) {
+        skippedDetails.push({ row: rowNumber, name: productName || 'Unknown', reason: 'Missing Product Id' });
         return;
       }
 
-      const groupKey = `${category}_${subCategory}_${brand}_${productName}`;
-
-      // Attribute Mapping
+      // Extract Variant Attributes (Variant 1 to Variant 5)
       const attributes = [];
-      if (rowData['Variant Title'] && rowData['Variant Value'] !== undefined) {
-        attributes.push({ name: String(rowData['Variant Title']).trim(), value: String(rowData['Variant Value']).trim() });
-      }
-      if (rowData['Size']) {
-        attributes.push({ name: 'Size', value: String(rowData['Size']).trim() });
-      }
-      if (rowData['Sub Variant Title'] && rowData['Sub Variant Value'] !== undefined) {
-        attributes.push({ name: String(rowData['Sub Variant Title']).trim(), value: String(rowData['Sub Variant Value']).trim() });
+      for (let i = 1; i <= 5; i++) {
+        const vName = getVal([`Variant ${i} Name`]);
+        const vValue = getVal([`Variant ${i} Value`]);
+        if (vName && vValue !== null && vValue !== '') {
+          attributes.push({ name: String(vName).trim(), value: String(vValue).trim() });
+        }
       }
 
-      const variantToken = attributes.map(a => `${a.name}:${a.value}`).sort().join('|');
+      // Existing attribute fallbacks for compatibility
+      const legacyVTitle = getVal(['Variant Title', 'VariantTitle']);
+      if (legacyVTitle && attributes.length === 0) {
+        const legacyVValue = getVal(['Variant Value', 'VariantValue']);
+        if (legacyVValue !== null) attributes.push({ name: String(legacyVTitle).trim(), value: String(legacyVValue).trim() });
+      }
 
-      const imageValue = String(rowData['Images'] || '').trim();
+      const imageValue = String(getVal(['Images', 'images', 'Image']) || '').trim();
       const images = imageValue.split(',').map(name => {
         const cleanName = name.trim();
         if (!cleanName) return null;
-        if (cleanName.startsWith('http') || cleanName.startsWith('/images/')) return cleanName;
-        return `/images/${cleanName}`;
+        return resolveImageExtension(cleanName, availableFiles);
       }).filter(Boolean);
 
-      const variant = {
-        sku: String(rowData['SKU Number'] || rowData['SKU'] || rowData['Product Code (SKU)']  || '').trim(),
-        productCode: String(rowData['Product ID'] || '').trim(),
+      const variantData = {
+        variantId,
+        sku: String(getVal(['SKU Number', 'SKU', 'Sku', 'skuNumber']) || '').trim(),
+        productCode: productId,
         name: attributes.map(a => `${a.name}: ${a.value}`).join(', ') || 'Standard',
-        price: parseFloat(rowData['Sale Price']) || 0,
-        attributes,
+        price: parseFloat(getVal(['Sale Price', 'SalePrice'])) || 0,
+        attributes: attributes.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}),
         pricing: {
-          mrp: parseFloat(rowData['MRP']) || 0,
-          salePrice: parseFloat(rowData['Sale Price']) || 0,
-          gst: parseFloat(rowData['GST']) || 0,
-          dealerDiscount: parseFloat(rowData['Dealer Discount']) || 0,
-          discountValue: parseFloat(rowData['Discount Value']) || 0,
-          discountRate: parseFloat(rowData['Discount Rate']) || 0,
-          buyingPrice: parseFloat(rowData['Buying Price']) || 0,
-          marginValue: parseFloat(rowData['Margin Value']) || 0
+          mrp: parseFloat(getVal(['MRP (Incl GST)', 'MRP', 'mrp'])) || 0,
+          salePrice: parseFloat(getVal(['Sale Price', 'SalePrice'])) || 0,
+          gst: (() => {
+            const v = parseFloat(getVal(['GST', 'gst'])) || 0;
+            return v > 0 && v < 1 ? v * 100 : v; // Normalize 0.18 to 18
+          })(),
+          dealerDiscount: (() => {
+            const v = parseFloat(getVal(['Dealer Discount', 'DealerDiscount'])) || 0;
+            return v > 0 && v < 1 ? v * 100 : v; // Normalize 0.19 to 19
+          })(),
+          priceAfterDiscount: parseFloat(getVal(['Price after discount', 'priceAfterDiscount'])) || 0,
+          discountValue: parseFloat(getVal(['Discount Value', 'DiscountValue'])) || 0,
+          discountRate: (() => {
+            const v = parseFloat(getVal(['Discount Rate', 'DiscountRate'])) || 0;
+            return Math.abs(v) > 0 && Math.abs(v) < 1 ? v * 100 : v;
+          })(),
+          buyingPrice: parseFloat(getVal(['Buying Price', 'BuyingPrice'])) || 0,
+          revMargin: (() => {
+            const v = parseFloat(getVal(['Rev Margin', 'revMargin'])) || 0;
+            return v > 0 && v < 1 ? v * 100 : v;
+          })(),
+          marginValue: parseFloat(getVal(['Margin Value', 'MarginValue'])) || 0,
+          sellingMeasureRate: parseFloat(getVal(['Selling Measure Rate', 'SellingMeasureRate'])) || 0
         },
         inventory: {
-          packOf: parseInt(rowData['Pack of']) || 1,
-          unitWeight: parseFloat(rowData['Unit Weight']) || 0,
-          bulkApplication: rowData['Bulk application']
+          packOf: parseInt(getVal(['Pack of', 'PackOf'])) || 1,
+          unitWeight: parseFloat(getVal(['Unit Weight \n(in gm)', 'Unit Weight', 'unitWeight'])) || 0,
+          bulkApplication: getVal(['Bulk application', 'BulkApplication'])
+        },
+        measure: {
+          value: String(getVal(['Measure Value', 'measureValue']) || '').trim(),
+          term: String(getVal(['Measure Term', 'measureTerm']) || '').trim(),
+          unit: String(getVal(['Measure', 'Unit', 'unit']) || '').trim()
         },
         meta: {
-          suppliedWith: rowData['Supplied With'],
-          suitableFor: rowData['Suitable For']
+          suppliedWith: getVal(['Supplied With', 'SuppliedWith']),
+          suitableFor: getVal(['Suitable For', 'SuitableFor']),
+          warranty: getVal(['Warranty', 'warranty'])
         },
         images
       };
 
-      if (!productGroups.has(groupKey)) {
-        productGroups.set(groupKey, {
-          productName,
-          category,
-          subCategory,
-          brand,
-          alternateNames: (rowData['Alternate Names'] ? String(rowData['Alternate Names']).split(',').map(s => s.trim()) : []),
-          description: rowData['Product Description'],
-          productCode: String(rowData['Product ID'] || '').trim(),
-          hsnCode: String(rowData['HSN Code'] || '').trim(),
-          sellingMeasure: rowData['Selling Measure'],
-          measureTerm: rowData['Measure Term'],
-          measureValue: rowData['Measure Value'],
-          deliveryTime: rowData['Delivery Time'],
-          returns: rowData['Returns'],
-          logisticsRule: rowData['Logistics Rule'],
-          logisticsCategory: rowData['Logistics'],
-          status: rowData['Status'] || 'In stock',
-          variants: [variant],
-          variantTokens: new Set([variantToken]),
-          price: variant.pricing.salePrice,
-          salePrice: variant.pricing.salePrice,
-          mrp: variant.pricing.mrp,
-          imageUrl: images[0] || '',
-          images: images
+      if (!productMap.has(productId)) {
+        productMap.set(productId, {
+          productId,
+          productData: {
+            productName: productName,
+            category: String(getVal(['Category', 'category']) || '').trim(),
+            subCategory: String(getVal(['Sub Category', 'subCategory']) || '').trim(),
+            brand: String(getVal(['Brand', 'brand']) || '').trim(),
+            alternateNames: (getVal(['Alternate Names', 'alternateNames']) ? String(getVal(['Alternate Names', 'alternateNames'])).split(',').map(s => s.trim()) : []),
+            description: getVal(['Product Description', 'description']),
+            productCode: productId,
+            hsnCode: String(getVal(['HSN Code', 'hsnCode']) || '').trim(),
+            sellingMeasure: getVal(['Selling Measure', 'sellingMeasure']),
+            measureValue: getVal(['Measure Value', 'measureValue']),
+            sellingMeasureRate: parseFloat(getVal(['Selling Measure Rate', 'sellingMeasureRate'])) || 0,
+            deliveryTime: getVal(['Delivery Time', 'deliveryTime']),
+            returns: getVal(['Returns', 'returns']),
+            logisticsRule: getVal(['Logistics Rule', 'logisticsRule']),
+            logisticsCategory: getVal(['Logistics', 'logisticsCategory']) || 'Light',
+            status: getVal(['Status', 'status']) || 'In stock',
+          },
+          variants: [variantData]
         });
       } else {
-        const product = productGroups.get(groupKey);
-        if (!product.variantTokens.has(variantToken)) {
-          product.variants.push(variant);
-          product.variantTokens.add(variantToken);
-          if (variant.pricing.salePrice < product.price) {
-            product.price = variant.pricing.salePrice;
-          }
+        const p = productMap.get(productId);
+        // Fill in missing product metadata if this row has it
+        if (!p.productData.productName && productName) p.productData.productName = productName;
+        if (!p.productData.category && getVal(['Category'])) p.productData.category = String(getVal(['Category'])).trim();
+        
+        // Avoid duplicate Variant Ids in the same product group from Excel
+        if (variantId && p.variants.some(v => v.variantId === variantId)) {
+          skippedDetails.push({ row: rowNumber, name: `PID: ${productId}, VID: ${variantId}`, reason: 'Duplicate Variant Id in Excel for this product' });
         } else {
-          skippedDetails.push({ 
-            row: rowNumber, 
-            name: `${productName} (${variant.name})`, 
-            reason: 'Duplicate variant for this product' 
-          });
+          p.variants.push(variantData);
         }
       }
     });
 
-    const bulkOps = Array.from(productGroups.values()).map(p => {
-      delete p.variantTokens;
-      return {
-        updateOne: {
-          filter: { productName: p.productName, category: p.category, subCategory: p.subCategory, brand: p.brand },
-          update: { $set: p },
-          upsert: true
-        }
-      };
-    });
+    let createdCount = 0;
+    let updatedCount = 0;
 
-    const result = await Product.bulkWrite(bulkOps);
+    // Second Pass: DB Upsert
+    for (const item of productMap.values()) {
+      const existingProduct = await Product.findOne({ productId: item.productId });
+
+      if (!existingProduct) {
+        if (!item.productData.productName || !item.productData.category) {
+          skippedDetails.push({ 
+            name: `PID: ${item.productId}`, 
+            reason: `Missing mandatory fields for creation: ${!item.productData.productName ? 'productName ' : ''}${!item.productData.category ? 'category' : ''}` 
+          });
+          continue;
+        }
+
+        const newProduct = new Product({
+          ...item.productData,
+          name: item.productData.productName, // Compatibility
+          productId: item.productId,
+          variants: item.variants,
+          imageUrl: item.variants[0]?.images[0] || '',
+          price: item.variants[0]?.pricing.salePrice || 0,
+          mrp: item.variants[0]?.pricing.mrp || 0,
+          salePrice: item.variants[0]?.pricing.salePrice || 0
+        });
+        await newProduct.save();
+        createdCount++;
+      } else {
+        const updateData = {};
+        Object.entries(item.productData).forEach(([key, val]) => {
+          if (val !== undefined && val !== null && val !== '') updateData[key] = val;
+        });
+        updateData.name = item.productData.productName; // Compatibility
+        Object.assign(existingProduct, updateData);
+
+        const existingVariantsMap = new Map();
+        existingProduct.variants.forEach(v => {
+          if (v.variantId) existingVariantsMap.set(v.variantId, v);
+        });
+
+        for (const incoming of item.variants) {
+          if (incoming.variantId && existingVariantsMap.has(incoming.variantId)) {
+            Object.assign(existingVariantsMap.get(incoming.variantId), incoming);
+          } else {
+            existingProduct.variants.push(incoming);
+          }
+        }
+
+        if (existingProduct.variants.length > 0) {
+          const mainVariant = existingProduct.variants[0];
+          existingProduct.imageUrl = mainVariant.images[0] || existingProduct.imageUrl;
+          existingProduct.price = mainVariant.pricing.salePrice;
+          existingProduct.mrp = mainVariant.pricing.mrp;
+          existingProduct.salePrice = mainVariant.pricing.salePrice;
+        }
+
+        await existingProduct.save();
+        updatedCount++;
+      }
+    }
 
     res.json({ 
       message: 'Upload complete', 
       summary: { 
         totalRows,
-        extracted: totalRows - skippedDetails.length,
+        processedProducts: productMap.size,
+        created: createdCount,
+        updated: updatedCount,
         skipped: skippedDetails.length,
-        totalGroups: productGroups.size, 
-        upserted: result.upsertedCount, 
-        modified: result.modifiedCount 
+        extractedFields: [
+          'Product Id', 'Variant Id', 'Category', 'Sub Category', 'Brand', 'Product Name',
+          'Alternate Names', 'Variant 1-5 Name/Value', 'Warranty', 'Pack of', 'Unit Weight',
+          'Supplied With', 'Suitable For', 'Measure', 'Images', 'HSN Code', 'Selling Measure',
+          'Measure Term', 'Measure Value', 'Selling Measure Rate', 'MRP (Incl GST)', 'Dealer Discount',
+          'Price after discount', 'GST', 'Buying Price', 'Rev Margin', 'Margin Value', 'Sale Price',
+          'Discount Value', 'Discount Rate', 'Delivery Time', 'Logistics Rule', 'Status', 'Product Description'
+        ]
       },
       skippedDetails
     });

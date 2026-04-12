@@ -162,9 +162,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Calculate totals
-      const baseAmountTotal = itemPrice * item.quantity;
-      const gstAmountTotal = baseAmountTotal * (itemGstRate / 100);
-      const rowTotalInclGst = baseAmountTotal + gstAmountTotal;
+      const rowTotalInclGst = itemPrice * item.quantity;
+      const itemBasePrice = itemPrice / (1 + itemGstRate / 100);
+      const baseAmountTotal = itemBasePrice * item.quantity;
+      const gstAmountTotal = rowTotalInclGst - baseAmountTotal;
 
       amount += rowTotalInclGst;
       gstSum += gstAmountTotal;
