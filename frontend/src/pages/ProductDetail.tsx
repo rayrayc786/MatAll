@@ -355,12 +355,20 @@ const ProductDetail: React.FC = () => {
                                <td className="spec-title">Sub-Category</td>
                                <td className="spec-value">{product.subCategory}</td>
                             </tr>
+                            <tr>
+                               <td className="spec-title">Product Id</td>
+                               <td className="spec-value">{product.productId || 'N/A'}</td>
+                            </tr>
                             
                             {selectedVariant && (
                               <>
                                 <tr>
-                                   <td className="spec-title">Product Code / SKU Number</td>
-                                   <td className="spec-value">{product.productCode} | {selectedVariant.sku}</td>
+                                   <td className="spec-title">Variant Id</td>
+                                   <td className="spec-value">{selectedVariant.variantId || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                   <td className="spec-title">Product Code</td>
+                                   <td className="spec-value">{selectedVariant.productCode || product.productCode || 'N/A'}</td>
                                 </tr>
                                 {selectedVariant.measure?.value && (
                                   <tr>

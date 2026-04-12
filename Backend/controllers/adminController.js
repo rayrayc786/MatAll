@@ -306,6 +306,7 @@ exports.bulkUploadProducts = async (req, res) => {
 
       const productId = String(getVal(['Product Id', 'Product ID', 'productId']) || '').trim();
       const variantId = String(getVal(['Variant Id', 'Variant ID', 'variantId']) || '').trim();
+      const productCode = String(getVal(['Product Code', 'ProductCode', 'productCode']) || '').trim();
       const productName = String(getVal(['Product Name', 'ProductName', 'Product name']) || '').trim();
       
       if (!productId) {
@@ -340,7 +341,8 @@ exports.bulkUploadProducts = async (req, res) => {
       const variantData = {
         variantId,
         sku: String(getVal(['SKU Number', 'SKU', 'Sku', 'skuNumber']) || '').trim(),
-        productCode: productId,
+        productId: productId,
+        productCode: productCode,
         name: attributes.map(a => `${a.name}: ${a.value}`).join(', ') || 'Standard',
         price: parseFloat(getVal(['Sale Price', 'SalePrice'])) || 0,
         attributes: attributes.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}),
@@ -397,7 +399,8 @@ exports.bulkUploadProducts = async (req, res) => {
             brand: String(getVal(['Brand', 'brand']) || '').trim(),
             alternateNames: (getVal(['Alternate Names', 'alternateNames']) ? String(getVal(['Alternate Names', 'alternateNames'])).split(',').map(s => s.trim()) : []),
             description: getVal(['Product Description', 'description']),
-            productCode: productId,
+            productId: productId,
+            productCode: productCode,
             hsnCode: String(getVal(['HSN Code', 'hsnCode']) || '').trim(),
             sellingMeasure: getVal(['Selling Measure', 'sellingMeasure']),
             measureValue: getVal(['Measure Value', 'measureValue']),
@@ -506,7 +509,7 @@ exports.bulkUploadProducts = async (req, res) => {
         updated: updatedCount,
         skipped: skippedDetails.length,
         extractedFields: [
-          'Product Id', 'Variant Id', 'Category', 'Sub Category', 'Brand', 'Product Name',
+          'Product Id', 'Variant Id', 'Product Code', 'Category', 'Sub Category', 'Brand', 'Product Name',
           'Alternate Names', 'Variant 1-5 Name/Value', 'Warranty', 'Pack of', 'Unit Weight',
           'Supplied With', 'Suitable For', 'Measure', 'Images', 'HSN Code', 'Selling Measure',
           'Measure Term', 'Measure Value', 'Selling Measure Rate', 'MRP (Incl GST)', 'Dealer Discount',

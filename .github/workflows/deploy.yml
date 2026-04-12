@@ -19,43 +19,67 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            echo "Checking deployment directory..."
+            if [ ! -d "/var/www/MatAll" ]; then
+              echo "Error: Directory /var/www/MatAll not found. Attempting to create it..."
+              mkdir -p /var/www/MatAll
+            fi
             cd /var/www/MatAll
             
+            echo "Loading environment..."
             # Load NVM and Profile to ensure npm/node/pm2 are in PATH
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
+            
+            # Use specific node version if possible or just ensure npm is available
+            nvm use stable || nvm use default || echo "Proceeding with system node"
+            
             source ~/.bashrc || source ~/.profile || true
+            
+            echo "Environment check:"
+            node -v
+            npm -v
+            pm2 -v || echo "pm2 not found in PATH"
 
             # Reset to origin to avoid local conflict issues
+            echo "Updating code from git..."
             git fetch --all
             git reset --hard origin/${{ github.ref_name }}
 
             # Backend
+            echo "Setting up Backend..."
             cd Backend
-            npm install
+            # Using --legacy-peer-deps to avoid potential conflicts during build
+            npm install --legacy-peer-deps
             
             # Use reload for zero-downtime; it will fall back to start if process isn't running
+            echo "Restarting Backend with PM2..."
             pm2 reload matall-backend --update-env || pm2 start server.js --name "matall-backend"
             pm2 save
             
-            # Verify status
-            pm2 list
-
             # Frontend
+            echo "Setting up Frontend..."
             cd ../frontend
             # Fresh install to avoid dependency issues with the new PWA plugin
+            echo "Cleaning frontend node_modules..."
             rm -rf node_modules package-lock.json
-            npm install --include=dev
+            echo "Installing frontend dependencies..."
+            npm install --include=dev --legacy-peer-deps
             
             # Build the PWA
+            echo "Building frontend production bundle..."
             npm run build
 
             # Only update live folder if build succeeded
             if [ -d "dist" ]; then
-              rm -rf /var/www/html/*
-              cp -r dist/* /var/www/html/
-              # Restart Nginx to pick up new SPA routing/PWA assets
+              echo "Deploying dist to /var/www/html..."
+              sudo rm -rf /var/www/html/*
+              sudo cp -r dist/* /var/www/html/
+              echo "Restarting Nginx..."
               sudo systemctl restart nginx
+              echo "Deployment successful!"
             else
               echo "Build failed - dist folder not found. Skipping copy."
               exit 1
