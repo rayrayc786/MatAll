@@ -159,8 +159,8 @@ const ProductDetail: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${product?.brand} ${product?.name}`,
-          text: `Check out ${product?.brand} ${product?.name} (${currentUnit}) on MatAll`,
+          title: `${product?.brand} ${product?.productName || product?.name}`,
+          text: `Check out ${product?.brand} ${product?.productName || product?.name} (${currentUnit}) on MatAll`,
           url: shareUrl,
         });
       } catch (err) { console.error(err); }
@@ -180,8 +180,8 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="blinkit-detail-page">
       <SEO 
-        title={`${product.brand} ${product.name}`}
-        description={product.description || `Buy ${product.brand} ${product.name} on MatAll. Get it delivered within 60 minutes.`}
+        title={`${product.brand} ${product.productName || product.name}`}
+        description={product.description || `Buy ${product.brand} ${product.productName || product.name} on MatAll. Get it delivered within 60 minutes.`}
         ogImage={getFullImageUrl(images[0])}
       />
       {/* Header */}
@@ -190,7 +190,7 @@ const ProductDetail: React.FC = () => {
           <ArrowLeft size={24} />
         </button>
         <div className="header-title-scroll">
-          {product.brand} {product.name}
+          {product.brand} {product.productName || product.name}
         </div>
         <div className="header-actions">
            <button className="header-icon-btn" onClick={handleShare}><Share2 size={20} /></button>
@@ -233,7 +233,7 @@ const ProductDetail: React.FC = () => {
 
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                <h1 className="prd-title-large" style={{ flex: 1 }}>
-                  <span className="brand-bold-large">{product.brand}</span> {product.name}
+                  <span className="brand-bold-large">{product.brand}</span> {product.productName || product.name}
                </h1>
                <button 
                  onClick={handleShare}

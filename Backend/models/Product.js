@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const VariantSchema = new mongoose.Schema({
+  variantId: { type: String }, // NEW: Variant identification for bulk upload
   sku: { type: String }, // SKU Number
   productCode: { type: String }, // Product Code
   name: { type: String }, // Generated human-readable name
@@ -17,7 +18,9 @@ const VariantSchema = new mongoose.Schema({
     discountRate: { type: Number },
     buyingPrice: { type: Number },
     marginValue: { type: Number },
-    sellingMeasureRate: { type: Number } // Rate per sq ft / per mt
+    sellingMeasureRate: { type: Number }, // Rate per sq ft / per mt
+    revMargin: { type: Number }, // NEW: Revenue margin
+    priceAfterDiscount: { type: Number } // NEW: Price after dealer discount
   },
   inventory: {
     packOf: { type: Number },
@@ -45,11 +48,14 @@ const ProductSchema = new mongoose.Schema({
   brand: { type: String },
   alternateNames: [{ type: String }],
   description: { type: String },
+  productId: { type: String, index: true }, // NEW: Product identification for bulk upload
   productCode: { type: String }, // Root level Product Code
   
   // Shared Parent Attributes
   hsnCode: { type: String },
   sellingMeasure: { type: String }, // e.g. "per sq ft" - usually shared for one product type
+  measureValue: { type: String }, // NEW: Root level measure value
+  sellingMeasureRate: { type: Number }, // NEW: Root level measure rate
   deliveryTime: { type: String },
   returns: { type: String },
   logisticsRule: { type: String },

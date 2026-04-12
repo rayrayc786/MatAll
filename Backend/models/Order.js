@@ -22,7 +22,7 @@ const OrderSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
-    enum: ['Accepted', 'Order Ready to Ship', 'Rider at hub for pickup', 'Order Picked', 'Order on way', 'Order Delivered', 'Cancelled'], 
+    enum: ['Accepted', 'Order Ready to Ship', 'Rider at hub for pickup', 'Order Picked', 'Order on way', 'Order Delivered', 'Payment Received', 'Cancelled'], 
     default: 'Accepted' 
   },
   
@@ -55,6 +55,7 @@ const OrderSchema = new mongoose.Schema({
     name: String,
     area: String, // Neighborhood, Sector, or Zone
     fullAddress: String,
+    contactPhone: String,
     pincode: String,
     city: String,
     state: String,

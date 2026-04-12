@@ -266,6 +266,9 @@ const AppContent = () => {
       <Toaster 
         position="top-right" 
         reverseOrder={false} 
+        containerStyle={{
+          zIndex: 999999,
+        }}
         toastOptions={{
           duration: 2000,
           style: {

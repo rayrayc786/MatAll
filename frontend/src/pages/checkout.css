@@ -190,10 +190,24 @@
 .bill-row-checkout {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   padding: 0.65rem 0;
   font-weight: 700;
   color: #1e293b;
   font-size: 0.95rem;
+}
+
+.bill-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.delivery-mode-tag {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
 .grand-total-row {
@@ -831,14 +845,7 @@
   gap: 8px;
 }
 
-.bill-row-checkout {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.65rem 0;
-  font-weight: 700;
-  color: #1e293b;
-  font-size: 0.95rem;
-}
+
 
 .final-place-btn-desktop {
   width: 100%;

@@ -154,6 +154,7 @@ const createOrder = async (orderData) => {
       name: orderData.deliveryAddress?.name || 'Home',
       area: orderData.deliveryAddress?.area || '',
       fullAddress: orderData.deliveryAddress?.fullAddress || '',
+      contactPhone: orderData.deliveryAddress?.contactPhone || '',
       pincode: orderData.deliveryAddress?.pincode || '',
       city: orderData.deliveryAddress?.city || '',
       state: orderData.deliveryAddress?.state || '',

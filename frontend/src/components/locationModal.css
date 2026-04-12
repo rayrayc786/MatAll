@@ -176,6 +176,13 @@
   line-height: 1.3;
 }
 
+.addr-phone-mini {
+  font-size: 0.75rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin-top: 2px !important;
+}
+
 /* Add Address Form - Slide 40 */
 .form-header-row {
   display: flex;

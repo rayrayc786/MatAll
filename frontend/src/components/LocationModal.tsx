@@ -570,6 +570,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
                           <div className="addr-text-mini">
                              <strong>{site.name}</strong>
                              <p>{site.addressText}</p>
+                             {site.contactPhone && <p className="addr-phone-mini">📞 {site.contactPhone}</p>}
                           </div>
                           <ChevronRight size={16} />
                         </div>

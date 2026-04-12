@@ -72,6 +72,16 @@ const Checkout: React.FC = () => {
   const deliveryMode = logisticsInfo.mode;
   const handlingCharge = settings.platformFee;
   const grandTotal = itemsTotal + deliveryCharge + handlingCharge;
+  const appliedGstRates = Array.from(new Set(cart.map(item => {
+    let rate = (item.product as any).gst || 18;
+    if (item.selectedVariant && item.product.variants) {
+      const variant: any = item.product.variants.find(v => v.name === item.selectedVariant);
+      if (variant) {
+        rate = variant.pricing?.gst || (item.product as any).gst || 18;
+      }
+    }
+    return rate;
+  }))).sort((a, b) => b - a);
 
   useEffect(() => {
     let timer: any;
@@ -213,6 +223,8 @@ const Checkout: React.FC = () => {
       if (err.response && err.response.status === 401) {
         toast.error('Session expired. Please login again.');
         navigate('/login', { state: { from: '/cart' }, replace: true });
+      } else if (err.response && err.response.status === 403) {
+        toast.error(err.response.data.message || "We're offline to make sure you experience is 10/10 tomorrow.See you at 9:00 AM!");
       } else {
         toast.error('Could not create payment session.');
       }
@@ -256,6 +268,7 @@ const Checkout: React.FC = () => {
         deliveryAddress: {
           name: selectedAddress.name || 'Site',
           fullAddress: selectedAddress.addressText || 'N/A',
+          contactPhone: (selectedAddress as any).contactPhone || '',
           pincode: (selectedAddress as any).pincode || '',
           city: (selectedAddress as any).city || '',
           state: (selectedAddress as any).state || '',
@@ -275,6 +288,8 @@ const Checkout: React.FC = () => {
       if (err.response && err.response.status === 401) {
           toast.error('Session expired. Please login again.');
           navigate('/login', { state: { from: '/cart' }, replace: true });
+      } else if (err.response && (err.response.status === 403)) {
+          toast.error(err.response.data.message || "We're offline to make sure you experience is 10/10 tomorrow.See you at 9:00 AM!");
       } else {
           toast.error('Failed to place order');
       }
@@ -394,11 +409,14 @@ const Checkout: React.FC = () => {
                   <span className="bill-val">₹{(totalAmount - totalGst).toFixed(2)}</span>
                 </div>
                 <div className="bill-row-checkout" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '8px' }}>
-                  <span>GST Amount</span>
+                  <span>GST Amount {appliedGstRates.length > 0 ? `(@ ${appliedGstRates.map(r => `${r}%`).join(' & ')})` : ''}</span>
                   <span className="bill-val">₹{totalGst.toFixed(2)}</span>
                 </div>
                 <div className="bill-row-checkout">
-                  <span>Delivery Charge (incl GST) (Mode: {deliveryMode})</span>
+                  <div className="bill-label-group">
+                    <span>Delivery Charge (incl GST)</span>
+                    <span className="delivery-mode-tag">(Mode: {deliveryMode})</span>
+                  </div>
                   <span className="bill-val">{deliveryCharge > 0 ? `₹${deliveryCharge.toFixed(2)}` : <span className="free">FREE</span>}</span>
                 </div>
                 <div className="bill-row-checkout">

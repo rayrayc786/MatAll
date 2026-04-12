@@ -114,6 +114,7 @@ const Tracking: React.FC = () => {
       case 'Order on way':
       case 'dispatched': return 'Order is on the way';
       case 'Order Delivered': return 'Delivered successfully!';
+      case 'Payment Received': return 'Payment received by MatAll';
       case 'Cancelled': return 'This order was cancelled';
       default: return status || 'Processing your order';
     }
@@ -126,7 +127,8 @@ const Tracking: React.FC = () => {
       'Rider at hub for pickup', 
       'Order Picked', 
       'Order on way', 
-      'Order Delivered'
+      'Order Delivered',
+      'Payment Received'
     ];
     
     const currentIndex = statuses.indexOf(order.status);
@@ -167,6 +169,13 @@ const Tracking: React.FC = () => {
             <div className="dot"></div>
             <div className="text">Order Delivered</div>
         </div>
+
+        {(['cod', 'cash on delivery'].includes(order.paymentMethod?.toLowerCase()) || !order.paymentMethod) && (
+          <div className={`timeline-item ${currentIndex >= 6 ? 'active' : ''}`}>
+              <div className="dot"></div>
+              <div className="text">Payment Received</div>
+          </div>
+        )}
 
         {order.status === 'Cancelled' && (
           <div className="timeline-item active danger">
@@ -374,9 +383,15 @@ const Tracking: React.FC = () => {
                    {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                  </p>
               </div>
-              <div className="info-block">
+              <div className="info-block full-width">
                  <span className="info-label">Delivering to</span>
-                 <p className="info-value">{order.shippingAddress || order.deliveryAddress?.name}</p>
+                 <p className="info-value"><strong>{order.deliveryAddress?.name || 'Home'}</strong></p>
+                 <p className="info-value" style={{ fontSize: '0.85rem', color: '#64748b' }}>{order.deliveryAddress?.fullAddress || order.shippingAddress || 'No address provided'}</p>
+                 {order.deliveryAddress?.contactPhone && (
+                   <p className="info-value" style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: '800', marginTop: '4px' }}>
+                     📞 {order.deliveryAddress.contactPhone}
+                   </p>
+                 )}
               </div>
            </div>
         </div>
