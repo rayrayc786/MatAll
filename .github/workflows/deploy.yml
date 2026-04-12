@@ -43,15 +43,18 @@ jobs:
 
             # Frontend
             cd ../frontend
-            npm install
-            # Use vite build directly to skip potentially blocking TS errors if you want immediate deployment
-            # Change back to 'npm run build' if you want strict typechecking in CI
+            # Fresh install to avoid dependency issues with the new PWA plugin
+            rm -rf node_modules package-lock.json
+            npm install --include=dev
+            
+            # Build the PWA
             npm run build
 
             # Only update live folder if build succeeded
             if [ -d "dist" ]; then
               rm -rf /var/www/html/*
               cp -r dist/* /var/www/html/
+              # Restart Nginx to pick up new SPA routing/PWA assets
               sudo systemctl restart nginx
             else
               echo "Build failed - dist folder not found. Skipping copy."
