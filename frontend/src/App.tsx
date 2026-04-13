@@ -27,8 +27,7 @@ axios.interceptors.response.use(
     const isUnauthorized = error.response?.status === 401;
 
     if (isUnauthorized || isUserNotFound) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.clear();
       // Only redirect if not already on login to avoid loops
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

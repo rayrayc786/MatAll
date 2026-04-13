@@ -202,8 +202,7 @@ const Profile: React.FC = () => {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.clear();
     toast.success('Logged out successfully');
     navigate('/login');
   };
