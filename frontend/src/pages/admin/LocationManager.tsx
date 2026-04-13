@@ -15,6 +15,12 @@ const LocationManager: React.FC = () => {
   const [bulkCity, setBulkCity] = useState('');
   const [bulkPincodes, setBulkPincodes] = useState<any[]>([]);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [bulkTab, setBulkTab] = useState<'lookup' | 'manual' | 'excel'>('lookup');
+  const [manualPincodes, setManualPincodes] = useState('');
+  const [manualCity, setManualCity] = useState('');
+  const [manualState, setManualState] = useState('');
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     pincode: '',
@@ -43,7 +49,22 @@ const LocationManager: React.FC = () => {
       if (editingArea) {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/serviceable-areas/${editingArea._id}`, formData);
       } else {
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/serviceable-areas`, formData);
+        // Check for multiple pincodes in the single field
+        const pins = formData.pincode.split(',').map(p => p.trim()).filter(p => p.length > 0);
+        
+        if (pins.length > 1) {
+          const areasToCreate = pins.map(p => ({
+            pincode: p,
+            city: formData.city,
+            state: formData.state,
+            isActive: formData.isActive
+          }));
+          await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/bulk-create-serviceable-areas`, {
+            areas: areasToCreate
+          });
+        } else {
+          await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/serviceable-areas`, formData);
+        }
       }
       setShowModal(false);
       setEditingArea(null);
@@ -153,7 +174,7 @@ const LocationManager: React.FC = () => {
         </div>
         <div className="admin-header-actions" style={{ display: 'flex', gap: '1rem' }}>
           <button className="secondary-btn" onClick={() => setShowBulkModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={18} /> Bulk Add by City
+            <Plus size={18} /> Bulk Add Pincodes
           </button>
           <button className="add-sku-btn" onClick={resetForm}>
             <Plus size={18} /> Add Pincode
@@ -375,12 +396,12 @@ const LocationManager: React.FC = () => {
             <form onSubmit={handleSave} className="admin-form">
               <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="form-group">
-                  <label>Pincode</label>
+                  <label>Pincode(s) <span style={{fontSize: '0.7rem', color: '#6366f1'}}>(Separate with comma for bulk add)</span></label>
                   <input 
                     type="text" 
                     value={formData.pincode} 
                     onChange={e => setFormData({...formData, pincode: e.target.value})} 
-                    placeholder="e.g. 122001"
+                    placeholder="e.g. 122001, 122002, 122003"
                     required 
                   />
                 </div>
@@ -429,8 +450,42 @@ const LocationManager: React.FC = () => {
           <div className="modal-content card" style={{ maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header space-between" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ margin: 0 }}>Bulk Add by City</h2>
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Auto-fetch all official pincodes for a city</p>
+                <h2 style={{ margin: 0 }}>Bulk Add Pincodes</h2>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <button 
+                    onClick={() => setBulkTab('lookup')}
+                    style={{ 
+                      padding: '0.5rem 0', border: 'none', background: 'none', cursor: 'pointer',
+                      fontSize: '0.9rem', fontWeight: bulkTab === 'lookup' ? 700 : 500,
+                      color: bulkTab === 'lookup' ? '#6366f1' : '#64748b',
+                      borderBottom: bulkTab === 'lookup' ? '2px solid #6366f1' : '2px solid transparent'
+                    }}
+                  >
+                    Auto-fetch
+                  </button>
+                  <button 
+                    onClick={() => setBulkTab('manual')}
+                    style={{ 
+                      padding: '0.5rem 0', border: 'none', background: 'none', cursor: 'pointer',
+                      fontSize: '0.9rem', fontWeight: bulkTab === 'manual' ? 700 : 500,
+                      color: bulkTab === 'manual' ? '#6366f1' : '#64748b',
+                      borderBottom: bulkTab === 'manual' ? '2px solid #6366f1' : '2px solid transparent'
+                    }}
+                  >
+                    Manual Multi-Add
+                  </button>
+                  <button 
+                    onClick={() => setBulkTab('excel')}
+                    style={{ 
+                      padding: '0.5rem 0', border: 'none', background: 'none', cursor: 'pointer',
+                      fontSize: '0.9rem', fontWeight: bulkTab === 'excel' ? 700 : 500,
+                      color: bulkTab === 'excel' ? '#6366f1' : '#64748b',
+                      borderBottom: bulkTab === 'excel' ? '2px solid #6366f1' : '2px solid transparent'
+                    }}
+                  >
+                    Excel Upload
+                  </button>
+                </div>
               </div>
               <button className="icon-btn" onClick={() => {
                 setShowBulkModal(false);
@@ -439,79 +494,148 @@ const LocationManager: React.FC = () => {
               }}><X size={20} /></button>
             </div>
 
-            <div className="admin-form">
-              <div className="form-group">
-                <label>Enter City Name (e.g. Gurgaon, Bangalore, Patna)</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input 
-                    type="text" 
-                    value={bulkCity} 
-                    onChange={e => setBulkCity(e.target.value)} 
-                    placeholder="Search city..." 
-                    style={{ flex: 1 }}
-                  />
-                  <button 
-                    className="primary-btn" 
-                    disabled={!bulkCity || isLookingUp}
-                    onClick={async () => {
-                      setIsLookingUp(true);
-                      try {
-                        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/proxy-city-pincodes/${encodeURIComponent(bulkCity)}`);
-                        if (data[0].Status === 'Success') {
-                          const poList = data[0].PostOffice;
-                          const uniquePins = Array.from(new Set(poList.map((p: any) => p.Pincode)));
-                          const firstOffice = poList[0];
-                          
-                          const results = uniquePins.map(p => ({
-                            pincode: p,
-                            city: firstOffice.District || firstOffice.Block || bulkCity,
-                            state: firstOffice.State,
-                            isActive: true
-                          }));
-                          setBulkPincodes(results);
-                        } else {
-                          alert('City not found or server error');
-                        }
-                      } catch (err) {
-                        console.error('Lookup failed:', err);
-                        alert('Lookup failed. Make sure city name is correct.');
-                      } finally {
-                        setIsLookingUp(false);
-                      }
-                    }}
-                  >
-                    {isLookingUp ? 'Looking up...' : 'Lookup Pincodes'}
-                  </button>
-                </div>
-              </div>
-
-              {bulkPincodes.length > 0 && (
-                <div style={{ marginTop: '2rem' }}>
-                  <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem' }}>Found {bulkPincodes.length} Pincodes</h3>
-                    <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>{bulkPincodes[0].city}, {bulkPincodes[0].state}</span>
+            <div className="admin-form" style={{ marginTop: '1.5rem' }}>
+              {bulkTab === 'lookup' ? (
+                <>
+                  <div className="form-group">
+                    <label>Enter City Name (e.g. Gurgaon, Patna)</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input 
+                        type="text" 
+                        value={bulkCity} 
+                        onChange={e => setBulkCity(e.target.value)} 
+                        placeholder="Search city..." 
+                        style={{ flex: 1 }}
+                      />
+                      <button 
+                        className="primary-btn" 
+                        disabled={!bulkCity || isLookingUp}
+                        onClick={async () => {
+                          setIsLookingUp(true);
+                          try {
+                            const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/proxy-city-pincodes/${encodeURIComponent(bulkCity)}`);
+                            if (data[0].Status === 'Success') {
+                              const poList = data[0].PostOffice;
+                              const uniquePins = Array.from(new Set(poList.map((p: any) => p.Pincode)));
+                              const firstOffice = poList[0];
+                              
+                              const results = uniquePins.map(p => ({
+                                pincode: p,
+                                city: firstOffice.District || firstOffice.Block || bulkCity,
+                                state: firstOffice.State,
+                                isActive: true,
+                                selected: true // For deselection
+                              }));
+                              setBulkPincodes(results);
+                            } else {
+                              alert('City not found or server error');
+                            }
+                          } catch (err) {
+                            console.error('Lookup failed:', err);
+                            alert('Lookup failed.');
+                          } finally {
+                            setIsLookingUp(false);
+                          }
+                        }}
+                      >
+                        {isLookingUp ? 'Searching...' : 'Search Pincodes'}
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div style={{ 
-                    maxHeight: '200px', overflowY: 'auto', background: '#f8fafc', 
-                    padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0',
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px'
-                  }}>
-                    {bulkPincodes.map((pin, i) => (
-                      <div key={i} style={{ padding: '6px', fontSize: '0.8rem', fontWeight: 700, background: '#fff', border: '1px solid #eee', borderRadius: '6px', textAlign: 'center' }}>
-                        {pin.pincode}
+
+                  {bulkPincodes.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.9rem' }}>Select Pincodes ({bulkPincodes.filter(p => p.selected).length} selected)</h3>
+                        <span style={{ fontSize: '0.8rem', color: '#6366f1', fontWeight: 700 }}>{bulkPincodes[0].city} batch</span>
                       </div>
-                    ))}
-                  </div>
+                      
+                      <div style={{ 
+                        maxHeight: '200px', overflowY: 'auto', background: '#f8fafc', 
+                        padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0',
+                        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px'
+                      }}>
+                        {bulkPincodes.map((pin, i) => (
+                          <div 
+                            key={i} 
+                            onClick={() => {
+                              const newList = [...bulkPincodes];
+                              newList[i].selected = !newList[i].selected;
+                              setBulkPincodes(newList);
+                            }}
+                            style={{ 
+                              padding: '6px', fontSize: '0.75rem', fontWeight: 700, 
+                              background: pin.selected ? '#e0e7ff' : '#fff', 
+                              border: pin.selected ? '1px solid #6366f1' : '1px solid #eee', 
+                              color: pin.selected ? '#4338ca' : '#94a3b8',
+                              borderRadius: '6px', textAlign: 'center', cursor: 'pointer'
+                            }}
+                          >
+                            {pin.pincode}
+                          </div>
+                        ))}
+                      </div>
 
+                      <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
+                        <button type="button" className="secondary-btn" onClick={() => { setShowBulkModal(false); setBulkPincodes([]); }}>Cancel</button>
+                        <button 
+                          className="primary-btn" 
+                          disabled={!bulkPincodes.some(p => p.selected)}
+                          onClick={async () => {
+                            try {
+                              const finalAreas = bulkPincodes.filter(p => p.selected).map(({ selected, ...rest }) => rest);
+                              await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/bulk-create-serviceable-areas`, { areas: finalAreas });
+                              setShowBulkModal(false); setBulkPincodes([]); fetchAreas();
+                              alert(`Added ${finalAreas.length} pincodes!`);
+                            } catch (err) { alert('Failed to save'); }
+                          }}
+                        >
+                          Confirm Add All
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : bulkTab === 'manual' ? (
+                <>
+                  <div className="form-group">
+                    <label>City Name</label>
+                    <input 
+                      type="text" 
+                      value={manualCity} 
+                      onChange={e => setManualCity(e.target.value)} 
+                      placeholder="e.g. Gurgaon" 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>State Name</label>
+                    <input 
+                      type="text" 
+                      value={manualState} 
+                      onChange={e => setManualState(e.target.value)} 
+                      placeholder="e.g. Haryana" 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Enter Pincodes (Separated by comma or newline)</label>
+                    <textarea 
+                      value={manualPincodes}
+                      onChange={e => setManualPincodes(e.target.value)}
+                      placeholder="122001, 122002, 122003..."
+                      style={{ 
+                        width: '100%', minHeight: '150px', padding: '1rem', 
+                        borderRadius: '12px', border: '1px solid #e2e8f0',
+                        fontSize: '0.9rem', fontFamily: 'inherit'
+                      }}
+                    />
+                  </div>
                   <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2rem' }}>
                     <button 
                       type="button" 
                       className="secondary-btn" 
                       onClick={() => {
                         setShowBulkModal(false);
-                        setBulkPincodes([]);
-                        setBulkCity('');
+                        setManualPincodes('');
                       }}
                     >
                       Cancel
@@ -519,26 +643,90 @@ const LocationManager: React.FC = () => {
                     <button 
                       type="button" 
                       className="primary-btn" 
+                      disabled={!manualPincodes || !manualCity}
                       onClick={async () => {
                         try {
+                          const pins = manualPincodes.split(/[,\n]/).map(p => p.trim()).filter(p => p.length > 0);
+                          if (pins.length === 0) return alert('No valid pincodes found');
+                          
+                          const areasToCreate = pins.map(p => ({
+                            pincode: p,
+                            city: manualCity,
+                            state: manualState,
+                            isActive: true
+                          }));
+                          
                           await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/bulk-create-serviceable-areas`, {
-                            areas: bulkPincodes
+                            areas: areasToCreate
                           });
+                          
                           setShowBulkModal(false);
-                          setBulkPincodes([]);
-                          setBulkCity('');
+                          setManualPincodes('');
+                          setManualCity('');
+                          setManualState('');
                           fetchAreas();
-                          alert(`Added ${bulkPincodes.length} pincodes!`);
+                          alert(`Added ${pins.length} pincodes to ${manualCity}!`);
                         } catch (err) {
                           console.error(err);
                           alert('Failed to save bulk locations');
                         }
                       }}
                     >
-                      Confirm Add All
+                      Add {manualPincodes.split(/[,\n]/).filter(p => p.trim()).length} Pincodes
                     </button>
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  <div className="excel-upload-zone" style={{ textAlign: 'center', padding: '3rem', border: '2px dashed #e2e8f0', borderRadius: '16px', background: '#f8fafc' }}>
+                    <div style={{ marginBottom: '1.5rem', color: '#64748b' }}>
+                      <p style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>Upload Locations spreadsheet</p>
+                      <p style={{ fontSize: '0.85rem' }}>Columns needed: <strong>Pincode, City, State</strong></p>
+                    </div>
+                    
+                    <input 
+                      type="file" 
+                      id="pincode-excel"
+                      accept=".xlsx, .xls"
+                      style={{ display: 'none' }}
+                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                    />
+                    
+                    <label htmlFor="pincode-excel" style={{ cursor: 'pointer', padding: '0.75rem 1.5rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, display: 'inline-block' }}>
+                      {bulkFile ? bulkFile.name : 'Choose File'}
+                    </label>
+
+                    {bulkFile && (
+                      <div style={{ marginTop: '2rem' }}>
+                        <button 
+                          className="primary-btn" 
+                          disabled={isUploading}
+                          onClick={async () => {
+                            setIsUploading(true);
+                            const formData = new FormData();
+                            formData.append('file', bulkFile);
+                            try {
+                              await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/serviceable-areas/bulk-upload`, formData);
+                              setShowBulkModal(false);
+                              setBulkFile(null);
+                              fetchAreas();
+                              alert('Excel Pincode Upload Complete!');
+                            } catch (err) {
+                              alert('Upload failed. Check console for details.');
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }}
+                        >
+                          {isUploading ? 'Uploading...' : 'Confirm Upload'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p>💡 Tip: Use this to precisely control which areas are serviceable without fetching irrelevant data.</p>
+                  </div>
+                </>
               )}
             </div>
           </div>

@@ -816,6 +816,64 @@ exports.bulkCreateServiceableAreas = async (req, res) => {
   }
 };
 
+exports.bulkUploadPincodes = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).send('No file uploaded.');
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.getWorksheet(1);
+    
+    const headers = [];
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+      headers[colNumber] = String(cell.value || '').trim();
+    });
+
+    const areas = [];
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return;
+      
+      const rowData = {};
+      row.eachCell((cell, colNumber) => {
+        rowData[headers[colNumber]] = cell.value;
+      });
+
+      const getVal = (names) => {
+        for (let name of names) {
+          if (rowData[name] !== undefined && rowData[name] !== null) return rowData[name];
+        }
+        return null;
+      };
+
+      const pincode = String(getVal(['Pincode', 'pincode', 'Zip', 'PIN']) || '').trim();
+      const city = String(getVal(['City', 'city', 'District', 'district']) || '').trim();
+      const state = String(getVal(['State', 'state']) || '').trim();
+      const isActiveValue = getVal(['Status', 'Active', 'isActive', 'status']);
+      const isActive = isActiveValue !== null ? (String(isActiveValue).toLowerCase() === 'active' || isActiveValue === true) : true;
+
+      if (pincode && city) {
+        areas.push({ pincode, city, state, isActive });
+      }
+    });
+
+    if (areas.length === 0) return res.status(400).json({ error: 'No valid data found in Excel' });
+
+    const bulkOps = areas.map(area => ({
+      updateOne: {
+        filter: { pincode: area.pincode },
+        update: { $set: area },
+        upsert: true
+      }
+    }));
+
+    await ServiceableArea.bulkWrite(bulkOps);
+    res.json({ message: `Successfully processed ${areas.length} locations` });
+  } catch (err) {
+    console.error('Pincode Bulk Upload Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.checkServiceability = async (req, res) => {
   try {
     const { pincode } = req.params;

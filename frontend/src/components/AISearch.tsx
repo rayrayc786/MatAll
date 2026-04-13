@@ -9,11 +9,6 @@ const AISearch: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [showCameraModal, setShowCameraModal] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -138,60 +133,17 @@ const AISearch: React.FC = () => {
     }
   };
 
-  const handleFileUploadClick = () => {
-    if (requireLogin()) {
-      fileInputRef.current?.click();
-    }
-  };
 
-  const startCameraClick = async () => {
-    if (requireLogin()) {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-           throw new Error("Generic camera API not supported");
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        });
-        setShowCameraModal(true);
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        }, 100);
-      } catch (err) {
-        console.error("Camera access error:", err);
-        // Fallback for mobile: trigger native camera via hidden input
-        toast.error("Custom camera not available. Opening native camera...");
-        cameraInputRef.current?.click();
-      }
-    }
-  };
+
+
+
 
 
   const closeAndStopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
     setShowModal(false);
-    setShowCameraModal(false);
     setIsSuccess(false);
   };
 
-  const closeCameraOnly = () => {
-     if (videoRef.current?.srcObject) {
-       const stream = videoRef.current.srcObject as MediaStream;
-       stream.getTracks().forEach(track => track.stop());
-       videoRef.current.srcObject = null;
-     }
-     setShowCameraModal(false);
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -249,7 +201,6 @@ const AISearch: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsSuccess(true);
-      setShowCameraModal(false);
       setTimeout(() => {
         setIsSuccess(false);
         setShowModal(false);
@@ -261,24 +212,7 @@ const AISearch: React.FC = () => {
     }
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
-      
-      // Stop camera tracks immediately
-      if (videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-      
-      processImage(dataUrl);
-    }
-  };
 
   return (
     <>
@@ -319,79 +253,65 @@ const AISearch: React.FC = () => {
                 </div>
               ) : (
                 <div className="search-options-grid">
-                  <button type="button" className="option-card" onClick={handleFileUploadClick}>
+                  <label className="option-card" style={{ position: 'relative', cursor: 'pointer' }}>
                     <Upload size={32} />
                     <span>Upload Image</span>
                     <p>Handwritten lists or BOQs</p>
-                  </button>
-                  <button type="button" className="option-card" onClick={startCameraClick}>
+                    <input 
+                      type="file" 
+                      onChange={handleFileUpload} 
+                      onClick={(e) => {
+                        if (!requireLogin()) {
+                          e.preventDefault();
+                        }
+                      }}
+                      style={{ 
+                        opacity: 0, 
+                        position: 'absolute', 
+                        inset: 0, 
+                        width: '100%', 
+                        height: '100%', 
+                        cursor: 'pointer' 
+                      }} 
+                      accept="image/*" 
+                    />
+                  </label>
+                  
+                  <label className="option-card" style={{ position: 'relative', cursor: 'pointer' }}>
                     <Camera size={32} />
                     <span>Use Camera</span>
                     <p>Capture site notes live</p>
-                  </button>
+                    <input 
+                      type="file" 
+                      onChange={handleFileUpload} 
+                      onClick={(e) => {
+                        if (!requireLogin()) {
+                          e.preventDefault();
+                        }
+                      }}
+                      style={{ 
+                        opacity: 0, 
+                        position: 'absolute', 
+                        inset: 0, 
+                        width: '100%', 
+                        height: '100%', 
+                        cursor: 'pointer' 
+                      }} 
+                      accept="image/*" 
+                      capture="environment"
+                    />
+                  </label>
                 </div>
               )}
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                style={{ opacity: 0, position: 'absolute', pointerEvents: 'none', width: 0, height: 0 }} 
-                accept="image/*" 
-              />
-              <input 
-                type="file" 
-                ref={cameraInputRef} 
-                onChange={handleFileUpload} 
-                style={{ opacity: 0, position: 'absolute', pointerEvents: 'none', width: 0, height: 0 }} 
-                accept="image/*" 
-                capture="environment" 
-              />
             </div>
 
+
           </div>
         </div>
       )}
 
-      {showCameraModal && (
-        <div className="modal-overlay camera-modal-overlay" style={{ zIndex: 100000 }}>
-          <div className="camera-fullscreen-container animate-fade-in">
-             <div className="camera-header-premium">
-                <div className="cam-meta">
-                    <span className="live-pill">LIVE</span>
-                    <span className="cam-title">Scan Material List</span>
-                </div>
-                <button className="cam-close-btn-premium" onClick={closeCameraOnly}><X size={24} /></button>
-             </div>
-             
-             <div className="video-viewport">
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  className="live-video-feed-premium"
-                />
-             </div>
-
-             <div className="camera-controls-premium">
-                <p className="cam-instruction">Position your list within the frame</p>
-                <div className="capture-action-row">
-                    <button 
-                      className="camera-capture-ring" 
-                      onClick={capturePhoto}
-                      disabled={isProcessing}
-                    >
-                      <div className="inner-shutter">
-                         {isProcessing && <Loader2 className="spinner-white" />}
-                      </div>
-                    </button>
-                </div>
-                <span className="cam-footer-text">Powered by MatAll AI Search</span>
-             </div>
-          </div>
-        </div>
-      )}
     </>
+
   );
 };
 
