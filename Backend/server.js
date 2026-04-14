@@ -8,6 +8,7 @@ dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,7 @@ const mongoose = require('mongoose');
 const socketAuth = require('./middleware/socketAuth');
 
 const app = express();
+app.use(compression());
 app.set('trust proxy', true);
 const server = http.createServer(app);
 
