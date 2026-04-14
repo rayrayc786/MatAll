@@ -970,9 +970,26 @@ const AdminDashboard: React.FC = () => {
     window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
   };
 
+  const getLocalOrderStats = () => {
+    const completed = orders.filter(o => {
+      const isCOD = ['cod', 'cash on delivery'].includes((o.paymentMethod || '').toLowerCase());
+      return isCOD ? o.status === 'Payment Received' : o.status === 'Order Delivered';
+    }).length;
+
+    const active = orders.filter(o => {
+      if (o.status === 'Cancelled') return false;
+      const isCOD = ['cod', 'cash on delivery'].includes((o.paymentMethod || '').toLowerCase());
+      return isCOD ? o.status !== 'Payment Received' : o.status !== 'Order Delivered';
+    }).length;
+
+    return { active, completed };
+  };
+
+  const localOrderStats = getLocalOrderStats();
+
   const TILES = [
-    { label: 'Active Orders', val: dashboardStats?.activeOrders ?? '0', icon: <Package size={20} />, color: '#FFEA00', tab: 'orders' },
-    { label: 'Delivered Orders', val: dashboardStats?.deliveredOrders ?? '0', icon: <CheckCircle size={20} />, color: '#DEDEDE', tab: 'orders' },
+    { label: 'Active Orders', val: localOrderStats.active || dashboardStats?.activeOrders || '0', icon: <Package size={20} />, color: '#FFEA00', tab: 'orders' },
+    { label: 'Completed Orders', val: localOrderStats.completed || dashboardStats?.deliveredOrders || '0', icon: <CheckCircle size={20} />, color: '#DEDEDE', tab: 'orders' },
     { label: 'Active Products', val: dashboardStats?.totalProducts ?? products.length ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'products' },
     { label: 'Active Categories', val: dashboardStats?.activeCategories ?? '0', icon: <Layers size={20} />, color: '#DEDEDE', tab: 'categories' },
     { label: 'Material Requests', val: userRequests.length ?? '0', icon: <Clock size={20} />, color: '#DEDEDE', tab: 'userRequests' },

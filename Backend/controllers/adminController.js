@@ -178,7 +178,17 @@ exports.getDashboardStats = async (req, res) => {
     const hourlyGMV = [{ time: '10:00', amount: 450 }, { time: '15:00', amount: gmv }];
     
     // New stats
-    const activeOrders = orders.filter(o => !['Order Delivered', 'Cancelled'].includes(o.status)).length;
+    const deliveredOrders = orders.filter(o => {
+      const isCOD = ['cod', 'cash on delivery'].includes((o.paymentMethod || '').toLowerCase());
+      return isCOD ? o.status === 'Payment Received' : o.status === 'Order Delivered';
+    }).length;
+
+    const activeOrders = orders.filter(o => {
+      if (o.status === 'Cancelled') return false;
+      const isCOD = ['cod', 'cash on delivery'].includes((o.paymentMethod || '').toLowerCase());
+      return isCOD ? o.status !== 'Payment Received' : o.status !== 'Order Delivered';
+    }).length;
+    
     const activeSuppliers = await Supplier.countDocuments({ isActive: true });
     const activeCategories = await Category.countDocuments({ isActive: true });
     
@@ -200,7 +210,7 @@ exports.getDashboardStats = async (req, res) => {
       { week: 'Mar\'25 W1', orders: 25, fulfilled: 25, delayed: 5 },
       { week: 'Mar\'25 W2', orders: 32, fulfilled: 30, delayed: 2 },
       { week: 'Mar\'25 W3', orders: 16, fulfilled: 16, delayed: 5 },
-      { week: 'Mar\'25 W4', orders: totalOrders > 0 ? totalOrders : 20, fulfilled: orders.filter(o=>o.status==='Order Delivered').length, delayed: lateOrders },
+      { week: 'Mar\'25 W4', orders: totalOrders > 0 ? totalOrders : 20, fulfilled: deliveredOrders, delayed: lateOrders },
     ];
 
     // Format top 5 recent orders for the B2B Orders list
@@ -218,8 +228,6 @@ exports.getDashboardStats = async (req, res) => {
         status: o.status
       };
     });
-
-    const deliveredOrders = orders.filter(o => o.status === 'Order Delivered').length;
 
     res.json({ 
       gmv, activeDeliveries, lateOrders, totalOrders, hourlyGMV,
