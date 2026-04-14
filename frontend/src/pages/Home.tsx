@@ -24,31 +24,19 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const popRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?isPopular=true`);
+        const [popRes, brandsRes, catsRes, offersRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?isPopular=true`),
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/brands?isFeatured=true`),
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/categories?isFeatured=true`),
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/offers`)
+        ]);
+
         setPopularProducts(popRes.data || []);
-      } catch (err) {
-        console.error('Error fetching popular products:', err);
-      }
-
-      try {
-        const brandsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/brands?isFeatured=true`);
         setFeaturedBrands(Array.isArray(brandsRes.data) ? brandsRes.data : []);
-      } catch (err) {
-        console.error('Error fetching featured brands:', err);
-      }
-
-      try {
-        const catsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/categories?isFeatured=true`);
         setFeaturedCategories(Array.isArray(catsRes.data) ? catsRes.data : []);
-      } catch (err) {
-        console.error('Error fetching featured categories:', err);
-      }
-
-      try {
-        const offersRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/offers`);
         setDynamicOffers(Array.isArray(offersRes.data) ? offersRes.data : []);
       } catch (err) {
-        console.error('Error fetching dynamic offers:', err);
+        console.error('Error fetching home data:', err);
       }
     };
     fetchData();

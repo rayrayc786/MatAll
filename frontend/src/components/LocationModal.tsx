@@ -36,6 +36,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
   });
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [isServiceable, setIsServiceable] = useState(true);
+  const [activeGeofences, setActiveGeofences] = useState<any[]>([]);
 
   
   // New address form states
@@ -63,7 +64,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
   const geocodingLibrary = useMapsLibrary('geocoding');
 
   // Safe Marker component with dynamic color
-  const MapMarker = ({ position, serviceable }: { position: google.maps.LatLngLiteral, serviceable: boolean }) => {
+  const MapMarker = ({ position }: { position: google.maps.LatLngLiteral, serviceable: boolean }) => {
     const map = useMap();
     if (!map) return null;
     return (
@@ -76,27 +77,20 @@ const LocationModal: React.FC<LocationModalProps> = ({
            // Simulate a map click to trigger geocoding and serviceability check
            handleMapClick({ detail: { latLng: { lat, lng } } });
         }}
-        icon={serviceable ? undefined : {
-           path: google.maps.SymbolPath.CIRCLE,
-           fillColor: "#ef4444",
-           fillOpacity: 1,
-           strokeWeight: 2,
-           strokeColor: "#ffffff",
-           scale: 10,
-        }}
+
       />
     );
   };
 
-  // Service Circle component
-  const ServiceCircle = ({ center, radius }: { center: google.maps.LatLngLiteral, radius: number }) => {
+
+  // Service Polygon component
+  const ServicePolygon = ({ paths }: { paths: { lat: number; lng: number }[] }) => {
     const map = useMap();
     useEffect(() => {
       if (!map) return;
-      const circle = new google.maps.Circle({
+      const polygon = new google.maps.Polygon({
         map,
-        center,
-        radius,
+        paths,
         fillColor: '#22c55e',
         fillOpacity: 0.1,
         strokeColor: '#22c55e',
@@ -104,10 +98,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
         strokeWeight: 1,
         clickable: false
       });
-      return () => circle.setMap(null);
-    }, [map, center, radius]);
+      return () => polygon.setMap(null);
+    }, [map, paths]);
     return null;
   };
+
 
   // Sync form state when user transitions to add address form
   useEffect(() => {
@@ -194,6 +189,25 @@ const LocationModal: React.FC<LocationModalProps> = ({
   }, [isOpen, initialData, currentAddress]); // Removed globalLocation to stop background resets
 
   useEffect(() => {
+    if (isOpen) {
+        // Fetch active geofences for visual feedback on map
+        const fetchGeofences = async () => {
+            try {
+                const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/active-geofences`);
+                setActiveGeofences(data);
+            } catch (err) {
+                console.error('Failed to fetch geofences for modal map', err);
+            }
+        };
+        fetchGeofences();
+
+        if (!searchTerm) {
+          setSuggestions([]);
+        }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!searchTerm) {
       setSuggestions([]);
     }
@@ -265,8 +279,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
     }
   };
 
-  const checkPincode = async (results: any) => {
+  const checkServiceability = async (results: any) => {
     const addressComponents = results[0].address_components;
+    const lat = results[0].geometry.location.lat();
+    const lng = results[0].geometry.location.lng();
+
     const pincodeComp = addressComponents.find((c: any) => c.types.includes('postal_code'));
     let pincodeVal = pincodeComp ? pincodeComp.long_name : '';
 
@@ -292,21 +309,17 @@ const LocationModal: React.FC<LocationModalProps> = ({
     setStateName(stateVal);
     setArea(areaVal);
 
-    if (!pincodeVal && !cityVal) {
-      toast.error("Could not detect location. Please try a more specific spot.");
-      return false;
-    }
-
-    if (!pincodeVal) {
-      toast.error("Please pick a more specific point to detect the area pincode.", { icon: '📍' });
+    if (!lat || !lng) {
+      toast.error("Could not detect precise location. Please try a more specific spot.");
       return false;
     }
 
     try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-serviceability/${encodeURIComponent(pincodeVal)}`);
+      // Switch from pincode-based check to coordinate-based geo-fencing
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-coordinates`, { lat, lng });
       
       if (!data.serviceable) {
-        toast.error(`We don't deliver to ${pincodeVal} yet. We're expanding fast and will be here soon!`, {
+        toast.error(`We don't deliver to this area yet. We're expanding fast and will be here soon!`, {
           duration: 4000,
           icon: '🚚'
         });
@@ -327,7 +340,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
         const geocoder = new geocodingLibrary.Geocoder();
         const results = await geocoder.geocode({ placeId: place.placeId });
         if (results.results[0]) {
-            const isServiceableResult = await checkPincode(results.results);
+            const isServiceableResult = await checkServiceability(results.results);
             const loc = results.results[0].geometry.location;
             const lat = loc.lat();
             const lng = loc.lng();
@@ -375,7 +388,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
         const geocoder = new geocodingLibrary.Geocoder();
         geocoder.geocode({ location: { lat, lng } }, async (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
           if (status === "OK" && results?.[0]) {
-            const isServiceableResult = await checkPincode(results);
+            const isServiceableResult = await checkServiceability(results);
             const address = results[0].formatted_address;
 
             if (!isServiceableResult) {
@@ -444,7 +457,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
             const geocoder = new geocodingLibrary.Geocoder();
             geocoder.geocode({ location: newCenter }, async (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
               if (status === "OK" && results?.[0]) {
-                const isServiceableResult = await checkPincode(results);
+                const isServiceableResult = await checkServiceability(results);
                 if (!isServiceableResult) {
                   setIsLocating(false);
                   setIsServiceable(false);
@@ -580,7 +593,14 @@ const LocationModal: React.FC<LocationModalProps> = ({
     <div className="location-modal-overlay" onClick={onClose}>
       <div className="location-modal-content" onClick={e => e.stopPropagation()}>
         <div className="location-modal-header">
-          <h2>Select delivery location</h2>
+          <div className="header-left">
+            {(step === 2 && !showAddForm) && (
+              <button className="header-back-btn" onClick={() => setStep(1)}>
+                <ArrowLeft size={22} />
+              </button>
+            )}
+            <h2>Select delivery location</h2>
+          </div>
           <button type="button" className="close-btn" onClick={(e) => { e.stopPropagation(); onClose(); }}><X size={24} /></button>
         </div>
 
@@ -624,37 +644,39 @@ const LocationModal: React.FC<LocationModalProps> = ({
               </div>
             ) : (
               <div className="location-search-step">
-                <div className="search-wrapper">
-                  <Search size={20} className="search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder="Search for area, street name..." 
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    autoFocus
-                  />
-                  {searchTerm && (
-                    <button type="button" className="clear-search-btn" onClick={() => { setSearchTerm(''); setSuggestions([]); }}>
-                      <X size={16} />
-                    </button>
-                  )}
-                  {isSearching && <Loader2 size={18} className="animate-spin" />}
-                </div>
-
-                {suggestions.length > 0 && (
-                  <div className="search-suggestions floating">
-                    {suggestions.map((item, idx) => (
-                      <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
-                        <MapPin size={18} className="pin-icon" />
-                        <div className="suggestion-details">
-                          <p className="main-text">{item.placePrediction.mainText.text}</p>
-                          <p className="sub-text">{item.placePrediction.text.text}</p>
-                        </div>
-                        <ChevronRight size={18} />
-                      </div>
-                    ))}
+                <div className="search-container-relative">
+                  <div className="search-wrapper">
+                    <Search size={20} className="search-icon" />
+                    <input 
+                      type="text" 
+                      placeholder="Search for area, street name..." 
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      autoFocus
+                    />
+                    {searchTerm && (
+                      <button type="button" className="clear-search-btn" onClick={() => { setSearchTerm(''); setSuggestions([]); }}>
+                        <X size={16} />
+                      </button>
+                    )}
+                    {isSearching && <Loader2 size={18} className="animate-spin" />}
                   </div>
-                )}
+
+                  {suggestions.length > 0 && (
+                    <div className="search-suggestions floating">
+                      {suggestions.map((item, idx) => (
+                        <div key={idx} className="suggestion-row" onClick={() => selectSuggestion(item)}>
+                          <MapPin size={18} className="pin-icon" />
+                          <div className="suggestion-details">
+                            <p className="main-text">{item.placePrediction.mainText.text}</p>
+                            <p className="sub-text">{item.placePrediction.text.text}</p>
+                          </div>
+                          <ChevronRight size={18} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="empty-search-state-wrapper">
                   <div className="empty-search-state" onClick={handleUseCurrentLocation}>
@@ -677,7 +699,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
                         }}
                       >
                         <MapMarker position={mapCenter} serviceable={isServiceable} />
-                        <ServiceCircle center={{ lat: 28.4595, lng: 77.0266 }} radius={20000} />
+                        {activeGeofences.map((gf, idx) => (
+                           gf.type === 'Polygon' && (
+                              <ServicePolygon key={idx} paths={gf.coordinates} />
+                           )
+                        ))}
                       </Map>
                       
                       <button className="locate-me-btn-overlay" onClick={() => {
@@ -722,7 +748,7 @@ const LocationModal: React.FC<LocationModalProps> = ({
                   )}
 
                 </div>
-                <button type="button" className="back-link-btn" onClick={() => setStep(1)}>Back</button>
+
               </div>
             )
           ) : (

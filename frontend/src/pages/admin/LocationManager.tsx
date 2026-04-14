@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit3, Trash2, X, MapPin } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, MapPin, Globe } from 'lucide-react';
+import GeofenceEditor from '../../components/admin/GeofenceEditor';
 
 const LocationManager: React.FC = () => {
   const [areas, setAreas] = useState<any[]>([]);
@@ -8,7 +9,7 @@ const LocationManager: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingArea, setEditingArea] = useState<any>(null);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'grouped'>('grouped');
+  const [viewMode, setViewMode] = useState<'list' | 'grouped' | 'geofence'>('grouped');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -203,6 +204,17 @@ const LocationManager: React.FC = () => {
         >
           Flat List View
         </button>
+        <button 
+          onClick={() => setViewMode('geofence')} 
+          style={{ 
+            padding: '0.5rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
+            fontWeight: 700, fontSize: '0.9rem', color: viewMode === 'geofence' ? '#000' : '#64748b',
+            borderBottom: viewMode === 'geofence' ? '2px solid var(--primary)' : '2px solid transparent',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          <Globe size={16} /> Visual Geofencing
+        </button>
       </div>
 
       <div className="card" style={{ padding: '1.25rem', marginBottom: '2rem' }}>
@@ -335,7 +347,7 @@ const LocationManager: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="admin-table-container">
           <table className="sku-table">
             <thead>
@@ -384,6 +396,8 @@ const LocationManager: React.FC = () => {
             </tbody>
           </table>
         </div>
+      ) : (
+        <GeofenceEditor />
       )}
 
       {showModal && (

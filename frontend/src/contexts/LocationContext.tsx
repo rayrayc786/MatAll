@@ -43,7 +43,7 @@ const findMatchingAddress = (lat: number, lng: number) => {
   if (!user.jobsites || !Array.isArray(user.jobsites)) return null;
 
   const THRESHOLD = 50; // 50 meters
-  return user.jobsites.find((site: any) => {
+  return user.jobsites.find((site: { location?: { coordinates: [number, number] }, addressText: string, _id: string }) => {
     if (!site.location?.coordinates) return false;
     const [sLng, sLat] = site.location.coordinates;
     return calculateDistance(lat, lng, sLat, sLng) < THRESHOLD;
@@ -63,14 +63,24 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLocationState(finalLoc);
   };
 
-  const checkServiceability = async (pincode: string, city: string) => {
+  // const checkServiceability = async (pincode: string, city: string) => {
+  //   try {
+  //     const query = pincode || city;
+  //     if (!query) return false;
+  //     const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-serviceability/${encodeURIComponent(query)}`);
+  //     return !!data.serviceable;
+  //   } catch (err) {
+  //     console.error('Serviceability check failed:', err);
+  //     return false;
+  //   }
+  // };
+
+  const checkGeofenceServiceability = async (lat: number, lng: number) => {
     try {
-      const query = pincode || city;
-      if (!query) return false;
-      const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-serviceability/${encodeURIComponent(query)}`);
+      const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/location/check-coordinates`, { lat, lng });
       return !!data.serviceable;
     } catch (err) {
-      console.error('Serviceability check failed:', err);
+      console.error('Geofence check failed:', err);
       return false;
     }
   };
@@ -83,12 +93,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (response.results[0]) {
         const result = response.results[0];
         const address = result.formatted_address;
-        const pincodeComp = result.address_components.find((c: any) => c.types.includes('postal_code'));
-        const cityComp = result.address_components.find((c: any) => c.types.includes('locality')) || 
-                        result.address_components.find((c: any) => c.types.includes('administrative_area_level_2'));
-        const pincode = pincodeComp ? pincodeComp.long_name : '';
-        const city = cityComp ? cityComp.long_name : '';
-        const isServiceable = await checkServiceability(pincode, city);
+        // const pincodeComp = result.address_components.find((c: any) => c.types.includes('postal_code'));
+        // const cityComp = result.address_components.find((c: any) => c.types.includes('locality')) || 
+                        // result.address_components.find((c: any) => c.types.includes('administrative_area_level_2'));
+        // const pincode = pincodeComp ? pincodeComp.long_name : '';
+        // const city = cityComp ? cityComp.long_name : '';
+        
+        // Geofence check (Dynamic from drawn polygons)
+        const isServiceable = await checkGeofenceServiceability(lat, lng);
         return { address, isServiceable };
       }
     } catch (err) {

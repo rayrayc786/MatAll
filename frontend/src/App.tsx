@@ -393,6 +393,7 @@ const App: React.FC = () => {
           <ServiceBanner />
           <APIProvider 
             apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""} 
+            libraries={['places', 'geocoding', 'drawing']}
           >
             <LocationProvider>
               <AppContent />

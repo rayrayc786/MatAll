@@ -112,6 +112,12 @@ router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 router.get('/search-logs', adminController.getSearchLogs);
 
+// Geofence management
+router.get('/geofences', adminController.getAllGeofences);
+router.post('/geofences', adminController.createGeofence);
+router.put('/geofences/:id', adminController.updateGeofence);
+router.delete('/geofences/:id', adminController.deleteGeofence);
+
 // Review management
 router.get('/reviews', adminController.getAllReviewsAdmin);
 router.delete('/reviews/:id', adminController.deleteReviewAdmin);

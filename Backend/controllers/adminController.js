@@ -17,6 +17,7 @@ const GSTClassification = require('../models/GSTClassification');
 const ServiceableArea = require('../models/ServiceableArea');
 const Settings = require('../models/Settings');
 const SearchLog = require('../models/SearchLog');
+const Geofence = require('../models/Geofence');
 const axios = require('axios');
 
 
@@ -997,5 +998,54 @@ exports.proxyCityPincodes = async (req, res) => {
   } catch (err) {
     console.error('Proxy lookup failed:', err);
     res.status(500).json({ error: 'Failed to fetch pincodes from external service' });
+  }
+};
+
+const gh = createHandlers(Geofence, 'Geofence');
+exports.getAllGeofences = gh.getAll;
+exports.createGeofence = gh.create;
+exports.updateGeofence = gh.update;
+exports.deleteGeofence = gh.delete;
+
+exports.checkCoordinateServiceability = async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    if (!lat || !lng) return res.status(400).json({ error: 'Lat and Lng required' });
+
+    const geofences = await Geofence.find({ isActive: true });
+    
+    const isServiceable = geofences.some(gf => {
+      if (gf.type === 'Polygon') {
+        return isPointInPolygon({ lat: Number(lat), lng: Number(lng) }, gf.coordinates);
+      }
+      return false;
+    });
+
+    res.json({ serviceable: isServiceable });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+function isPointInPolygon(point, polygon) {
+  let x = point.lat, y = point.lng;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    let xi = polygon[i].lat, yi = polygon[i].lng;
+    let xj = polygon[j].lat, yj = polygon[j].lng;
+    let intersect = ((yi > y) !== (yj > y))
+      && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+exports.getActiveGeofencesPublic = async (req, res) => {
+  try {
+    const geofences = await Geofence.find({ isActive: true });
+    res.json(geofences);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

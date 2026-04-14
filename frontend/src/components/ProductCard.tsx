@@ -13,7 +13,7 @@ interface ProductCardProps {
   product: any;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
   const { cart, addToCart } = useCart();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -137,6 +137,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           src={getFullImageUrl(selectedVariant?.images?.[0] || product.images?.[0] || product.imageUrl)} 
           alt={product.name} 
           className="list-product-img"
+          loading="lazy"
           onError={(e) => {
             e.currentTarget.src = 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecb?auto=format&fit=crop&q=80&w=400';
           }}
@@ -336,6 +337,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       />
     </div>
   );
-};
+});
 
 export default ProductCard;
