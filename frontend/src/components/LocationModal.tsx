@@ -386,10 +386,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
     
     if (geocodingLibrary) {
         const geocoder = new geocodingLibrary.Geocoder();
-        geocoder.geocode({ location: { lat, lng } }, async (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
-          if (status === "OK" && results?.[0]) {
-            const isServiceableResult = await checkServiceability(results);
-            const address = results[0].formatted_address;
+        try {
+            const { results } = await geocoder.geocode({ location: { lat, lng } });
+            if (results && results[0]) {
+                const isServiceableResult = await checkServiceability(results);
+                const address = results[0].formatted_address;
 
             if (!isServiceableResult) {
               setSelectedAddress('');
@@ -397,23 +398,25 @@ const LocationModal: React.FC<LocationModalProps> = ({
               return;
             }
 
-            // Check for saved match
-            const match = findMatchingSavedAddress(lat, lng);
-            if (match) {
-               setSelectedAddress(match.addressText);
-               setSearchTerm(match.addressText);
-            } else {
-               setSelectedAddress(address);
-               setSearchTerm(address);
-            }
+                // Check for saved match
+                const match = findMatchingSavedAddress(lat, lng);
+                if (match) {
+                    setSelectedAddress(match.addressText);
+                    setSearchTerm(match.addressText);
+                } else {
+                    setSelectedAddress(address);
+                    setSearchTerm(address);
+                }
 
-            setIsServiceable(true);
-            if (showAddForm) {
-              setNewAddrText(match ? match.addressText : address);
-              setNewAddrCoords([lng, lat]);
+                setIsServiceable(true);
+                if (showAddForm) {
+                    setNewAddrText(match ? match.addressText : address);
+                    setNewAddrCoords([lng, lat]);
+                }
             }
-          }
-        });
+        } catch (error) {
+            console.error('Geocoding error:', error);
+        }
     }
   };
 
@@ -455,8 +458,9 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
           if (geocodingLibrary) {
             const geocoder = new geocodingLibrary.Geocoder();
-            geocoder.geocode({ location: newCenter }, async (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
-              if (status === "OK" && results?.[0]) {
+            try {
+              const { results } = await geocoder.geocode({ location: newCenter });
+              if (results && results[0]) {
                 const isServiceableResult = await checkServiceability(results);
                 if (!isServiceableResult) {
                   setIsLocating(false);
@@ -477,7 +481,11 @@ const LocationModal: React.FC<LocationModalProps> = ({
                 toast.error('Failed to get address from GPS');
                 setIsLocating(false);
               }
-            });
+            } catch (error) {
+              console.error('Geocoding error:', error);
+              toast.error('Failed to get address from GPS');
+              setIsLocating(false);
+            }
           } else {
             // Fallback if geocoding library isn't ready
             setIsLocating(false);
@@ -716,11 +724,13 @@ const LocationModal: React.FC<LocationModalProps> = ({
                             
                             if (geocodingLibrary) {
                               const geocoder = new geocodingLibrary.Geocoder();
-                              geocoder.geocode({ location: newLoc }, (res: any, status: string) => {
-                                if (status === 'OK' && res?.[0]) {
-                                  setSearchTerm(res[0].formatted_address);
-                                  setSelectedAddress(res[0].formatted_address);
+                              geocoder.geocode({ location: newLoc }).then(({ results }) => {
+                                if (results && results[0]) {
+                                  setSearchTerm(results[0].formatted_address);
+                                  setSelectedAddress(results[0].formatted_address);
                                 }
+                              }).catch(err => {
+                                console.error('Geocoding error:', err);
                               });
                             }
                           }, () => {
