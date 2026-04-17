@@ -26,6 +26,7 @@ const Support: React.FC = () => {
           <button className="back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={24} />
           </button>
+          <h2 className="support-nav-title">Customer Support</h2>
           <Link to="/" className="home-btn-link"><Home size={24} /></Link>
         </div>
         
