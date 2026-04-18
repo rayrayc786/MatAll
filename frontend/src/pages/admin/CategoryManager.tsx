@@ -374,7 +374,19 @@ const CategoryManager: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{cat.description || 'Master Level Category'}</td>
+                      <td style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '350px' }}>
+                        <div style={{ 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          display: '-webkit-box', 
+                          WebkitLineClamp: 2, 
+                          WebkitBoxOrient: 'vertical',
+                          lineHeight: '1.4',
+                          wordBreak: 'break-word'
+                        }}>
+                          {(cat.description || '').replace(/<[^>]*>?/gm, '') || 'Master Level Category'}
+                        </div>
+                      </td>
                       <td>
                         <span style={{ 
                           padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
