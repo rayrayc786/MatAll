@@ -457,7 +457,7 @@ const Checkout: React.FC = () => {
 
                 {settings.isCodEnabled && (
                   <button className={`final-place-btn-desktop ${!settings.isServiceEnabled ? 'disabled' : ''}`} onClick={() => finalizeOrder('COD', null, 0)} disabled={loading || !settings.isServiceEnabled} style={{ background: '#000', color: '#FFEA00' }}>
-                      {loading ? 'Processing...' : !settings.isServiceEnabled ? 'Service Offline' : `Cash on Delivery (COD +1%) – Pay ₹${(grandTotal * 1.01).toFixed(2)} at home`}
+                      {loading ? 'Processing...' : !settings.isServiceEnabled ? 'Service Offline' : `Cash on Delivery (COD) – Pay ₹${grandTotal.toFixed(2)} at home`}
                   </button>
                 )}
              </div>
@@ -494,11 +494,11 @@ const Checkout: React.FC = () => {
           {settings.isCodEnabled && (
             <button className={`checkout-place-btn cod-pay ${!settings.isServiceEnabled ? 'disabled' : ''}`} onClick={() => finalizeOrder('COD', null, 0)} disabled={loading || !settings.isServiceEnabled} style={{ background: '#000', color: '#fff' }}>
               <div className="btn-p-info">
-                  <span className="p-val">₹{(grandTotal * 1.01).toFixed(2)}</span>
+                  <span className="p-val">₹{grandTotal.toFixed(2)}</span>
                   <span className="p-lbl">ON DELIVERY</span>
               </div>
               <div className="btn-p-main">
-                  {loading ? 'Processing...' : !settings.isServiceEnabled ? 'Offline' : 'COD (+1%)'}
+                  {loading ? 'Processing...' : !settings.isServiceEnabled ? 'Offline' : 'COD'}
               </div>
             </button>
           )}
