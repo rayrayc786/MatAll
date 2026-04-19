@@ -8,7 +8,7 @@ const settingsSchema = new mongoose.Schema({
   serviceEndTime: { type: String, default: "21:00" },   // HH:mm format
   deliveryCharge: { type: Number, default: 150 },
   freeDeliveryThreshold: { type: Number, default: 5000 },
-  platformFee: { type: Number, default: 15 },
+  platformFee: { type: Number, default: 9 },
   isCodEnabled: { type: Boolean, default: true },
   isPartPaymentEnabled: { type: Boolean, default: true },
   isFullPaymentEnabled: { type: Boolean, default: true },

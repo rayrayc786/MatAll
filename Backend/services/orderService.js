@@ -15,7 +15,7 @@ const calculateOrderTotals = (items, settings = null) => {
   let totalTaxAmount = 0;  // Cumulative tax amount for all items
 
   // Use settings or default values
-  const fee_platform = settings?.platformFee ?? 15;
+  const fee_platform = settings?.platformFee ?? 9;
   const threshold_free = settings?.freeDeliveryThreshold ?? 5000;
 
   // 1. Determine logistics category based on items
