@@ -242,9 +242,18 @@ exports.getAllProducts = async (req, res) => {
       }
     }
 
-    let products = await Product.find(query).lean();
+    let productsQuery = Product.find(query);
     
-    // Log the search
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 2000; // Large default to keep backward compatibility if needed, but we will change frontend to request 8.
+    const skip = (page - 1) * limit;
+
+    const totalProducts = await Product.countDocuments(query);
+    
+    let products = await productsQuery.lean();
+    
+    // Log the search (same as before)
     if (search) {
       try {
         await SearchLog.create({
@@ -254,7 +263,6 @@ exports.getAllProducts = async (req, res) => {
           user: req.user ? req.user.id || req.user._id : null
         });
 
-        // If no products found, send instant email notification
         if (products.length === 0) {
           let userData = { 
             searchTerm: search, 
@@ -272,7 +280,6 @@ exports.getAllProducts = async (req, res) => {
             }
           }
 
-          // Save to MissingProduct collection for admin dashboard
           try {
             await MissingProduct.create({
               userId: req.user ? (req.user.id || req.user._id) : null,
@@ -285,14 +292,13 @@ exports.getAllProducts = async (req, res) => {
             console.error('Error saving missing product record:', missingErr);
           }
 
-          // Send Email
           await emailService.sendMissingProductEmail(userData);
-          console.log(`Instant Alert: Search for "${search}" returned 0 results. Email sent to configured recipients.`);
         }
       } catch (logErr) {
         console.error('Error logging search or sending alert:', logErr);
       }
     }
+
     const hydrated = products.map(p => {
       const h = hydrateProduct(p);
       if (p.subCategory && !h.subCategory) h.subCategory = p.subCategory;
@@ -307,7 +313,20 @@ exports.getAllProducts = async (req, res) => {
       return 0;
     });
 
-    res.json(hydrated);
+    // Apply pagination after hydration/sorting if specific order is needed, 
+    // but usually better to do filter at DB level.
+    // However, the current code sorts by image presence in JS.
+    // If I want to paginate properly, I should either sort in DB or paginate in JS.
+    // Given the sorting is based on 'imageUrl' (which is resolved in JS), I have to paginate in JS.
+    
+    const paginatedProducts = hydrated.slice(skip, skip + limit);
+
+    res.json({
+      products: paginatedProducts,
+      totalProducts,
+      totalPages: Math.ceil(totalProducts / limit),
+      currentPage: page
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -370,7 +370,7 @@ exports.bulkUploadProducts = async (req, res) => {
 
       const variantData = {
         variantId,
-        sku: String(getVal(['SKU Number', 'SKU', 'Sku', 'skuNumber']) || '').trim(),
+        sku: String(getVal(['SKU', 'Sku']) || '').trim(),
         productId: productId,
         productCode: productCode,
         name: attributes.map(a => `${a.name}: ${a.value}`).join(', ') || 'Standard',

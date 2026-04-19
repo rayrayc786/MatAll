@@ -23,7 +23,7 @@ const SupplierStore: React.FC = () => {
     const fetchSupplierProducts = async () => {
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?supplierId=${id}`);
-        setProducts(data);
+        setProducts(data.products || data || []);
       } catch (err) {
         console.error(err);
       }

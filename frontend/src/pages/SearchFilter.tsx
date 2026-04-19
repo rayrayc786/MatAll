@@ -29,10 +29,11 @@ const SearchFilter: React.FC = () => {
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
         const { data } = await axios.get(`${baseUrl}/api/products?limit=20`);
-        if (data && Array.isArray(data)) {
-          setBaseSuggestions(data.slice(0, 6));
-          setSuggestions(data.slice(0, 6));
-          setTrending(data.slice(6, 12));
+        const products = data.products || data || [];
+        if (products && Array.isArray(products)) {
+          setBaseSuggestions(products.slice(0, 6));
+          setSuggestions(products.slice(0, 6));
+          setTrending(products.slice(6, 12));
         }
       } catch (err) {
         console.error('Fetch error:', err);

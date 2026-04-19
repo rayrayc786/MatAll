@@ -31,7 +31,7 @@ const Home: React.FC = () => {
           axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products/offers`)
         ]);
 
-        setPopularProducts(popRes.data || []);
+        setPopularProducts(popRes.data.products || popRes.data || []);
         setFeaturedBrands(Array.isArray(brandsRes.data) ? brandsRes.data : []);
         setFeaturedCategories(Array.isArray(catsRes.data) ? catsRes.data : []);
         setDynamicOffers(Array.isArray(offersRes.data) ? offersRes.data : []);

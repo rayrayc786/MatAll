@@ -32,12 +32,13 @@ const BrandStore: React.FC = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?brand=${brandName}`);
-        setProducts(data);
+        const fetchedProducts = data.products || data || [];
+        setProducts(fetchedProducts);
         
         // Extract unique subcategories within this brand
-        const uniqueSubs = Array.from(new Set(data.map((p: any) => p.subCategory))).filter(Boolean) as string[];
+        const uniqueSubs = Array.from(new Set(fetchedProducts.map((p: any) => p.subCategory))).filter(Boolean) as string[];
         const subData = uniqueSubs.map(sub => {
-          const firstProd = data.find((p: any) => p.subCategory === sub);
+          const firstProd = fetchedProducts.find((p: any) => p.subCategory === sub);
           return {
             name: sub,
             image: firstProd?.imageUrl ? getFullImageUrl(firstProd.imageUrl) : 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?auto=format&fit=crop&q=80&w=200',

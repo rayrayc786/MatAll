@@ -94,7 +94,8 @@ const ProductDetail: React.FC = () => {
         }
         
         const similarRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${data.category}`);
-        setSimilarProducts(similarRes.data.filter((p: any) => p._id !== data._id).slice(0, 8));
+        const similarProductsList = similarRes.data.products || similarRes.data || [];
+        setSimilarProducts(similarProductsList.filter((p: any) => p._id !== data._id).slice(0, 8));
       } catch (err) {
         console.error(err);
       } finally {

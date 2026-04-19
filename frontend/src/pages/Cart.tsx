@@ -70,10 +70,11 @@ const Cart: React.FC = () => {
         }
         
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?${query}`);
+        const fetchedProducts = data.products || data || [];
         
         // Filter out items already in cart
         const cartIds = cart.map(item => item.product._id);
-        const filtered = data.filter((p: any) => !cartIds.includes(p._id));
+        const filtered = fetchedProducts.filter((p: any) => !cartIds.includes(p._id));
         
         setRecommendations(filtered.slice(0, 10));
       } catch (err) {

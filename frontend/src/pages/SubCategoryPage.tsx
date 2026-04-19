@@ -51,7 +51,7 @@ const SubCategoryPage: React.FC = () => {
         const dbCategoryName = SLUG_MAP[slug || ''] || slug;
         const encodedCat = encodeURIComponent(dbCategoryName || '');
         const { data: prodsData } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?category=${encodedCat}`);
-        setProducts(prodsData);
+        setProducts(prodsData.products || prodsData);
         setDisplayCategory(dbCategoryName || 'Category');
 
         // Fetch sub-categories to get images

@@ -58,7 +58,8 @@ const Login: React.FC = () => {
     const fetchBannerImages = async () => {
       try {
         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products?limit=20`);
-        const imgs = data
+        const productList = data.products || data || [];
+        const imgs = productList
           .map((p: any) => p.imageUrl)
           .filter((url: string) => url && !url.includes('unsplash'));
         
