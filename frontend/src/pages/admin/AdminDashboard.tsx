@@ -822,7 +822,14 @@ const AdminDashboard: React.FC = () => {
     const onConnect = () => console.log('Admin Socket Connected');
     const onNewOrder = (order: any) => {
        console.log('Received socket new-order payload:', order);
-       fetchData(); // Auto-refresh all stats and orders
+       setOrders(prev => {
+         // Prevent duplicates just in case
+         const exists = prev.find(o => String(o._id) === String(order._id));
+         if (exists) return prev;
+         return [order, ...prev];
+       });
+       // Optional: Update dashboard stats immediately if possible, or just refetch
+       fetchData(); 
     };
 
 

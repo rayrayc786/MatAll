@@ -156,11 +156,14 @@ exports.checkout = async (req, res) => {
     if (order.supplierId) {
       io.of('/supplier').to(order.supplierId.toString()).emit('new-order', order);
     }
-    const safeOrder = order.toJSON ? order.toJSON() : order;
-    
     // Real-time notification for Admin
     if (io) {
-      console.log(`[Socket] Broadcasting new order ${safeOrder._id} to /admin namespace`);
+      const populatedOrder = await Order.findById(order._id)
+        .populate('userId', 'fullName phoneNumber email')
+        .populate('items.productId', '-variants');
+        
+      const safeOrder = populatedOrder.toJSON ? populatedOrder.toJSON() : populatedOrder;
+      console.log(`[Socket] Broadcasting populated new order ${safeOrder._id} to /admin namespace`);
       io.of('/admin').emit('new-order', safeOrder);
     } else {
       console.warn('[Socket] Server io instance not found in orderController!');

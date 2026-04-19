@@ -445,6 +445,8 @@ const syncToHisaabKitaab = async (orderId, io) => {
         ac_gst_rate_id: 10, // Hisaab Kitab ID for 18%
         ac_hsn_sac_code: "996511",
         hsn_sac_code: "996511",
+        sac_code: "996511",
+        hsn_code: "996511",
         ac_taxable_value: deliveryBase,
         ac_total_without_tax: deliveryBase,
         ac_tax_amount: lineTax,
@@ -468,6 +470,8 @@ const syncToHisaabKitaab = async (orderId, io) => {
         ac_gst_rate_id: 10, // Hisaab Kitab ID for 18%
         ac_hsn_sac_code: "998541",
         hsn_sac_code: "998541",
+        sac_code: "998541",
+        hsn_code: "998541",
         ac_taxable_value: platformBase,
         ac_total_without_tax: platformBase,
         ac_tax_amount: lineTax,
