@@ -313,16 +313,16 @@ const ProductDetail: React.FC = () => {
                     {Math.round(((currentMrp - currentPrice)/currentMrp)*100)}% OFF on MRP
                   </div>
                 )}
-                {selectedVariant?.pricing?.sellingMeasureRate > 0 && (
+                {/* {selectedVariant?.pricing?.sellingMeasureRate > 0 && (
                   <div className="selling-rate-info" style={{ fontSize: '0.9rem', color: '#10b981', fontWeight: '600', marginTop: '8px' }}>
                     ₹{Number(selectedVariant.pricing.sellingMeasureRate).toFixed(2)} {product.sellingMeasure || 'per unit'}
                   </div>
-                )}
-                {selectedVariant?.measure?.value && (
+                )} */}
+                {/* {selectedVariant?.measure?.value && (
                   <div className="measure-info" style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
                     {selectedVariant.measure.term || 'Net contents'}: {selectedVariant.measure.value} {selectedVariant.measure.unit || ''}
                   </div>
-                )}
+                )} */}
              </div>
 
               {/* View Details Dropdown */}
