@@ -1,6 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const Category = require('./models/Category');
+const Category = require('../models/Category');
 
 const CATEGORIES = [
   { name: 'Wooden Material', description: 'Plywood, Boards, Laminates & Veneers', imageUrl: 'https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&q=80&w=400', isFeatured: true },

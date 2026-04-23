@@ -1,12 +1,11 @@
+const path = require('path');
 const mongoose = require('mongoose');
-const Product = require('./models/Product');
-const User = require('./models/User');
-const Supplier = require('./models/Supplier');
-const DarkStore = require('./models/DarkStore');
-const ServiceableArea = require('./models/ServiceableArea');
-require('dotenv').config();
-
-
+const Product = require('../models/Product');
+const User = require('../models/User');
+const Supplier = require('../models/Supplier');
+const DarkStore = require('../models/DarkStore');
+const ServiceableArea = require('../models/ServiceableArea');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/matall';
 
 const seedDarkStore = {

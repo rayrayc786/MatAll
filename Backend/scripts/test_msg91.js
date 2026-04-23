@@ -1,5 +1,6 @@
-require('dotenv').config();
-const msg91Service = require('./services/msg91Service');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const msg91Service = require('../services/msg91Service');
 
 async function test() {
   console.log('Testing MSG91 OTP Service...');

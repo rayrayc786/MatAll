@@ -1,7 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const Category = require('./models/Category');
-const SubCategory = require('./models/SubCategory');
+const Category = require('../models/Category');
+const SubCategory = require('../models/SubCategory');
 
 const DATA = {
   'Bathroom': ['Door Hook/ Cloth Hook', 'Jet Spray'],

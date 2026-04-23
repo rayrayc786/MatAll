@@ -1,6 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const ServiceableArea = require('./models/ServiceableArea');
+const ServiceableArea = require('../models/ServiceableArea');
 
 const locations = [
   { pincode: '122001', city: 'Gurgaon', state: 'Haryana', isActive: true },

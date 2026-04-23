@@ -2,7 +2,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 
 try {
-  const filePath = path.join(__dirname, '..', 'SAFE_Cleaned_Product_Master.xlsx');
+  const filePath = path.join(__dirname, '..', '..', 'SAFE_Cleaned_Product_Master.xlsx');
   const workbook = xlsx.readFile(filePath, { sheetRows: 5 });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];

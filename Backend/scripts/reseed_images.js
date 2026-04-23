@@ -1,18 +1,18 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const xlsx = require('xlsx');
-const path = require('path');
-const Product = require('./models/Product');
+const Product = require('../models/Product');
 
 async function reseedData() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB...');
 
-    const workbook = xlsx.readFile(path.join(__dirname, '..', 'Data new.xlsx'));
+    const workbook = xlsx.readFile(path.join(__dirname, '..', '..', 'Data new.xlsx'));
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     const fs = require('fs');
-    const imageDirPath = path.join(__dirname, 'public', 'images');
+    const imageDirPath = path.join(__dirname, '..', 'public', 'images');
     const files = fs.existsSync(imageDirPath) ? fs.readdirSync(imageDirPath) : [];
 
     console.log(`Processing ${data.length} rows from Excel...`);

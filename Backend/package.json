@@ -4,9 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node seed.js",
-    "seed:categories": "node seed-categories.js",
-    "seed:subcategories": "node seed-subcategories.js",
+    "seed": "node scripts/seed.js",
+    "seed:categories": "node scripts/seed-categories.js",
+    "seed:subcategories": "node scripts/seed-subcategories.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

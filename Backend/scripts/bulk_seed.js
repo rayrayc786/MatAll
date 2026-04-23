@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-const Product = require('./models/Product');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const Product = require('../models/Product');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/matall';
 
@@ -16,7 +16,7 @@ async function seedBulk() {
     console.log('Cleared existing products...');
 
     // Use the new master file
-    const filePath = path.join(__dirname, '..', 'Final_Full_Product_Master NEW.xlsx');
+    const filePath = path.join(__dirname, '..', '..', 'Final_Full_Product_Master NEW.xlsx');
     if (!fs.existsSync(filePath)) {
       console.error('Master file not found at:', filePath);
       return;
@@ -28,7 +28,7 @@ async function seedBulk() {
 
     console.log(`Processing ${rawData.length} rows from Excel...`);
 
-    const imagesDir = path.join(__dirname, 'public', 'images');
+    const imagesDir = path.join(__dirname, '..', 'public', 'images');
     const imageFilesMap = new Map();
     if (fs.existsSync(imagesDir)) {
       const files = fs.readdirSync(imagesDir);
@@ -117,7 +117,7 @@ async function seedBulk() {
       const gstPercentage = gstVal < 1 ? gstVal * 100 : gstVal;
 
       const variant = {
-        sku: row['SKU Number'] || row['SKU']  `V-${index}`,
+        sku: row['SKU Number'] || row['SKU'] || `V-${index}`,
         productCode:  row['Product ID'] || '',
         name: variantAttrsString ? `${product.productName} - ${variantAttrsString}` : product.productName,
         attributes: attributes, 
