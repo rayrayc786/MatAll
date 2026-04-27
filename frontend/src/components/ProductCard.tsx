@@ -17,10 +17,10 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
   const { cart, addToCart } = useCart();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [isFavorite, setIsFavorite] = useState(user.favorites?.includes(product._id));
-  
+
   const [selectedVariant, setSelectedVariant] = useState<any>(
     product.variants && product.variants.length > 0 ? product.variants[0] : null
   );
@@ -35,7 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
       setSelectedVariant(null);
     }
   }, [product._id]);
-  
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -58,17 +58,17 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
   // const basePrice = currentPrice / (1 + gstRate / 100);
   // const gstAmount = currentPrice - basePrice;
   const currentMrp = Number(selectedVariant?.pricing?.mrp || selectedVariant?.mrp || product.mrp || 0);
-  
+
   const discount = (currentMrp > currentPrice && currentMrp > 0)
-    ? Math.round(((currentMrp - currentPrice) / currentMrp) * 100) 
+    ? Math.round(((currentMrp - currentPrice) / currentMrp) * 100)
     : 0;
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     // Enhanced check to prevent navigation when clicking action buttons
     if (
-      target.closest('.list-add-container') || 
-      target.closest('.list-fav-btn') || 
+      target.closest('.list-add-container') ||
+      target.closest('.list-fav-btn') ||
       target.closest('.dropdown-trigger') ||
       target.closest('.options-indicator-row') ||
       target.tagName.toLowerCase() === 'button'
@@ -124,18 +124,18 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
             {discount}% OFF
           </div>
         )}
-        
-        <button 
-          className={`list-fav-btn ${isFavorite ? 'active' : ''}`} 
+
+        <button
+          className={`list-fav-btn ${isFavorite ? 'active' : ''}`}
           onClick={toggleFavorite}
           aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         >
           <Heart size={18} fill={isFavorite ? '#ef4444' : 'none'} strokeWidth={2.5} />
         </button>
-        
-        <img 
-          src={getFullImageUrl(selectedVariant?.images?.[0] || product.images?.[0] || product.imageUrl)} 
-          alt={product.name} 
+
+        <img
+          src={getFullImageUrl(selectedVariant?.images?.[0] || product.images?.[0] || product.imageUrl)}
+          alt={product.name}
           className="list-product-img"
           loading="lazy"
           onError={(e) => {
@@ -144,91 +144,102 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
         />
 
         <div className={`list-delivery-time ${product.deliveryTime === 'On Demand' ? 'on-demand' : ''}`}>
-           <Clock size={12} strokeWidth={3} />
-           <span>{product.deliveryTime || '10 mins'}</span>
+          <Clock size={12} strokeWidth={3} />
+          <span>{product.deliveryTime || '10 mins'}</span>
         </div>
       </div>
 
       <div className="list-card-details">
-        {/* 2. Action Row (Unit Selector + ADD) */}
-        <div className="list-action-row">
-          <div 
-            className={`list-unit-info ${product.variants?.length > 1 ? 'is-clickable' : ''}`}
-            onClick={(e) => {
-              if (product.variants?.length > 1) {
-                e.stopPropagation();
-                e.preventDefault();
-                setShowVariantModal(true);
-              }
-            }}
-          >
-            <span className="unit-label-text">
-              {selectedVariant?.attributes && Object.keys(selectedVariant.attributes).length > 0 
-                ? Object.values(selectedVariant.attributes)[0]
-                : (selectedVariant?.name && selectedVariant.name !== 'Standard' 
-                    ? selectedVariant.name.split(',')[0].trim() 
+        {/* 2. Action/Variant Section */}
+        <div className="list-variant-info-wrapper">
+          <div className="list-action-row">
+            <div
+              className={`list-unit-info ${product.variants?.length > 1 ? 'is-clickable' : ''}`}
+              onClick={(e) => {
+                if (product.variants?.length > 1) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setShowVariantModal(true);
+                }
+              }}
+            >
+              <span className="unit-label-text">
+                {selectedVariant?.attributes && Object.keys(selectedVariant.attributes).length > 0
+                  ? Object.values(selectedVariant.attributes)[0]
+                  : (selectedVariant?.name && selectedVariant.name !== 'Standard'
+                    ? selectedVariant.name.split(',')[0].trim()
                     : product.unitLabel || 'Standard')}
-            </span>
-            {product.variants?.length > 1 && <ChevronDown size={14} className="unit-arrow" />}
-          </div>
-          
-          <div className="list-add-container">
-            {product.deliveryTime === 'On Demand' ? (
-              <button 
-                className="list-request-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setShowOnDemandModal(true);
-                }}
-              >
-                REQUEST
-              </button>
-            ) : cartItem ? (
-              <div className="list-qty-control" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
-                <button onClick={(e) => { e.stopPropagation(); addToCart(product, -1, currentVariantName); }} aria-label="Decrease quantity"><Minus size={14} strokeWidth={3} /></button>
-                <span className="list-qty-val">{cartItem.quantity}</span>
-                <button onClick={(e) => { e.stopPropagation(); addToCart(product, 1, currentVariantName); }} aria-label="Increase quantity"><Plus size={14} strokeWidth={3} /></button>
-              </div>
-            ) : (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (product.variants && product.variants.length > 1) {
-                    setShowVariantModal(true);
-                  } else {
-                    handleAddToCart(e);
-                  }
-                }} 
-                className="list-add-btn"
-              >
-                ADD
-              </button>
-            )}
-          </div>
-        </div>
+              </span>
+              {product.variants?.length > 1 && <ChevronDown size={14} className="unit-arrow" />}
+            </div>
 
-        {product.variants && product.variants.length > 1 && (
-          <div className="options-indicator-row" onClick={(e) => { e.stopPropagation(); setShowVariantModal(true); }}>
-             <span className="options-text">{product.variants.length} options</span>
+            <div className="list-add-container">
+              {product.deliveryTime === 'On Demand' ? (
+                <button
+                  className="list-request-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setShowOnDemandModal(true);
+                  }}
+                >
+                  REQUEST
+                </button>
+              ) : cartItem ? (
+                <div className="list-qty-control" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
+                  <button onClick={(e) => { e.stopPropagation(); addToCart(product, -1, currentVariantName); }} aria-label="Decrease quantity"><Minus size={14} strokeWidth={3} /></button>
+                  <span className="list-qty-val">{cartItem.quantity}</span>
+                  <button onClick={(e) => { e.stopPropagation(); addToCart(product, 1, currentVariantName); }} aria-label="Increase quantity"><Plus size={14} strokeWidth={3} /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (product.variants && product.variants.length > 1) {
+                      setShowVariantModal(true);
+                    } else {
+                      handleAddToCart(e);
+                    }
+                  }}
+                  className="list-add-btn"
+                >
+                  ADD
+                </button>
+              )}
+            </div>
           </div>
-        )}
+
+          {product.variants && product.variants.length > 1 ? (
+            <div className="options-indicator-row" onClick={(e) => { e.stopPropagation(); setShowVariantModal(true); }}>
+              <span className="options-text">{product.variants.length} options</span>
+            </div>
+          ) : (
+            <div className="options-indicator-row placeholder"></div>
+          )}
+        </div>
 
         {/* 3. Pricing Section */}
         <div className="list-pricing-section">
-           <div className="list-price-row">
-              <span className="list-price">₹{currentPrice.toFixed(2)}</span>
-              {currentMrp > currentPrice && <span className="list-mrp">₹{currentMrp.toFixed(2)}</span>}
-           </div>
+          <div className="list-price-row">
+            <span className="list-price">₹{currentPrice.toFixed(2)}</span>
+            {currentMrp > currentPrice && <span className="list-mrp">₹{currentMrp.toFixed(2)}</span>}
+          </div>
 
         </div>
 
         {/* 4. Product Name */}
         <h3 className="list-product-name">
-          <span className="brand-bold">{product.brand}</span> {displayName}
+
+          <span className="brand-bold">{product.brand}</span>
+          {product.subCategory && (
+            <span className="list-subcategory-name">
+              {product.subCategory}
+            </span>
+          )}
+          {displayName}
         </h3>
-        
+
         {/* 5. Meta/Footer Row (Rating) */}
         <div className="list-meta-row">
           <div className="list-rating">
@@ -250,14 +261,14 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
               </div>
               <button className="close-modal-btn" onClick={() => setShowVariantModal(false)}><X size={20} /></button>
             </div>
-            
+
             <div className="variants-list">
               {product.variants.map((v: any, idx: number) => {
                 const isSelected = selectedVariant?.name === v.name;
                 const vCartItem = cart.find(
                   (item) => item.product._id === product._id && item.selectedVariant === v.name
                 );
-                
+
                 // Pricing calculations for variant
                 const vsPrice = Number(v.pricing?.salePrice || v.price || 0);
                 // const vGstRate = Number(v.pricing?.gst || (product.variants?.[0]?.pricing?.gst) || 0);
@@ -265,20 +276,20 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
                 // const vGst = vsPrice - vBase;
                 const vmrp = Number(v.pricing?.mrp || v.mrp || 0);
                 const vDisc = (vmrp > vsPrice && vmrp > 0) ? Math.round(((vmrp - vsPrice) / vmrp) * 100) : 0;
-                
+
                 const vImg = (v.images && v.images.length > 0) ? v.images[0] : (v.image || product.imageUrl);
 
                 return (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`variant-list-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => setSelectedVariant(v)}
                   >
                     <div className="v-item-left">
-                       {vDisc > 0 && <div className="v-discount-badge">{vDisc}% OFF</div>}
-                       <img src={getFullImageUrl(vImg)} alt={v.name} />
+                      {vDisc > 0 && <div className="v-discount-badge">{vDisc}% OFF</div>}
+                      <img src={getFullImageUrl(vImg)} alt={v.name} />
                     </div>
-                    
+
                     <div className="v-item-mid">
                       <span className="v-name">{v.name}</span>
                       <div className="v-price-row">
@@ -287,10 +298,10 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
                       </div>
 
                     </div>
-                    
+
                     <div className="v-item-right">
                       {product.deliveryTime === 'On Demand' ? (
-                        <button 
+                        <button
                           className="list-request-btn"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -308,7 +319,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
                           <button onClick={(e) => { e.stopPropagation(); addToCart(product, 1, v.name); }} aria-label="Increase quantity"><Plus size={14} strokeWidth={3} /></button>
                         </div>
                       ) : (
-                        <button 
+                        <button
                           className="list-add-btn"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -329,7 +340,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product }) => {
         document.body
       )}
 
-      <OnDemandModal 
+      <OnDemandModal
         isOpen={showOnDemandModal}
         onClose={() => setShowOnDemandModal(false)}
         product={product}
